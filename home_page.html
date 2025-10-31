@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ketenangan hati — Islamic Event Website Prototype</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Icon set (Font Awesome) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer" />
+
+  <link rel="stylesheet" href="css/home_page.css" />
+</head>
+<body>
+
+  <!-- ================= NAVBAR ================= -->
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="#">
+        <span class="brand-logo">
+          <i class="fa-solid fa-book-quran"></i>
+        </span>
+        <span class="brand-text">ketenangan hati</h1></span>
+      </a>
+
+      <button class="nav-toggle" aria-label="Buka menu">
+        <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+      </button>
+
+      <nav class="nav-links">
+        <a href="#beranda" class="active">Beranda</a>
+        <a href="#event">Event</a>
+        <a href="#tentang">Tentang</a>
+        <a href="#kontak">Kontak</a>
+
+        <!-- PERBAIKAN: slot auth agar bisa swap Login <-> User chip -->
+        <div id="auth-slot">
+          <a href="#" class="btn btn-login"><i class="fa-regular fa-user"></i> Login</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ================= HERO ================= -->
+  <section id="beranda" class="hero">
+    <img src="./assets/img/hero.jpg" alt="Ilustrasi shaf shalat" class="hero-bg">
+    <div class="hero-overlay"></div>
+
+    <div class="container hero-content" data-animate="fade-up">
+      <p class="eyebrow">Bergabunglah dalam Pengajian Islamic</p>
+      <h1 class="hero-title">
+        Mari tingkatkan ilmu agama dan keimanan bersama para ustadz terbaik.<br />
+        Daftar sekarang untuk mengikuti kajian dan event Islamic.
+      </h1>
+
+      <div class="hero-actions">
+        <a href="#event" class="btn btn-light">Lihat Event</a>
+        <a href="#tentang" class="btn btn-outline">Pelajari Lebih Lanjut</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SECTION: EVENT & KAJIAN MENDATANG ========== -->
+  <section id="event" class="section">
+    <div class="container">
+      <h2 class="section-title" data-animate="fade-up">Event & Kajian Mendatang</h2>
+
+      <div class="cards" data-animate="fade-up">
+        <!-- Card 1 -->
+        <article class="card">
+          <div class="card-media">
+            <img src="./assets/img/event-1.jpg" alt="Kajian Tafsir Al-Qur'an" />
+            <span class="chip chip-green"><i class="fa-solid fa-leaf"></i> Tafsir</span>
+          </div>
+          <div class="card-body">
+            <h3>Kajian Tafsir Al-Quran Surat Al-Baqarah</h3>
+            <p>Memahami makna dan hikmah dari Surat Al-Baqarah dengan penjelasan yang mendalam dan mudah...</p>
+
+            <ul class="meta">
+              <li><i class="fa-regular fa-calendar-days"></i> Rabu, 5 November 2025 — 19:00–21:00 WIB</li>
+              <li><i class="fa-solid fa-location-dot"></i> Masjid Agung Kota</li>
+              <li><i class="fa-regular fa-user"></i> Ustadz Ahmad Wijaya</li>
+            </ul>
+
+            <div class="card-footer">
+              <span class="price price-free">Gratis</span>
+              <a href="#" class="btn btn-primary">Daftar</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 2 -->
+        <article class="card">
+          <div class="card-media">
+            <img src="./assets/img/event-2.jpg" alt="Fiqih Muamalat" />
+            <span class="chip chip-green"><i class="fa-solid fa-scale-balanced"></i> Fiqih</span>
+          </div>
+          <div class="card-body">
+            <h3>Seminar Fiqih Muamalat dalam Kehidupan Modern</h3>
+            <p>Membahas hukum-hukum dalam transaksi dan muamalah di era digital dan modern.</p>
+
+            <ul class="meta">
+              <li><i class="fa-regular fa-calendar-days"></i> Sabtu, 8 November 2025 — 14:00–17:00 WIB</li>
+              <li><i class="fa-solid fa-location-dot"></i> Gedung Islamic Center</li>
+              <li><i class="fa-regular fa-user"></i> Ustadz Dr. Muhammad Hasan</li>
+            </ul>
+
+            <div class="card-footer">
+              <span class="price">Rp 50.000</span>
+              <a href="#" class="btn btn-primary">Daftar</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 3 -->
+        <article class="card">
+          <div class="card-media">
+            <img src="./assets/img/event-3.jpg" alt="Hadits Arba'in" />
+            <span class="chip chip-green"><i class="fa-solid fa-hands-praying"></i> Hadits</span>
+          </div>
+          <div class="card-body">
+            <h3>Kajian Hadits Arba'in An-Nawawi</h3>
+            <p>40 hadits pilihan yang mencakup dasar-dasar ajaran Islam dengan penjelasan komprehensif.</p>
+
+            <ul class="meta">
+              <li><i class="fa-regular fa-calendar-days"></i> Rabu, 12 November 2025 — 08:00–10:00 WIB</li>
+              <li><i class="fa-solid fa-location-dot"></i> Pesantren Dar Al-Hikam</li>
+              <li><i class="fa-regular fa-user"></i> Ustadzah Fatimah Zahra</li>
+            </ul>
+
+            <div class="card-footer">
+              <span class="price price-free">Gratis</span>
+              <a href="#" class="btn btn-primary">Daftar</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 4 -->
+        <article class="card">
+          <div class="card-media">
+            <img src="./assets/img/event-4.jpg" alt="Tahsin Tajwid" />
+            <span class="chip chip-green"><i class="fa-solid fa-book-open-reader"></i> Tahsin</span>
+          </div>
+          <div class="card-body">
+            <h3>Workshop Tahsin dan Tajwid Al-Quran</h3>
+            <p>Belajar membaca Al-Quran dengan tajwid yang benar dan memperbaiki bacaan.</p>
+
+            <ul class="meta">
+              <li><i class="fa-regular fa-calendar-days"></i> Sabtu, 15 November 2025 — 09:00–12:00 WIB</li>
+              <li><i class="fa-solid fa-location-dot"></i> Aula Masjid Baiturrohman</li>
+              <li><i class="fa-regular fa-user"></i> Qori Abdurrahman Al-Hafidz</li>
+            </ul>
+
+            <div class="card-footer">
+              <span class="price">Rp 100.000</span>
+              <a href="#" class="btn btn-primary">Daftar</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 5 -->
+        <article class="card">
+          <div class="card-media">
+            <img src="./assets/img/event-5.jpg" alt="Sirah Nabawiyah" />
+            <span class="chip chip-green"><i class="fa-solid fa-route"></i> Sirah</span>
+          </div>
+          <div class="card-body">
+            <h3>Kajian Sirah Nabawiyah: Periode Mekkah</h3>
+            <p>Menelusuri perjalanan Rasulullah SAW di masa awal dakwah di Mekkah.</p>
+
+            <ul class="meta">
+              <li><i class="fa-regular fa-calendar-days"></i> Selasa, 18 November 2025 — 19:30–21:30 WIB</li>
+              <li><i class="fa-solid fa-location-dot"></i> Masjid Al-Ikhlas</li>
+              <li><i class="fa-regular fa-user"></i> Ustadz Yusuf Abdullah</li>
+            </ul>
+
+            <div class="card-footer">
+              <span class="price price-free">Gratis</span>
+              <a href="#" class="btn btn-primary">Daftar</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 6 -->
+        <article class="card">
+          <div class="card-media">
+            <img src="./assets/img/event-6.jpg" alt="Parenting Islami" />
+            <span class="chip chip-green"><i class="fa-solid fa-children"></i> Parenting</span>
+          </div>
+          <div class="card-body">
+            <h3>Seminar Parenting Islami</h3>
+            <p>Mendidik anak dengan nilai-nilai Islam di tengah tantangan zaman modern.</p>
+
+            <ul class="meta">
+              <li><i class="fa-regular fa-calendar-days"></i> Kamis, 20 November 2025 — 13:00–16:00 WIB</li>
+              <li><i class="fa-solid fa-location-dot"></i> Hotel Syariah Grand</li>
+              <li><i class="fa-regular fa-user"></i> Ustadz & Ustadzah Family Center</li>
+            </ul>
+
+            <div class="card-footer">
+              <span class="price">Rp 150.000</span>
+              <a href="#" class="btn btn-primary">Daftar</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SECTION: TENTANG (placeholder) ========== -->
+  <section id="tentang" class="section section-muted">
+    <div class="container" data-animate="fade-up">
+      <h2 class="section-title">Tentang</h2>
+      <p class="lead">
+        ketenangan hati adalah platform yang memudahkan muslimin untuk menemukan, mendaftar, dan mengikuti kajian serta event Islami yang terpercaya. Kami menghadirkan informasi kajian tafsir, hadits, fiqih, tahsin, sirah, hingga parenting Islami—dari masjid, pesantren, dan komunitas dakwah—dalam satu tempat yang rapi dan mudah diakses.
+      </p>
+      <p class="lead">
+        Misi kami adalah menyebarkan ilmu yang bermanfaat dengan menjaga amanah, adab, dan keilmuan. Melalui kurasi pemateri, detail acara yang jelas, serta pengingat yang membantu, kami berharap pengalaman menuntut ilmu menjadi lebih teratur dan nyaman bagi siapa pun, baik hadir luring maupun daring.
+      </p>
+      <p class="lead">
+        Kami terbuka untuk kolaborasi dengan DKM, panitia kajian, lembaga pendidikan, dan komunitas. Bersama-sama, mari memakmurkan masjid dan menghidupkan majelis ilmu yang menentramkan hati.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== SECTION: KONTAK (placeholder) ========== -->
+  <section id="kontak" class="section">
+    <div class="container" data-animate="fade-up">
+      <h2 class="section-title">Kontak</h2>
+      <p class="lead">
+        Halaman “Kontak” belum dibuat. Sementara ini gunakan tombol sosial mengambang di kanan bawah,
+        atau tambahkan form kontak di sini nanti.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="brand-logo"><i class="fa-solid fa-book-quran"></i></span>
+        <span class="brand-text">ketenangan hati</span>
+      </div>
+      <div class="footer-copy">
+        &copy; <span id="year"></span> ketenangan hati. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== Floating Socials (WA/IG/TikTok) ===== -->
+  <div class="floating-social">
+    <!-- Ganti href dengan kontakmu -->
+    <a class="fs-btn wa" href="https://wa.me/62811456999" aria-label="WhatsApp" target="_blank" rel="noopener">
+      <i class="fa-brands fa-whatsapp"></i>
+    </a>
+    <a class="fs-btn ig" href="https://www.instagram.com/renowahyusanramaa?igsh=dnMwZno0OHo2Z3E5" aria-label="Instagram" target="_blank" rel="noopener">
+      <i class="fa-brands fa-instagram"></i>
+    </a>
+    <a class="fs-btn tk" href="https://www.tiktok.com/@buagusejagat?_t=ZS-90xZDTff8AK&_r=1" aria-label="TikTok" target="_blank" rel="noopener">
+      <i class="fa-brands fa-tiktok"></i>
+    </a>
+  </div>
+
+  <!-- ================= LOGIN MODAL (PERBAIKAN: dipindah ke dalam <body>) ================= -->
+  <div id="loginModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-overlay" data-close="true"></div>
+
+    <div class="modal-dialog" role="document" aria-labelledby="loginTitle">
+      <button class="modal-close" aria-label="Tutup" data-close="true">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="modal-header">
+        <div class="modal-logo">
+          <i class="fa-solid fa-moon"></i>
+        </div>
+        <h3 id="loginTitle">Selamat Datang</h3>
+        <p class="modal-sub">Login untuk mengikuti kajian dan event Islamic</p>
+      </div>
+
+      <div class="modal-body">
+        <button class="btn btn-google" type="button" aria-label="Login dengan Google">
+          <!-- Google 'G' colored SVG -->
+          <svg class="gmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+            <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303C33.843,31.912,29.363,35,24,35c-6.627,0-12-5.373-12-12
+              s5.373-12,12-12c3.059,0,5.842,1.154,7.964,3.036l5.657-5.657C33.643,5.059,28.983,3,24,3C12.955,3,4,11.955,4,23
+              s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+            <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,16.131,18.961,13,24,13c3.059,0,5.842,1.154,7.964,3.036l5.657-5.657
+              C33.643,5.059,28.983,3,24,3C16.318,3,9.656,7.337,6.306,14.691z"/>
+            <path fill="#4CAF50" d="M24,43c5.305,0,10.124-2.037,13.73-5.343l-6.333-5.353C29.38,33.195,26.833,34,24,34
+              c-5.329,0-9.797-3.584-11.403-8.421l-6.51,5.02C9.393,38.658,16.106,43,24,43z"/>
+            <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-1.636,4.71-6.084,8-11.303,8c-5.329,0-9.797-3.584-11.403-8.421
+              l-6.51,5.02C9.393,38.658,16.106,43,24,43c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+          </svg>
+          Login dengan Google
+        </button>
+
+        <div class="divider">
+          <span>atau</span>
+        </div>
+
+        <form id="loginForm" autocomplete="on" novalidate>
+          <label class="label">Email</label>
+          <input class="input" type="email" name="email" placeholder="nama@email.com" required />
+
+          <label class="label">Password</label>
+          <input class="input" type="password" name="password" placeholder="••••••••" required />
+
+          <button class="btn btn-primary btn-login-submit" type="submit">Login</button>
+        </form>
+
+        <p class="modal-footnote">
+          Belum punya akun? <a href="#" class="link-register">Daftar sekarang</a>
+        </p>
+      </div>
+    </div>
+  </div>
+  <!-- =============== END LOGIN MODAL =============== -->
+
+  <script src="js/home_page.js"></script>
+  <!-- Auth (Google Login) -->
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>
