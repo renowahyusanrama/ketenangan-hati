@@ -79,7 +79,7 @@ function renderUserChip(user){
     <div class="user-chip">
       ${photo}
       <span class="user-name">${user.displayName || user.email}</span>
-      ${isAdmin ? '<a class="user-admin" href="/admin.html" title="Admin dashboard">Admin</a>' : ''}
+      ${isAdmin ? '<a class="user-admin" href="admin.html" title="Admin dashboard">Admin</a>' : ''}
       <button class="user-logout" title="Logout">Keluar</button>
     </div>
   `;
