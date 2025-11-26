@@ -3,7 +3,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
-  getRedirectResult, onAuthStateChanged, signOut,
+  getRedirectResult, onAuthStateChanged, signOut, getIdTokenResult,
   setPersistence, browserLocalPersistence,
   signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -32,6 +32,7 @@ const modal     = document.getElementById('loginModal');
 const form      = document.getElementById('loginForm');
 const linkReg   = document.querySelector('.link-register');
 const submitBtn = form?.querySelector('.btn-login-submit');
+let isAdmin = false;
 
 // ——— Modal helpers
 function closeModal(){
@@ -78,6 +79,7 @@ function renderUserChip(user){
     <div class="user-chip">
       ${photo}
       <span class="user-name">${user.displayName || user.email}</span>
+      ${isAdmin ? '<a class="user-admin" href="/admin.html" title="Admin dashboard">Admin</a>' : ''}
       <button class="user-logout" title="Logout">Keluar</button>
     </div>
   `;
@@ -95,11 +97,29 @@ function injectChipStyles(){
     .user-chip .avatar{ width:28px; height:28px; border-radius:999px; object-fit:cover }
     .avatar-fallback{ display:grid; place-items:center; background:#E2E8F0; color:#111; font-weight:700 }
     .user-name{ font-weight:600; color:#111827; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+    .user-admin{ color:#2563eb; font-weight:700; text-decoration:none; padding:4px 10px; border:1px solid #2563eb; border-radius:999px; }
+    .user-admin:hover{ background:#2563eb; color:#fff; }
     .user-logout{ background:transparent; border:0; color:#ef4444; font-weight:700; cursor:pointer }
     .user-logout:hover{ text-decoration:underline }
   `;
   const style = Object.assign(document.createElement('style'), { id:'userChipStyle', textContent:css });
   document.head.appendChild(style);
+}
+
+async function refreshAdminFlag(user){
+  if(!user){ isAdmin = false; return; }
+  try{
+    const token = await getIdTokenResult(user);
+    isAdmin = !!token.claims?.admin;
+  }catch(err){
+    console.error('Gagal cek klaim admin:', err?.code || err);
+    isAdmin = false;
+  }
+}
+
+async function renderAfterAuth(user){
+  await refreshAdminFlag(user);
+  renderUserChip(user);
 }
 
 // ——— GOOGLE LOGIN (popup + fallback redirect)
@@ -114,7 +134,7 @@ document.addEventListener('click', async (e)=>{
 
   try{
     const res = await signInWithPopup(auth, provider);
-    if(res?.user){ renderUserChip(res.user); closeModal(); }
+    if(res?.user){ await renderAfterAuth(res.user); closeModal(); }
   }catch(err){
     if (err.code === 'auth/popup-blocked') {
       await signInWithRedirect(auth, provider);
@@ -128,7 +148,7 @@ document.addEventListener('click', async (e)=>{
 });
 
 getRedirectResult(auth)
-  .then(res => { if(res?.user){ renderUserChip(res.user); closeModal(); } })
+  .then(async (res) => { if(res?.user){ await renderAfterAuth(res.user); closeModal(); } })
   .catch(err => console.error('Redirect error:', err.code));
 
 // ——— EMAIL/PASSWORD: toggle daftar & submit
@@ -167,11 +187,11 @@ form?.addEventListener('submit', async (e)=>{
       // opsional: set displayName dari bagian sebelum '@'
       const guessName = email.split('@')[0];
       try{ await updateProfile(user, { displayName: guessName }); }catch{}
-      renderUserChip(user);
+      await renderAfterAuth(user);
       closeModal();
     }else{
       const { user } = await signInWithEmailAndPassword(auth, email, password);
-      renderUserChip(user);
+      await renderAfterAuth(user);
       closeModal();
     }
   }catch(err){
@@ -197,9 +217,14 @@ function mapAuthError(code){
 
 // ——— Observer state
 onAuthStateChanged(auth, (user)=>{
-  if(user) renderUserChip(user);
-  else     renderLoginButton();
+  if(user) renderAfterAuth(user);
+  else {
+    isAdmin = false;
+    renderLoginButton();
+  }
 });
 
 // Render awal
 renderLoginButton();
+
+
