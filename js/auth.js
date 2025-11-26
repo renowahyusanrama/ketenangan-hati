@@ -124,6 +124,7 @@ async function renderAfterAuth(user){
 
 // ——— GOOGLE LOGIN (popup + fallback redirect)
 let authBusy = false;
+const isMobileDevice = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent || '');
 
 document.addEventListener('click', async (e)=>{
   const btn = e.target.closest('.btn-google');
@@ -133,6 +134,12 @@ document.addEventListener('click', async (e)=>{
   authBusy = true; btn.disabled = true;
 
   try{
+    // Di mobile lebih aman pakai redirect agar tidak kena blokir popup
+    if (isMobileDevice) {
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+
     const res = await signInWithPopup(auth, provider);
     if(res?.user){ await renderAfterAuth(res.user); closeModal(); }
   }catch(err){
