@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ketenangan hati — Islamic Event Website Prototype</title>
+  <title>ketenangan jiwa</title>
 
   <!-- Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +12,7 @@
 
   <!-- Icon set (Font Awesome) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer" />
+  <link rel="icon" type="image/png" href="images/logo.png" />
 
   <link rel="stylesheet" href="css/home_page.css" />
 </head>
@@ -22,9 +23,9 @@
     <div class="container nav">
       <a class="brand" href="#">
         <span class="brand-logo">
-          <i class="fa-solid fa-book-quran"></i>
+          <img src="images/logo.png" alt="ketenangan jiwa" />
         </span>
-        <span class="brand-text">ketenangan hati</h1></span>
+        <span class="brand-text">ketenangan jiwa</span>
       </a>
 
       <button class="nav-toggle" aria-label="Buka menu">
@@ -47,7 +48,7 @@
 
   <!-- ================= HERO ================= -->
   <section id="beranda" class="hero">
-    <img src="./assets/img/hero.jpg" alt="Ilustrasi shaf shalat" class="hero-bg">
+    <img src="images/hero.jpg" alt="Ilustrasi shaf shalat" class="hero-bg">
     <div class="hero-overlay"></div>
 
     <div class="container hero-content" data-animate="fade-up">
@@ -69,7 +70,7 @@
     <div class="container">
       <h2 class="section-title" data-animate="fade-up">Event & Kajian Mendatang</h2>
 
-      <div class="cards" data-animate="fade-up">
+      <div id="eventCards" class="cards" data-animate="fade-up">
         <!-- Card 1 -->
         <article class="card">
           <div class="card-media">
@@ -88,7 +89,7 @@
 
             <div class="card-footer">
               <span class="price price-free">Gratis</span>
-              <a href="#" class="btn btn-primary">Daftar</a>
+              <a href="event-detail.html?event=kajian-tafsir-al-baqarah" class="btn btn-primary">Daftar</a>
             </div>
           </div>
         </article>
@@ -111,7 +112,7 @@
 
             <div class="card-footer">
               <span class="price">Rp 50.000</span>
-              <a href="#" class="btn btn-primary">Daftar</a>
+              <a href="event-detail.html?event=fiqih-muamalat-modern" class="btn btn-primary">Daftar</a>
             </div>
           </div>
         </article>
@@ -134,7 +135,7 @@
 
             <div class="card-footer">
               <span class="price price-free">Rp 70.000</span>
-              <a href="#" class="btn btn-primary">Daftar</a>
+              <a href="event-detail.html?event=hadits-arbain" class="btn btn-primary">Daftar</a>
             </div>
           </div>
         </article>
@@ -157,7 +158,7 @@
 
             <div class="card-footer">
               <span class="price">Rp 100.000</span>
-              <a href="#" class="btn btn-primary">Daftar</a>
+              <a href="event-detail.html?event=workshop-tahsin-tajwid" class="btn btn-primary">Daftar</a>
             </div>
           </div>
         </article>
@@ -180,7 +181,7 @@
 
             <div class="card-footer">
               <span class="price price-free">Rp 120.000</span>
-              <a href="#" class="btn btn-primary">Daftar</a>
+              <a href="event-detail.html?event=sirah-nabawiyah-mekkah" class="btn btn-primary">Daftar</a>
             </div>
           </div>
         </article>
@@ -203,7 +204,7 @@
 
             <div class="card-footer">
               <span class="price">Rp 150.000</span>
-              <a href="#" class="btn btn-primary">Daftar</a>
+              <a href="event-detail.html?event=seminar-parenting-islami" class="btn btn-primary">Daftar</a>
             </div>
           </div>
         </article>
@@ -216,7 +217,7 @@
     <div class="container" data-animate="fade-up">
       <h2 class="section-title">Tentang</h2>
       <p class="lead">
-        ketenangan hati adalah platform yang memudahkan muslimin untuk menemukan, mendaftar, dan mengikuti kajian serta event Islami yang terpercaya. Kami menghadirkan informasi kajian tafsir, hadits, fiqih, tahsin, sirah, hingga parenting Islami—dari masjid, pesantren, dan komunitas dakwah—dalam satu tempat yang rapi dan mudah diakses.
+        ketenangan jiwa adalah platform yang memudahkan muslimin untuk menemukan, mendaftar, dan mengikuti kajian serta event Islami yang terpercaya. Kami menghadirkan informasi kajian tafsir, hadits, fiqih, tahsin, sirah, hingga parenting Islami—dari masjid, pesantren, dan komunitas dakwah—dalam satu tempat yang rapi dan mudah diakses.
       </p>
       <p class="lead">
         Misi kami adalah menyebarkan ilmu yang bermanfaat dengan menjaga amanah, adab, dan keilmuan. Melalui kurasi pemateri, detail acara yang jelas, serta pengingat yang membantu, kami berharap pengalaman menuntut ilmu menjadi lebih teratur dan nyaman bagi siapa pun, baik hadir luring maupun daring.
@@ -232,8 +233,16 @@
     <div class="container" data-animate="fade-up">
       <h2 class="section-title">Kontak</h2>
       <p class="lead">
-        Halaman “Kontak” belum dibuat. Sementara ini gunakan tombol sosial mengambang di kanan bawah,
-        atau tambahkan form kontak di sini nanti.
+        Kontak Person.
+      </p>
+      <p class="body">
+        WA: 0811456999
+      </p>
+      <p class=" body">
+        INSTAGRAM: @renwahyusanramaa
+      </p>
+      <p class="body">
+        TIKTOK: @buagusejagat
       </p>
     </div>
   </section>
@@ -242,11 +251,11 @@
   <footer class="footer">
     <div class="container footer-inner">
       <div class="footer-brand">
-        <span class="brand-logo"><i class="fa-solid fa-book-quran"></i></span>
-        <span class="brand-text">ketenangan hati</span>
+        <span class="brand-logo"><img src="images/logo.png" alt="ketenangan jiwa" /></span>
+        <span class="brand-text">ketenangan jiwa</span>
       </div>
       <div class="footer-copy">
-        &copy; <span id="year"></span> ketenangan hati. All rights reserved.
+        &copy; <span id="year"></span> ketenangan jiwa. All rights reserved.
       </div>
     </div>
   </footer>
@@ -321,6 +330,7 @@
   </div>
   <!-- =============== END LOGIN MODAL =============== -->
 
+  <script type="module" src="js/events_feed.js"></script>
   <script src="js/home_page.js"></script>
   <!-- Auth (Google Login) -->
   <script type="module" src="js/auth.js"></script>

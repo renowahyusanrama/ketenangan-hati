@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Dashboard | ketenangan jiwa</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="css/admin_preview.css" />
+  <link rel="icon" type="image/png" href="images/logo.png" />
+
+  <style>
+    :root {
+      --bg: #0b1624;
+      --panel: #0f192b;
+      --border: #1f2b3e;
+      --text: #e6edf5;
+      --muted: #9cb1c7;
+      --primary: #3b82f6;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --card: #111c2f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(80% 80% at 20% 20%, rgba(59,130,246,0.12), transparent 60%),
+                  radial-gradient(60% 60% at 80% 0%, rgba(34,197,94,0.12), transparent 70%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(9, 14, 25, 0.8);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .brand img { width: 36px; height: 36px; object-fit: contain; border-radius: 8px; }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+    }
+    h1, h2, h3 { margin: 0 0 12px; }
+    .muted { color: var(--muted); }
+    .flex { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    button, input, select, textarea {
+      font: inherit;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0c1525;
+      color: var(--text);
+      padding: 10px 12px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      background: var(--primary);
+      color: #0b1624;
+      font-weight: 700;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      box-shadow: 0 10px 22px rgba(59,130,246,0.22);
+    }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .danger { background: var(--danger); color: #fff; box-shadow: 0 10px 22px rgba(239,68,68,0.22); }
+    .outline { background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+    form .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    textarea { min-height: 100px; resize: vertical; }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .table th, .table td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+    .badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .badge.green { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .badge.gray { background: rgba(148,163,184,0.15); color: #cbd5e1; }
+    .status-text { font-size: 14px; }
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+    }
+    .preview {
+      width: 100%;
+      max-width: 240px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      background: #0c1525;
+    }
+    .preview img { display: block; width: 100%; height: auto; }
+    .hidden { display: none !important; }
+    @media (max-width: 720px) {
+      header { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .container { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+      <a href="#" class="brand">
+        <img src="images/logo.png" alt="ketenangan jiwa" />
+        <span>ketenangan jiwa • Admin</span>
+      </a>
+    <div class="flex">
+      <span id="userInfo" class="pill muted">Belum login</span>
+      <button id="loginBtn"><i class="fa-brands fa-google"></i> Login</button>
+      <button id="logoutBtn" class="outline hidden">Logout</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="guardPanel" class="panel">
+      <h2>Status Akses</h2>
+      <p id="guardMessage" class="muted">Memeriksa sesi...</p>
+    </div>
+
+    <div id="dashboard" class="hidden">
+      <div class="panel">
+        <div class="flex" style="justify-content: space-between; align-items: center;">
+          <div>
+            <h2 style="margin-bottom:4px;">Kelola Event</h2>
+            <p class="muted" style="margin:0;">Tambah/edit event, upload poster Cloudinary, lalu simpan ke Firestore.</p>
+          </div>
+          <div class="pill status-text">
+            <span id="adminStatus" class="badge gray">checking</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="admin-layout">
+          <form id="eventForm">
+            <div class="grid">
+              <div>
+                <label>Judul</label>
+                <input name="title" type="text" placeholder="Judul event" required />
+              </div>
+              <div>
+              <label>Slug (unik)</label>
+              <input name="slug" type="text" placeholder="kajian-tafsir-al-baqarah" required />
+            </div>
+            <div>
+              <label>Kategori</label>
+              <input name="category" type="text" placeholder="Tafsir / Fiqih / dll" />
+            </div>
+            <div>
+              <label>Status</label>
+              <select name="status">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+            </div>
+            <div>
+              <label>Tanggal</label>
+              <input name="schedule" type="text" placeholder="Sabtu, 8 Nov 2025" />
+            </div>
+            <div>
+              <label>Waktu</label>
+              <input name="time" type="text" placeholder="19:00 - 21:00 WIB" />
+            </div>
+            <div>
+              <label>Lokasi</label>
+              <input name="location" type="text" placeholder="Masjid / Aula" />
+            </div>
+            <div>
+              <label>Alamat lengkap</label>
+              <input name="address" type="text" placeholder="Jl. ..." />
+            </div>
+            <div>
+              <label>Pemateri</label>
+              <input name="speaker" type="text" placeholder="Nama ustadz/ustadzah" />
+            </div>
+            <div>
+              <label>Harga (0 untuk gratis)</label>
+              <input name="amount" type="number" min="0" step="1000" value="0" />
+            </div>
+            <div>
+              <label>Kapasitas (opsional)</label>
+              <input name="capacity" type="number" min="0" step="1" />
+            </div>
+            <div>
+              <label>Tagline singkat</label>
+              <input name="tagline" type="text" placeholder="Kalimat singkat promosi" />
+            </div>
+            </div>
+
+            <div class="grid" style="margin-top:12px;">
+              <div>
+                <label>Deskripsi</label>
+                <textarea name="description" placeholder="Deskripsi event"></textarea>
+              </div>
+              <div>
+                <label>Highlight (pisah baris)</label>
+                <textarea name="highlights" placeholder="Poin highlight, satu per baris"></textarea>
+              </div>
+            </div>
+
+            <div class="grid" style="margin-top:12px;">
+              <div>
+                <label>Agenda (format: 08:30 - registrasi)</label>
+                <textarea name="agenda" placeholder="08:30 - Registrasi&#10;09:00 - Sesi 1: ..."></textarea>
+              </div>
+              <div>
+                <label>Catatan (pisah baris)</label>
+                <textarea name="notes" placeholder="Catatan untuk peserta"></textarea>
+              </div>
+              <div>
+                <label>Persiapan (pisah baris)</label>
+                <textarea name="preparation" placeholder="Persiapan peserta"></textarea>
+              </div>
+              <div>
+                <label>Poster URL</label>
+                <input name="imageUrl" type="text" placeholder="Hasil upload Cloudinary" />
+                <div class="flex" style="margin-top:8px;">
+                  <button type="button" id="uploadPosterBtn" class="outline">
+                    <i class="fa-regular fa-image"></i> Upload/Ganti Poster
+                  </button>
+                  <div class="preview hidden" id="posterPreview"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid" style="margin-top:12px;">
+              <div>
+                <label>Kontak WA</label>
+                <input name="contactWa" type="text" placeholder="https://wa.me/62..." />
+              </div>
+              <div>
+                <label>Kontak Telepon</label>
+                <input name="contactPhone" type="text" placeholder="08xx" />
+              </div>
+              <div>
+                <label>Kontak Email</label>
+                <input name="contactEmail" type="email" placeholder="panitia@contoh.com" />
+              </div>
+            </div>
+
+            <div class="flex" style="margin-top:14px;">
+              <button type="submit" id="saveBtn"><i class="fa-regular fa-floppy-disk"></i> Simpan</button>
+              <button type="button" id="resetBtn" class="outline">Reset Form</button>
+              <span id="formStatus" class="muted"></span>
+            </div>
+          </form>
+
+          <div>
+            <div class="preview-card" id="livePreview">
+              <div class="preview-media">
+                <img id="previewImage" src="./images/placeholder.jpg" alt="Poster event">
+                <span class="preview-chip" id="previewCategory">Kategori</span>
+              </div>
+              <div class="preview-body">
+                <h3 class="preview-title" id="previewTitle">Judul Event</h3>
+                <p class="preview-tagline" id="previewTagline">Tagline atau deskripsi singkat.</p>
+                <ul class="preview-meta">
+                  <li><i class="fa-regular fa-calendar-days"></i><span id="previewSchedule">Tanggal & waktu</span></li>
+                  <li><i class="fa-solid fa-location-dot"></i><span id="previewLocation">Lokasi</span></li>
+                  <li><i class="fa-regular fa-user"></i><span id="previewSpeaker">Pemateri</span></li>
+                </ul>
+              </div>
+              <div class="preview-footer">
+                <span class="preview-price" id="previewPrice">Gratis</span>
+                <button class="preview-btn" type="button">Daftar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="flex" style="justify-content: space-between; align-items: center;">
+          <h3 style="margin:0;">Daftar Event</h3>
+          <div class="flex">
+            <button id="newEventBtn" class="outline"><i class="fa-solid fa-plus"></i> Event Baru</button>
+            <button id="refreshBtn" class="outline"><i class="fa-solid fa-rotate"></i> Refresh</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto; margin-top:12px;">
+          <table class="table" id="eventsTable">
+            <thead>
+              <tr>
+                <th>Judul</th>
+                <th>Slug</th>
+                <th>Status</th>
+                <th>Tanggal</th>
+                <th>Lokasi</th>
+                <th>Harga</th>
+                <th>Poster</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://widget.cloudinary.com/v2.0/global/all.js" async></script>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

@@ -53,11 +53,13 @@
     min-height:80px; gap:16px;
   }
   .brand{ display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none }
-  .brand-logo{
-    width:36px; height:36px; display:grid; place-items:center;
-    border-radius:100px; color:#fff;
-    background:linear-gradient(135deg, var(--green-600), var(--green-800));
-  }
+.brand-logo{
+  width:36px; height:36px; display:grid; place-items:center;
+  border-radius:12px; overflow:hidden;
+}
+.brand-logo img{
+  width:100%; height:100%; object-fit:contain;
+}
   .brand-text{ font-weight:600 }
   .nav-links{ display:flex; align-items:center; gap:50px }
   .nav-links a{ color:#334155; text-decoration:none; font-weight:500 }
@@ -97,13 +99,10 @@
     position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:-2;
     filter:grayscale(10%) contrast(1.05);
   }
-  .hero-overlay{
-    position:absolute; inset:0; z-index:-1;
-    background:
-      linear-gradient(180deg, rgba(0,0,0,.25) 0%, rgba(0,0,0,.25) 50%, rgba(0,0,0,.35) 100%),
-      linear-gradient(0deg, rgba(22,163,74,.86), rgba(22,163,74,.86));
-    mix-blend-mode: multiply;
-  }
+.hero-overlay{
+  position:absolute; inset:0; z-index:-1;
+  background: linear-gradient(180deg, rgba(0,0,0,.25) 0%, rgba(0,0,0,.32) 100%);
+}
   .eyebrow{ margin:0 0 8px; opacity:.9; font-weight:500 }
   .hero-title{
     margin:0 auto; font-weight:600; line-height:1.45;

@@ -1,0 +1,402 @@
+.is-hidden {
+  display: none !important;
+}
+
+.event-hero {
+  --hero-image: url('../assets/img/event-1.jpg');
+  position: relative;
+  padding: 140px 0 110px;
+  background-image: var(--hero-image);
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+}
+
+.event-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.75), rgba(17, 24, 39, 0.65));
+}
+
+.event-hero .hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 720px;
+}
+
+.event-hero .hero-title {
+  font-size: clamp(2.5rem, 4vw, 3.4rem);
+  margin: 18px 0 12px;
+}
+
+.event-hero .hero-tagline {
+  font-size: 1.1rem;
+  max-width: 620px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.event-meta {
+  list-style: none;
+  padding: 0;
+  margin: 26px 0 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 32px;
+}
+
+.event-meta li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.event-meta i {
+  font-size: 1.1rem;
+}
+
+.event-detail {
+  padding: 90px 0;
+}
+
+.event-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: flex-start;
+}
+
+.event-summary p {
+  font-size: 1.05rem;
+  line-height: 1.85;
+  color: #4b5563;
+}
+
+.event-block {
+  margin-top: 36px;
+}
+
+.event-block h3 {
+  font-size: 1.35rem;
+  margin-bottom: 14px;
+}
+
+.bullet-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.bullet-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: #4b5563;
+}
+
+.bullet-list li::before {
+  content: '\2022';
+  color: var(--primary, #22c55e);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.agenda-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.agenda-item {
+  display: flex;
+  gap: 16px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 14px;
+}
+
+.agenda-item time {
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 78px;
+}
+
+.agenda-item p {
+  margin: 0;
+  color: #475569;
+}
+
+.event-sidebar {
+  display: grid;
+  gap: 24px;
+}
+
+.booking-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.price-tag {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.price-tag .label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.price-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.info-list {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.info-list div {
+  display: flex;
+  gap: 12px;
+  color: #475569;
+}
+
+.info-list i {
+  color: rgb(34, 197, 94);
+  margin-top: 3px;
+}
+
+.booking-card .btn {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.contact-hint {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.contact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.contact-list li {
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+.contact-list a {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.info-box {
+  background: #f1f5f9;
+  border-radius: 18px;
+  padding: 20px 22px;
+}
+
+.info-box h4 {
+  margin-bottom: 12px;
+  font-size: 1.15rem;
+}
+
+.recommended .cards.compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.empty-state {
+  text-align: center;
+  display: grid;
+  gap: 16px;
+  padding: 80px 0;
+}
+
+.empty-state h2 {
+  font-size: 2rem;
+}
+
+.recommended .mini-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  display: grid;
+  gap: 12px;
+}
+
+.mini-card h4 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.mini-card .meta {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.mini-card .meta i {
+  margin-right: 8px;
+}
+
+.mini-card .btn {
+  justify-self: flex-start;
+}
+
+@media (max-width: 992px) {
+  .event-layout {
+    grid-template-columns: 1fr;
+  }
+  .event-sidebar {
+    order: -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .event-hero {
+    padding: 120px 0 90px;
+  }
+  .event-meta {
+    gap: 14px 20px;
+  }
+  .event-meta li {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .event-hero .hero-title {
+    font-size: 2.2rem;
+  }
+  .event-layout {
+    gap: 32px;
+  }
+  .booking-card {
+    padding: 20px;
+  }
+}
+.payment-form {
+  margin-top: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 16px;
+  padding: 18px;
+  background: #f8fafc;
+}
+
+.payment-form h4 {
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.method-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.method-btn {
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.method-btn.active {
+  background: var(--primary, #22c55e);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.25);
+}
+
+.btn-full {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.form-hint {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.payment-result {
+  margin-top: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  padding: 18px;
+  background: #fff;
+  display: grid;
+  gap: 12px;
+}
+
+.payment-result.hidden {
+  display: none;
+}
+
+.payment-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.payment-info-row strong {
+  font-size: 1.2rem;
+}
+
+.qr-preview {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+}
+
+.qr-preview img {
+  width: 220px;
+  height: 220px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.copy-btn {
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.form-hint.error { color: #dc2626; }
+.form-hint.success { color: #16a34a; }
+
