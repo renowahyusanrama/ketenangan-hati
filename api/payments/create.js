@@ -82,7 +82,8 @@ async function fetchEvent(db, eventId) {
 
 module.exports = async (req, res) => {
   if (req.method === "OPTIONS") {
-    return res.status(200).set(CORS_HEADERS).end();
+    Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+    return res.status(200).end();
   }
   if (req.method !== "POST") {
     return send(res, 405, { error: "Method not allowed" });
