@@ -1,4 +1,4 @@
-// js/event_detail.js (module) - render detail event dari Firestore + fallback pembayaran Midtrans
+// js/event_detail.js (module) - render detail event dari Firestore + pembayaran Tripay sandbox
 
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -136,6 +136,22 @@ function createQrUrl(qrString) {
   return `https://chart.googleapis.com/chart?chs=320x320&cht=qr&chl=${encodeURIComponent(qrString)}`;
 }
 
+function buildInstructionsHtml(instructions) {
+  if (!instructions || !instructions.length) return "";
+  const content = instructions
+    .map((item) => {
+      const steps = (item.steps || []).map((step) => `<li>${step}</li>`).join("");
+      return `
+        <details class="payment-instruction" open>
+          <summary>${item.title || "Panduan pembayaran"}</summary>
+          ${steps ? `<ol>${steps}</ol>` : ""}
+        </details>
+      `;
+    })
+    .join("");
+  return `<div class="payment-instructions">${content}</div>`;
+}
+
 function renderPaymentResult(container, data) {
   if (!container) return;
   if (!data) {
@@ -143,9 +159,14 @@ function renderPaymentResult(container, data) {
     return;
   }
 
+  const checkoutLink = data.checkoutUrl
+    ? `<a class="btn btn-outline" href="${data.checkoutUrl}" target="_blank" rel="noopener">Buka halaman pembayaran</a>`
+    : "";
+  const referenceText = data.reference || data.orderId || "";
+
   if (data.paymentType === "bank_transfer") {
-    const bank = (data.bank || "bca").toUpperCase();
-    const va = data.vaNumber || "-";
+    const bank = (data.bank || data.paymentName || "VA").toString().toUpperCase();
+    const va = data.vaNumber || data.payCode || data.pay_code || "-";
     container.innerHTML = `
       <div class="payment-info-row">
         <div>
@@ -165,16 +186,21 @@ function renderPaymentResult(container, data) {
         <button class="copy-btn" data-copy="${va}">Salin</button>
       </div>
       <p class="form-hint">Transfer tepat sesuai nominal. Tagihan akan diverifikasi otomatis setelah pembayaran berhasil.</p>
-      ${data.pdfUrl ? `<a class="btn btn-outline" href="${data.pdfUrl}" target="_blank" rel="noopener">Panduan Transfer</a>` : ""}
+      ${checkoutLink}
+      ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
+      ${buildInstructionsHtml(data.instructions)}
     `;
   } else {
-    const qrUrl = createQrUrl(data.qrString) || data.qrUrl || "";
+    const qrUrl = data.qrUrl || createQrUrl(data.qrString) || "";
     container.innerHTML = `
       <div class="qr-preview">
         ${qrUrl ? `<img src="${qrUrl}" alt="QRIS">` : ""}
         <strong>${formatCurrency(data.amount)}</strong>
         <p>Pindai QRIS menggunakan mobile banking / e-wallet.</p>
       </div>
+      ${checkoutLink}
+      ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
+      ${buildInstructionsHtml(data.instructions)}
     `;
   }
 

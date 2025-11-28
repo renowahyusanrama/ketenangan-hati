@@ -391,6 +391,25 @@
   border: 1px solid rgba(148, 163, 184, 0.4);
 }
 
+.payment-instructions {
+  border-top: 1px dashed rgba(148, 163, 184, 0.4);
+  padding-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.payment-instruction summary {
+  font-weight: 600;
+  cursor: pointer;
+  color: #0f172a;
+}
+
+.payment-instruction ol {
+  margin: 8px 0 0 18px;
+  color: #475569;
+  line-height: 1.5;
+}
+
 .copy-btn {
   border: 1px solid rgba(15, 23, 42, 0.2);
   background: transparent;

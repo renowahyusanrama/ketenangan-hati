@@ -8,14 +8,17 @@ const crypto = require("crypto");
 admin.initializeApp();
 const db = admin.firestore();
 
-const MIDTRANS_SERVER_KEY = functions.config().midtrans?.server_key;
-const MIDTRANS_CLIENT_KEY = functions.config().midtrans?.client_key || "";
-const MIDTRANS_BASE_URL = "https://api.sandbox.midtrans.com";
+const TRIPAY_API_KEY = functions.config().trippay?.api_key || "";
+const TRIPAY_PRIVATE_KEY = functions.config().trippay?.private_key || "";
+const TRIPAY_MERCHANT_CODE = functions.config().trippay?.merchant_code || "";
+const TRIPAY_MODE = functions.config().trippay?.mode || "sandbox";
+const TRIPAY_BASE_URL =
+  TRIPAY_MODE === "production" ? "https://tripay.co.id/api" : "https://tripay.co.id/api-sandbox";
 
-if (!MIDTRANS_SERVER_KEY) {
-  console.warn("Midtrans server key belum di-set. Jalankan:");
+if (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) {
+  console.warn("Tripay credential belum lengkap. Jalankan:");
   console.warn(
-    'firebase functions:config:set midtrans.server_key="<SERVER_KEY>" midtrans.client_key="<CLIENT_KEY>"',
+    'firebase functions:config:set trippay.api_key="<API_KEY>" trippay.private_key="<PRIVATE_KEY>" trippay.merchant_code="<MERCHANT_CODE>" [trippay.mode="production|sandbox"] [trippay.callback_url="https://.../api/payments/webhook"] [trippay.return_url="https://..."]',
   );
 }
 
@@ -51,29 +54,113 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-function basicAuthHeader() {
-  const auth = Buffer.from(`${MIDTRANS_SERVER_KEY}:`).toString("base64");
-  return `Basic ${auth}`;
+const projectId = process.env.GCLOUD_PROJECT || "pengajian-online";
+const defaultCallbackUrl = `https://us-central1-${projectId}.cloudfunctions.net/api/payments/webhook`;
+const callbackUrl = functions.config().trippay?.callback_url || defaultCallbackUrl;
+const returnUrl = functions.config().trippay?.return_url || "";
+
+function createTripaySignature(merchantRef, amount) {
+  if (!TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) return "";
+  return crypto
+    .createHmac("sha256", TRIPAY_PRIVATE_KEY)
+    .update(`${TRIPAY_MERCHANT_CODE}${merchantRef}${Number(amount)}`)
+    .digest("hex");
 }
 
-async function chargeMidtrans(payload) {
-  const { data } = await axios.post(`${MIDTRANS_BASE_URL}/v2/charge`, payload, {
+function resolveTripayMethod(paymentType, bank) {
+  if (paymentType === "qris") return "QRIS";
+  const normalized = (bank || "bca").toLowerCase();
+  const map = {
+    bca: "BCAVA",
+    bni: "BNIVA",
+    bri: "BRIVA",
+    mandiri: "MANDIRIVA",
+    permata: "PERMATAVA",
+  };
+  return map[normalized] || "BCAVA";
+}
+
+async function createTripayTransaction(payload) {
+  const { data } = await axios.post(`${TRIPAY_BASE_URL}/transaction/create`, payload, {
     headers: {
       "Content-Type": "application/json",
-      Authorization: basicAuthHeader(),
+      Authorization: `Bearer ${TRIPAY_API_KEY}`,
     },
   });
   return data;
 }
 
+function normalizeTripayResponse(
+  trx,
+  { eventId, eventTitle, paymentType, bank, method, merchantRef, amount },
+) {
+  const payCode = trx?.pay_code || trx?.va_number || trx?.payment_code || null;
+  return {
+    provider: "tripay",
+    orderId: merchantRef,
+    reference: trx?.reference || trx?.reference_id,
+    eventId,
+    eventTitle,
+    amount,
+    paymentType,
+    bank: bank || null,
+    method,
+    paymentName: trx?.payment_name || trx?.payment_method || method,
+    vaNumber: paymentType === "bank_transfer" ? payCode : null,
+    payCode,
+    checkoutUrl: trx?.checkout_url || trx?.pay_url,
+    qrUrl: trx?.qr_url || "",
+    qrString: trx?.qr_string || "",
+    instructions: trx?.instructions || [],
+    expiresAt: trx?.expired_time
+      ? new Date(Number(trx.expired_time) * 1000).toISOString()
+      : null,
+    status: trx?.status || "UNPAID",
+  };
+}
+
+function verifyTripayCallback(body = {}) {
+  if (!TRIPAY_PRIVATE_KEY) return false;
+  const signature = body.signature || body.sign;
+  if (!signature) return false;
+  const merchantRef = body.merchant_ref || body.merchantRef || body.reference;
+  const amount = body.total_amount ?? body.amount ?? body.amount_total;
+  const status = body.status || "";
+  const basePayload = `${merchantRef}${TRIPAY_MERCHANT_CODE}${amount}${status}`;
+  const altPayload = `${TRIPAY_MERCHANT_CODE}${merchantRef}${amount}`;
+  const expected = crypto.createHmac("sha256", TRIPAY_PRIVATE_KEY).update(basePayload).digest("hex");
+  const altExpected = crypto.createHmac("sha256", TRIPAY_PRIVATE_KEY).update(altPayload).digest("hex");
+  return signature === expected || signature === altExpected;
+}
+
+function mapStatus(status = "") {
+  const normalized = status.toUpperCase();
+  const statusMap = {
+    PAID: "paid",
+    PENDING: "pending",
+    UNPAID: "pending",
+    EXPIRED: "expired",
+    FAILED: "failed",
+    REFUND: "refunded",
+    CANCEL: "canceled",
+    CANCELED: "canceled",
+  };
+  return statusMap[normalized] || normalized.toLowerCase() || "pending";
+}
+
 app.get("/ping", (_req, res) => {
-  res.json({ status: "ok", clientKey: MIDTRANS_CLIENT_KEY ? "set" : "missing" });
+  res.json({
+    status: "ok",
+    provider: "tripay",
+    mode: TRIPAY_MODE,
+    config: TRIPAY_API_KEY && TRIPAY_PRIVATE_KEY && TRIPAY_MERCHANT_CODE ? "ready" : "missing",
+  });
 });
 
 app.post("/payments/create", async (req, res) => {
   try {
-    if (!MIDTRANS_SERVER_KEY) {
-      return res.status(500).json({ error: "Midtrans belum dikonfigurasi." });
+    if (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) {
+      return res.status(500).json({ error: "Tripay belum dikonfigurasi." });
     }
 
     const { eventId, paymentType, bank, customer } = req.body || {};
@@ -82,88 +169,83 @@ app.post("/payments/create", async (req, res) => {
     if (!event) {
       return res.status(400).json({ error: "Event tidak dikenal." });
     }
+    if (!event.amount || Number(event.amount) <= 0) {
+      return res.status(400).json({ error: "Event ini gratis, tidak perlu pembayaran." });
+    }
     if (!["bank_transfer", "qris"].includes(paymentType)) {
       return res
         .status(400)
         .json({ error: "paymentType harus bank_transfer atau qris." });
     }
 
-    const orderId = `${eventId}-${Date.now()}`;
+    const method = resolveTripayMethod(paymentType, bank);
+    const merchantRef = `${eventId}-${Date.now()}`;
 
     const payload = {
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: event.amount,
-      },
-      customer_details: {
-        first_name: customer?.name || "Peserta",
+      method,
+      merchant_ref: merchantRef,
+      amount: Number(event.amount),
+      customer_name: customer?.name || "Peserta",
+      customer_email: customer?.email || "peserta@example.com",
+      customer_phone: customer?.phone || "",
+      order_items: [
+        {
+          sku: eventId,
+          name: event.title,
+          price: Number(event.amount),
+          quantity: 1,
+          subtotal: Number(event.amount),
+        },
+      ],
+      signature: createTripaySignature(merchantRef, event.amount),
+      expired_time: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+    };
+
+    if (callbackUrl) payload.callback_url = callbackUrl;
+    if (returnUrl) payload.return_url = returnUrl;
+
+    const tripayResponse = await createTripayTransaction(payload);
+    if (tripayResponse?.success === false) {
+      return res
+        .status(400)
+        .json({ error: tripayResponse.message || "Gagal membuat pembayaran." });
+    }
+
+    const tripayData = tripayResponse?.data || tripayResponse;
+
+    const normalized = normalizeTripayResponse(tripayData, {
+      eventId,
+      eventTitle: event.title,
+      paymentType,
+      bank,
+      method,
+      merchantRef,
+      amount: Number(event.amount),
+    });
+
+    await db.collection("orders").doc(merchantRef).set({
+      provider: "tripay",
+      eventId,
+      eventTitle: event.title,
+      amount: Number(event.amount),
+      paymentType,
+      bank: bank || null,
+      method,
+      merchantRef,
+      reference: normalized.reference,
+      customer: {
+        name: customer?.name || "Peserta",
         email: customer?.email || "peserta@example.com",
         phone: customer?.phone || "",
       },
-      item_details: [
-        {
-          id: eventId,
-          price: event.amount,
-          quantity: 1,
-          name: event.title,
-        },
-      ],
-    };
-
-    if (paymentType === "bank_transfer") {
-      payload.payment_type = "bank_transfer";
-      payload.bank_transfer = { bank: (bank || "bca").toLowerCase() };
-    } else {
-      payload.payment_type = "qris";
-    }
-
-    const chargeResponse = await chargeMidtrans(payload);
-
-    await db.collection("orders").doc(orderId).set({
-      eventId,
-      eventTitle: event.title,
-      amount: event.amount,
-      paymentType,
-      bank: bank || null,
-      customer: payload.customer_details,
-      midtrans: chargeResponse,
-      status: "pending",
+      tripay: tripayResponse,
+      status: mapStatus(tripayData?.status || tripayResponse?.status),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    const responsePayload = {
-      orderId,
-      eventId,
-      eventTitle: event.title,
-      amount: event.amount,
-      paymentType,
-      midtrans: chargeResponse,
-    };
-
-    if (paymentType === "bank_transfer") {
-      const vaInfo = (chargeResponse && chargeResponse.va_numbers && chargeResponse.va_numbers[0]) || {};
-      responsePayload.bank = vaInfo.bank || bank || "bca";
-      responsePayload.vaNumber =
-        vaInfo.va_number || chargeResponse.permata_va_number || null;
-      responsePayload.pdfUrl =
-        chargeResponse.pdf_url ||
-        (Array.isArray(chargeResponse.actions)
-          ? chargeResponse.actions.find((a) => a.name === "pdf")?.url
-          : undefined);
-    } else {
-      responsePayload.qrString = chargeResponse.qr_string || "";
-      responsePayload.qrUrl =
-        chargeResponse.qr_url ||
-        (Array.isArray(chargeResponse.actions)
-          ? chargeResponse.actions.find((a) => a.name === "qr_code")?.url
-          : undefined);
-    }
-
-    res.json(responsePayload);
+    res.json(normalized);
   } catch (error) {
-    // Log detail error midtrans jika ada
-    // eslint-disable-next-line no-console
-    console.error("Midtrans charge error:", error.response?.data || error.message);
+    console.error("Tripay charge error:", error.response?.data || error.message);
     res.status(500).json({
       error: "Gagal membuat pembayaran.",
       details: error.response?.data || error.message,
@@ -173,42 +255,25 @@ app.post("/payments/create", async (req, res) => {
 
 app.post("/payments/webhook", async (req, res) => {
   try {
-    const {
-      order_id: orderId,
-      status_code: statusCode,
-      gross_amount: grossAmount,
-      signature_key: signatureKey,
-      transaction_status: transactionStatus,
-      fraud_status: fraudStatus,
-    } = req.body || {};
+    const payload = req.body || {};
+    const merchantRef = payload.merchant_ref || payload.merchantRef || payload.reference;
+    if (!merchantRef) {
+      return res.status(400).json({ error: "merchant_ref tidak ditemukan." });
+    }
 
-    const expectedSignature = crypto
-      .createHash("sha512")
-      .update(`${orderId}${statusCode}${grossAmount}${MIDTRANS_SERVER_KEY}`)
-      .digest("hex");
-
-    if (signatureKey !== expectedSignature) {
-      // eslint-disable-next-line no-console
-      console.warn("Signature Midtrans tidak valid untuk order", orderId);
+    if (!verifyTripayCallback(payload)) {
+      console.warn("Signature Tripay tidak valid untuk order", merchantRef);
       return res.status(403).send("Invalid signature");
     }
 
-    const statusMap = {
-      capture: fraudStatus === "challenge" ? "challenge" : "paid",
-      settlement: "paid",
-      pending: "pending",
-      deny: "deny",
-      expire: "expired",
-      cancel: "canceled",
-    };
-
     await db
       .collection("orders")
-      .doc(orderId)
+      .doc(merchantRef)
       .set(
         {
-          status: statusMap[transactionStatus] || transactionStatus,
-          midtrans: req.body,
+          status: mapStatus(payload.status),
+          tripay: payload,
+          reference: payload.reference || payload.reference_id || null,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true },
@@ -216,7 +281,6 @@ app.post("/payments/webhook", async (req, res) => {
 
     res.json({ received: true });
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error("Webhook error:", error.message);
     res.status(500).send("Webhook error");
   }
