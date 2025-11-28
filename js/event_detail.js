@@ -27,7 +27,8 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const DEFAULT_FUNCTION_BASE = "https://us-central1-pengajian-online.cloudfunctions.net/api";
+const PROD_FUNCTION_BASE = "https://ketenangan-jiwa.vercel.app/api";
+const DEFAULT_FUNCTION_BASE = "https://us-central1-pengajian-online.cloudfunctions.net/api"; // fallback lama
 const LOCAL_FUNCTION_BASE = "http://localhost:5001/pengajian-online/us-central1/api";
 const shouldUseRelativeApi =
   typeof window !== "undefined" &&
@@ -42,7 +43,7 @@ const API_BASE =
       ? window.location.hostname === "localhost"
         ? LOCAL_FUNCTION_BASE
         : "/api"
-      : DEFAULT_FUNCTION_BASE;
+      : PROD_FUNCTION_BASE;
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("id-ID", {
