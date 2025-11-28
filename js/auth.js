@@ -24,6 +24,8 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 auth.languageCode = 'id';
 await setPersistence(auth, browserLocalPersistence).catch(console.error);
+const authGate = document.getElementById('auth-gate');
+const bodyEl = document.body;
 
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
@@ -37,6 +39,11 @@ let isAdmin = false;
 // ——— Modal helpers
 function closeModal(){
   if(!modal) return;
+  if(!auth.currentUser){
+    modal.classList.add('open'); // tetap buka
+    document.body.style.overflow = 'hidden';
+    return;
+  }
   modal.classList.remove('open');
   document.body.style.overflow = '';
 }
@@ -106,6 +113,15 @@ function injectChipStyles(){
   document.head.appendChild(style);
 }
 
+function showAuthGate(){
+  bodyEl.classList.add('auth-locked');
+  document.body.style.overflow = 'hidden';
+}
+function hideAuthGate(){
+  bodyEl.classList.remove('auth-locked');
+  document.body.style.overflow = '';
+}
+
 async function refreshAdminFlag(user){
   if(!user){ isAdmin = false; return; }
   try{
@@ -120,6 +136,7 @@ async function refreshAdminFlag(user){
 async function renderAfterAuth(user){
   await refreshAdminFlag(user);
   renderUserChip(user);
+  hideAuthGate();
 }
 
 // ——— GOOGLE LOGIN (popup + fallback redirect)
@@ -217,14 +234,22 @@ function mapAuthError(code){
 
 // ——— Observer state
 onAuthStateChanged(auth, (user)=>{
-  if(user) renderAfterAuth(user);
-  else {
+  if(user) {
+    renderAfterAuth(user);
+  } else {
     isAdmin = false;
     renderLoginButton();
+    showAuthGate();
+    modal?.classList.add('open'); // paksa modal tampil
+    document.body.style.overflow = 'hidden';
   }
 });
 
 // Render awal
 renderLoginButton();
+// Paksa tampilkan modal & kunci konten sampai login
+showAuthGate();
+modal?.classList.add('open');
+document.body.style.overflow = 'hidden';
 
 

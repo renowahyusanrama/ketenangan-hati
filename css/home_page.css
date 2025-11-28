@@ -396,8 +396,19 @@ img{ max-width:100%; display:block }
     box-shadow:0 12px 28px rgba(0,0,0,.3);
 }
 .fs-btn.wa{ background:#25D366 }
-.fs-btn.ig{ background: radial-gradient(circle at 30% 110%, #feda75, #d62976 40%, #962fbf 60%, #4f5bd5) }
-.fs-btn.tk{ background:#000 }
+  .fs-btn.ig{ background: radial-gradient(circle at 30% 110%, #feda75, #d62976 40%, #962fbf 60%, #4f5bd5) }
+  .fs-btn.tk{ background:#000 }
+
+  /* ===== Auth Gate Overlay ===== */
+  /* Gate disembunyikan; login dipaksa via modal saja */
+  .auth-gate{ display:none }
+
+  /* Kunci konten ketika belum login */
+  body.auth-locked > *:not(#auth-gate):not(#loginModal){
+    filter: blur(4px);
+    pointer-events:none;
+    user-select:none;
+  }
 
 /* ===== Animations (scroll in) ===== */
 [data-animate]{ 

@@ -14,7 +14,18 @@
   <link rel="stylesheet" href="css/home_page.css" />
   <link rel="stylesheet" href="css/event_detail.css" />
 </head>
-<body>
+<body class="auth-locked">
+  <!-- Gate: wajib login sebelum akses konten -->
+  <div id="auth-gate" class="auth-gate">
+    <div class="gate-card">
+      <div class="gate-logo">
+        <img src="images/logo.png" alt="ketenangan jiwa" />
+      </div>
+      <h2>Masuk untuk melanjutkan</h2>
+      <p>Silakan login terlebih dahulu untuk mengakses halaman ketenangan jiwa.</p>
+      <button class="btn gate-login-btn" type="button">Login</button>
+    </div>
+  </div>
   <header class="site-header">
     <div class="container nav">
       <a class="brand" href="index.html#beranda">

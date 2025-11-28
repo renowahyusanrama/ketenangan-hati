@@ -16,7 +16,18 @@
 
   <link rel="stylesheet" href="css/home_page.css" />
 </head>
-<body>
+<body class="auth-locked">
+  <!-- Gate: wajib login sebelum akses konten -->
+  <div id="auth-gate" class="auth-gate">
+    <div class="gate-card">
+      <div class="gate-logo">
+        <img src="images/logo.png" alt="ketenangan jiwa" />
+      </div>
+      <h2>Masuk untuk melanjutkan</h2>
+      <p>Silakan login terlebih dahulu untuk mengakses halaman ketenangan jiwa.</p>
+      <button class="btn gate-login-btn" type="button">Login</button>
+    </div>
+  </div>
 
   <!-- ================= NAVBAR ================= -->
   <header class="site-header">
@@ -276,16 +287,13 @@
 
   <!-- ================= LOGIN MODAL (PERBAIKAN: dipindah ke dalam <body>) ================= -->
   <div id="loginModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="modal-overlay" data-close="true"></div>
+    <div class="modal-overlay"></div>
 
     <div class="modal-dialog" role="document" aria-labelledby="loginTitle">
-      <button class="modal-close" aria-label="Tutup" data-close="true">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
 
       <div class="modal-header">
         <div class="modal-logo">
-          <i class="fa-solid fa-moon"></i>
+          <img src="images/logo.png" alt="ketenangan jiwa" />
         </div>
         <h3 id="loginTitle">Selamat Datang</h3>
         <p class="modal-sub">Login untuk mengikuti kajian dan event Islamic</p>

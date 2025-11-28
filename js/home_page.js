@@ -65,8 +65,8 @@ function openModal(){
   setTimeout(()=> modal.querySelector('input[name="email"]')?.focus(), 80);
 }
 function closeModal(){
-  modal?.classList.remove('open');
-  document.body.style.overflow = '';
+    // nonaktifkan tombol close/escape: modal hanya ditutup setelah login via auth.js
+    return;
 }
 
 // tombol Login di navbar akan dirender oleh auth.js.
@@ -78,11 +78,7 @@ document.addEventListener('click', (e)=>{
   openModal();
 });
 
-closes?.forEach(el => el.addEventListener('click', closeModal));
-modal?.addEventListener('click', (e)=>{
-  if(e.target?.dataset?.close === 'true') closeModal();
-});
-window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && modal?.classList.contains('open')) closeModal(); });
+  // hilangkan kemampuan close via click / escape
 
 // JANGAN ADA handler submit demo di sini.
 // Form akan ditangani oleh js/auth.js (Firebase).
