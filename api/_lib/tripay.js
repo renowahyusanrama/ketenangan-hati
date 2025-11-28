@@ -71,9 +71,13 @@ function normalizeTripayResponse(
   };
 }
 
-function verifyTripayCallback(body = {}) {
+function verifyTripayCallback(body = {}, headers = {}) {
   if (!TRIPAY_PRIVATE_KEY) return false;
-  const signature = body.signature || body.sign;
+  const headerSig =
+    headers["x-callback-signature"] ||
+    headers["X-CALLBACK-SIGNATURE"] ||
+    headers["x-callback-signature".toLowerCase()];
+  const signature = body.signature || body.sign || headerSig;
   if (!signature) return false;
   const merchantRef = body.merchant_ref || body.merchantRef || body.reference;
   const amount = body.total_amount ?? body.amount ?? body.amount_total;

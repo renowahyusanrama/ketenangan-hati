@@ -1,5 +1,6 @@
 const { admin, getDb } = require("../_lib/admin");
 const { verifyTripayCallback, mapStatus } = require("../_lib/tripay");
+const { sendTicketEmail } = require("../_lib/email");
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -39,25 +40,53 @@ module.exports = async (req, res) => {
     return send(res, 400, { error: "merchant_ref tidak ditemukan." });
   }
 
-  if (!verifyTripayCallback(payload)) {
+  if (!verifyTripayCallback(payload, req.headers)) {
     console.warn("Signature Tripay tidak valid untuk order", merchantRef);
     return send(res, 403, { error: "Invalid signature" });
   }
 
   try {
     const db = getDb();
-    await db
-      .collection("orders")
-      .doc(merchantRef)
-      .set(
-        {
-          status: mapStatus(payload.status),
-          tripay: payload,
-          reference: payload.reference || payload.reference_id || null,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
+    const docRef = db.collection("orders").doc(merchantRef);
+    const snap = await docRef.get();
+    const previous = snap.exists ? snap.data() : null;
+
+    const newStatus = mapStatus(payload.status);
+    await docRef.set(
+      {
+        status: newStatus,
+        tripay: payload,
+        reference: payload.reference || payload.reference_id || null,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    const wasPaid = previous && previous.status === "paid";
+    const nowPaid = newStatus === "paid";
+
+    if (!wasPaid && nowPaid && previous) {
+      // Ambil kode bayar dari payload sebagai backup
+      const payCode =
+        payload.pay_code ||
+        payload.payment_code ||
+        payload.va_number ||
+        (Array.isArray(payload.va_numbers) && payload.va_numbers[0]?.va_number) ||
+        previous.vaNumber ||
+        previous.payCode;
+
+      const orderForEmail = {
+        ...previous,
+        status: newStatus,
+        reference: payload.reference || previous.reference,
+        payCode,
+        vaNumber: payCode,
+      };
+
+      sendTicketEmail(orderForEmail).catch((err) => {
+        console.error("Email send error (webhook):", err?.message || err);
+      });
+    }
 
     return send(res, 200, { received: true });
   } catch (error) {

@@ -7,7 +7,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="css/admin_preview.css" />
   <link rel="icon" type="image/png" href="images/logo.png" />
@@ -20,19 +20,27 @@
       --text: #e6edf5;
       --muted: #9cb1c7;
       --primary: #3b82f6;
+      --primary-dark: #2563eb;
       --danger: #ef4444;
+      --danger-dark: #dc2626;
       --success: #22c55e;
+      --success-dark: #16a34a;
       --card: #111c2f;
+      --highlight: rgba(59,130,246,0.1);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
     }
-    * { box-sizing: border-box; }
-    body {
+    * { 
+      box-sizing: border-box;
       margin: 0;
+      padding: 0;
+    }
+    body {
       font-family: 'Poppins', system-ui, -apple-system, sans-serif;
-      background: radial-gradient(80% 80% at 20% 20%, rgba(59,130,246,0.12), transparent 60%),
-                  radial-gradient(60% 60% at 80% 0%, rgba(34,197,94,0.12), transparent 70%),
-                  var(--bg);
+      background: linear-gradient(135deg, #0b1624 0%, #0f192b 100%);
       color: var(--text);
       min-height: 100vh;
+      line-height: 1.6;
     }
     header {
       display: flex;
@@ -40,100 +48,394 @@
       justify-content: space-between;
       padding: 16px 24px;
       border-bottom: 1px solid var(--border);
-      background: rgba(9, 14, 25, 0.8);
-      backdrop-filter: blur(8px);
+      background: rgba(9, 14, 25, 0.9);
+      backdrop-filter: blur(10px);
       position: sticky;
       top: 0;
-      z-index: 20;
+      z-index: 100;
+      box-shadow: var(--shadow);
     }
     .brand {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       font-weight: 700;
+      font-size: 1.2rem;
       letter-spacing: 0.5px;
       color: var(--text);
       text-decoration: none;
+      transition: opacity 0.2s;
     }
-    .brand img { width: 36px; height: 36px; object-fit: contain; border-radius: 8px; }
+    .brand:hover {
+      opacity: 0.8;
+    }
+    .brand img { 
+      width: 40px; 
+      height: 40px; 
+      object-fit: contain; 
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
     .container {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 24px;
     }
     .panel {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px 20px;
-      margin-bottom: 18px;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-lg);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    h1, h2, h3 { margin: 0 0 12px; }
-    .muted { color: var(--muted); }
-    .flex { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .panel:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    }
+    h1, h2, h3 { 
+      margin: 0 0 16px; 
+      font-weight: 600;
+    }
+    h1 { font-size: 1.8rem; }
+    h2 { font-size: 1.5rem; }
+    h3 { font-size: 1.2rem; }
+    .muted { 
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .flex { 
+      display: flex; 
+      gap: 12px; 
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
     button, input, select, textarea {
-      font: inherit;
+      font-family: inherit;
       border-radius: 10px;
       border: 1px solid var(--border);
-      background: #0c1525;
+      background: rgba(12, 21, 37, 0.7);
       color: var(--text);
-      padding: 10px 12px;
+      padding: 12px 16px;
+      transition: all 0.2s;
     }
     button {
       cursor: pointer;
       border: none;
       background: var(--primary);
-      color: #0b1624;
-      font-weight: 700;
-      transition: transform 0.1s ease, box-shadow 0.1s ease;
-      box-shadow: 0 10px 22px rgba(59,130,246,0.22);
+      color: white;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      box-shadow: var(--shadow);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
-    button:hover { transform: translateY(-1px); }
-    button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .danger { background: var(--danger); color: #fff; box-shadow: 0 10px 22px rgba(239,68,68,0.22); }
-    .outline { background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+    button:hover { 
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    button:disabled { 
+      opacity: 0.5; 
+      cursor: not-allowed; 
+      transform: none; 
+    }
+    .danger { 
+      background: var(--danger); 
+      color: #fff; 
+      box-shadow: var(--shadow);
+    }
+    .danger:hover {
+      background: var(--danger-dark);
+    }
+    .outline { 
+      background: transparent; 
+      color: var(--text); 
+      border: 1px solid var(--border); 
+      box-shadow: none;
+    }
+    .outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
     form .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
     }
-    label { display: block; font-weight: 600; margin-bottom: 6px; }
-    textarea { min-height: 100px; resize: vertical; }
+    label { 
+      display: block; 
+      font-weight: 600; 
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    input, select, textarea {
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    textarea { 
+      min-height: 100px; 
+      resize: vertical;
+    }
     .table {
       width: 100%;
       border-collapse: collapse;
       font-size: 14px;
+      margin-top: 16px;
     }
     .table th, .table td {
-      padding: 10px;
+      padding: 12px;
       border-bottom: 1px solid var(--border);
       text-align: left;
-      vertical-align: top;
+      vertical-align: middle;
     }
-    .badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
-    .badge.green { background: rgba(34,197,94,0.15); color: #4ade80; }
-    .badge.gray { background: rgba(148,163,184,0.15); color: #cbd5e1; }
-    .status-text { font-size: 14px; }
+    .table th {
+      background: rgba(31, 43, 62, 0.5);
+      font-weight: 600;
+      color: var(--text);
+    }
+    .table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .badge { 
+      padding: 4px 10px; 
+      border-radius: 999px; 
+      font-size: 12px; 
+      font-weight: 600;
+      display: inline-block;
+    }
+    .badge.green { 
+      background: rgba(34,197,94,0.2); 
+      color: #4ade80; 
+    }
+    .badge.gray { 
+      background: rgba(148,163,184,0.2); 
+      color: #cbd5e1; 
+    }
+    .badge.blue {
+      background: rgba(59,130,246,0.2);
+      color: #60a5fa;
+    }
+    .status-text { 
+      font-size: 14px; 
+    }
     .pill {
-      padding: 6px 10px;
+      padding: 8px 16px;
       border-radius: 999px;
       background: rgba(255,255,255,0.06);
       border: 1px solid var(--border);
+      font-size: 0.9rem;
     }
     .preview {
       width: 100%;
-      max-width: 240px;
-      border-radius: 12px;
+      max-width: 320px;
+      border-radius: 16px;
       border: 1px solid var(--border);
       overflow: hidden;
-      background: #0c1525;
+      background: var(--card);
+      box-shadow: var(--shadow-lg);
     }
-    .preview img { display: block; width: 100%; height: auto; }
-    .hidden { display: none !important; }
+    .preview img { 
+      display: block; 
+      width: 100%; 
+      height: auto; 
+    }
+    .hidden { 
+      display: none !important; 
+    }
+    
+    /* Custom styles for admin layout */
+    .admin-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
+    }
+    
+    /* Preview Card Styles */
+    .preview-card {
+      background: var(--card);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      position: sticky;
+      top: 100px;
+    }
+    .preview-media {
+      position: relative;
+      height: 200px;
+      overflow: hidden;
+    }
+    .preview-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .preview-chip {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .preview-body {
+      padding: 20px;
+    }
+    .preview-title {
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .preview-tagline {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+    .preview-meta {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .preview-meta li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    .preview-meta i {
+      width: 16px;
+      color: var(--primary);
+    }
+    .preview-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .preview-price {
+      font-weight: 600;
+      color: var(--success);
+    }
+    .preview-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .preview-btn:hover {
+      background: var(--primary-dark);
+    }
+    
+    /* Form Actions */
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    
+    /* Table Actions */
+    .table-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    
+    /* Status Indicators */
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-dot.green {
+      background: var(--success);
+    }
+    .status-dot.gray {
+      background: var(--muted);
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .admin-layout {
+        grid-template-columns: 1fr;
+      }
+      .preview-card {
+        position: static;
+        margin-top: 24px;
+      }
+    }
+    
     @media (max-width: 720px) {
-      header { flex-direction: column; align-items: flex-start; gap: 10px; }
-      .container { padding: 16px; }
+      header { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 12px; 
+      }
+      .container { 
+        padding: 16px; 
+      }
+      .form .grid {
+        grid-template-columns: 1fr;
+      }
+      .table {
+        font-size: 12px;
+      }
+      .table th, .table td {
+        padding: 8px;
+      }
+      .btn-icon {
+        width: 28px;
+        height: 28px;
+      }
     }
   </style>
 </head>
@@ -158,12 +460,12 @@
 
     <div id="dashboard" class="hidden">
       <div class="panel">
-        <div class="flex" style="justify-content: space-between; align-items: center;">
+        <div class="flex-between">
           <div>
-            <h2 style="margin-bottom:4px;">Kelola Event</h2>
-            <p class="muted" style="margin:0;">Tambah/edit event, upload poster Cloudinary, lalu simpan ke Firestore.</p>
+            <h2>Kelola Event</h2>
+            <p class="muted">Tambah/edit event, upload poster Cloudinary, lalu simpan ke Firestore.</p>
           </div>
-          <div class="pill status-text">
+          <div class="status-text">
             <span id="adminStatus" class="badge gray">checking</span>
           </div>
         </div>
@@ -226,7 +528,7 @@
             </div>
             </div>
 
-            <div class="grid" style="margin-top:12px;">
+            <div class="grid" style="margin-top:20px;">
               <div>
                 <label>Deskripsi</label>
                 <textarea name="description" placeholder="Deskripsi event"></textarea>
@@ -237,7 +539,7 @@
               </div>
             </div>
 
-            <div class="grid" style="margin-top:12px;">
+            <div class="grid" style="margin-top:20px;">
               <div>
                 <label>Agenda (format: 08:30 - registrasi)</label>
                 <textarea name="agenda" placeholder="08:30 - Registrasi&#10;09:00 - Sesi 1: ..."></textarea>
@@ -253,7 +555,7 @@
               <div>
                 <label>Poster URL</label>
                 <input name="imageUrl" type="text" placeholder="Hasil upload Cloudinary" />
-                <div class="flex" style="margin-top:8px;">
+                <div class="flex" style="margin-top:12px;">
                   <button type="button" id="uploadPosterBtn" class="outline">
                     <i class="fa-regular fa-image"></i> Upload/Ganti Poster
                   </button>
@@ -262,7 +564,7 @@
               </div>
             </div>
 
-            <div class="grid" style="margin-top:12px;">
+            <div class="grid" style="margin-top:20px;">
               <div>
                 <label>Kontak WA</label>
                 <input name="contactWa" type="text" placeholder="https://wa.me/62..." />
@@ -277,7 +579,7 @@
               </div>
             </div>
 
-            <div class="flex" style="margin-top:14px;">
+            <div class="form-actions">
               <button type="submit" id="saveBtn"><i class="fa-regular fa-floppy-disk"></i> Simpan</button>
               <button type="button" id="resetBtn" class="outline">Reset Form</button>
               <span id="formStatus" class="muted"></span>
@@ -309,14 +611,14 @@
       </div>
 
       <div class="panel">
-        <div class="flex" style="justify-content: space-between; align-items: center;">
-          <h3 style="margin:0;">Daftar Event</h3>
+        <div class="flex-between">
+          <h3>Daftar Event</h3>
           <div class="flex">
             <button id="newEventBtn" class="outline"><i class="fa-solid fa-plus"></i> Event Baru</button>
             <button id="refreshBtn" class="outline"><i class="fa-solid fa-rotate"></i> Refresh</button>
           </div>
         </div>
-        <div style="overflow-x:auto; margin-top:12px;">
+        <div style="overflow-x:auto;">
           <table class="table" id="eventsTable">
             <thead>
               <tr>

@@ -12,6 +12,7 @@ const {
   normalizeTripayResponse,
   mapStatus,
 } = require("../_lib/tripay");
+const { sendTicketEmail } = require("../_lib/email");
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
