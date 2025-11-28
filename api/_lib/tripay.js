@@ -80,7 +80,12 @@ function verifyTripayCallback(body = {}, headers = {}) {
   const signature = body.signature || body.sign || headerSig;
   if (!signature) return false;
   const merchantRef = body.merchant_ref || body.merchantRef || body.reference;
-  const amount = body.total_amount ?? body.amount ?? body.amount_total;
+  const amount =
+    body.total_amount ??
+    body.amount ??
+    body.amount_total ??
+    body.amount_received ??
+    body.amount_received_raw;
   const status = body.status || "";
   const basePayload = `${merchantRef}${TRIPAY_MERCHANT_CODE}${amount}${status}`;
   const altPayload = `${TRIPAY_MERCHANT_CODE}${merchantRef}${amount}`;
