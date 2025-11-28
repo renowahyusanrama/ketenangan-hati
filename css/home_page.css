@@ -400,8 +400,28 @@ img{ max-width:100%; display:block }
   .fs-btn.tk{ background:#000 }
 
   /* ===== Auth Gate Overlay ===== */
-  /* Gate disembunyikan; login dipaksa via modal saja */
-  .auth-gate{ display:none }
+  /* ===== Auth Gate Overlay ===== */
+  .auth-gate{
+    position:fixed; inset:0; z-index:999; background:rgba(10,20,40,.72);
+    backdrop-filter: blur(12px);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .auth-gate.hidden{ display:none }
+  .gate-card{
+    width:min(420px, 94vw); background:#f7fbff; border-radius:22px;
+    padding:28px; text-align:center; box-shadow:0 24px 60px rgba(0,0,0,.28);
+    border:1px solid rgba(214,227,242,.8);
+  }
+  .gate-logo{ width:120px; height:120px; margin:0 auto 16px; }
+  .gate-logo img{ width:100%; height:100%; object-fit:contain }
+  .gate-card h2{ margin:0 0 10px; color:#0f1a2e; font-size:22px; font-weight:700 }
+  .gate-card p{ margin:0 0 18px; color:#4b5563; line-height:1.6 }
+  .gate-login-btn{
+    background:var(--primary); color:#fff; border:1px solid var(--primary);
+    border-radius:12px; padding:12px 20px; font-weight:700; cursor:pointer;
+    box-shadow:0 12px 28px rgba(55,117,181,.25);
+  }
+  .gate-login-btn:hover{ background:var(--primary-700) }
 
   /* Kunci konten ketika belum login */
   body.auth-locked > *:not(#auth-gate):not(#loginModal){

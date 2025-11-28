@@ -114,10 +114,12 @@ function injectChipStyles(){
 }
 
 function showAuthGate(){
+  authGate?.classList.remove('hidden');
   bodyEl.classList.add('auth-locked');
   document.body.style.overflow = 'hidden';
 }
 function hideAuthGate(){
+  authGate?.classList.add('hidden');
   bodyEl.classList.remove('auth-locked');
   document.body.style.overflow = '';
 }
@@ -236,6 +238,10 @@ function mapAuthError(code){
 onAuthStateChanged(auth, (user)=>{
   if(user) {
     renderAfterAuth(user);
+    // pastikan gate & modal tertutup jika sudah login (termasuk saat reload)
+    hideAuthGate();
+    modal?.classList.remove('open');
+    document.body.style.overflow = '';
   } else {
     isAdmin = false;
     renderLoginButton();
@@ -243,6 +249,14 @@ onAuthStateChanged(auth, (user)=>{
     modal?.classList.add('open'); // paksa modal tampil
     document.body.style.overflow = 'hidden';
   }
+});
+
+// Tombol login pada gate -> buka modal & hilangkan gate
+document.querySelector('.gate-login-btn')?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  hideAuthGate();
+  modal?.classList.add('open');
+  document.body.style.overflow = 'hidden';
 });
 
 // Render awal
