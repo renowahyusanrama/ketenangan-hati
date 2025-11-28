@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
 const SMTP_HOST = process.env.SMTP_HOST || "";
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
@@ -8,6 +9,9 @@ const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || "no-reply@example.com";
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_FROM = process.env.BREVO_FROM || SMTP_FROM;
+
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const RESEND_FROM = process.env.RESEND_FROM || "onboarding@resend.dev";
 
 function createTransporter() {
   if (BREVO_API_KEY) {
@@ -59,7 +63,6 @@ function buildTicketHtml({ name, email, phone, eventTitle, eventId, method, payC
 async function sendTicketEmail(order) {
   const to = order?.customer?.email;
   if (!to) return;
-  const transporter = createTransporter();
   const subject = `E-Ticket / Tagihan ${order.eventTitle || order.eventId || "Acara"}`;
   const html = buildTicketHtml({
     name: order.customer?.name,
@@ -72,8 +75,23 @@ async function sendTicketEmail(order) {
     amount: order.amount,
     reference: order.reference || order.merchantRef,
   });
+
+  // Kirim via Resend jika API key tersedia
+  if (RESEND_API_KEY) {
+    const resend = new Resend(RESEND_API_KEY);
+    await resend.emails.send({
+      from: RESEND_FROM,
+      to,
+      subject,
+      html,
+    });
+    return;
+  }
+
+  // Fallback ke Brevo/SMTP
+  const transporter = createTransporter();
   await transporter.sendMail({
-    from: SMTP_FROM,
+    from: BREVO_FROM || SMTP_FROM,
     to,
     subject,
     html,
