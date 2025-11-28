@@ -48,7 +48,8 @@ const eventsMap = {
 };
 
 function send(res, status, body) {
-  res.status(status).set(CORS_HEADERS).json(body);
+  Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+  res.status(status).json(body);
 }
 
 function parseBody(req) {
