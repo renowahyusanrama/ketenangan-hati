@@ -16,7 +16,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(17, 24, 39, 0.75), rgba(17, 24, 39, 0.65));
+  background: linear-gradient(180deg, rgba(22,74,132,0.78), rgba(55,117,181,0.72));
 }
 
 .event-hero .hero-content {
@@ -28,6 +28,8 @@
 .event-hero .hero-title {
   font-size: clamp(2.5rem, 4vw, 3.4rem);
   margin: 18px 0 12px;
+  font-family: 'Kalam', 'Poppins', sans-serif;
+  text-shadow: 0 10px 32px rgba(0,0,0,.35);
 }
 
 .event-hero .hero-tagline {
@@ -100,7 +102,7 @@
 
 .bullet-list li::before {
   content: '\2022';
-  color: var(--primary, #22c55e);
+  color: var(--primary, #3775B5);
   font-weight: 700;
   margin-top: 2px;
 }
@@ -116,7 +118,7 @@
 .agenda-item {
   display: flex;
   gap: 16px;
-  background: #f8fafc;
+  background: #eef5fb;
   padding: 16px;
   border-radius: 14px;
 }
@@ -178,7 +180,7 @@
 }
 
 .info-list i {
-  color: rgb(34, 197, 94);
+  color: #3775B5;
   margin-top: 3px;
 }
 
@@ -207,7 +209,7 @@
 }
 
 .contact-list a {
-  color: #22c55e;
+  color: #3775B5;
   font-weight: 600;
 }
 
@@ -308,7 +310,7 @@
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 16px;
   padding: 18px;
-  background: #f8fafc;
+  background: #eef5fb;
 }
 
 .payment-form h4 {
@@ -334,10 +336,10 @@
 }
 
 .method-btn.active {
-  background: var(--primary, #22c55e);
+  background: var(--primary, #3775B5);
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.25);
+  box-shadow: 0 6px 18px rgba(55,117,181,0.25);
 }
 
 .btn-full {
@@ -398,5 +400,11 @@
 }
 
 .form-hint.error { color: #dc2626; }
-.form-hint.success { color: #16a34a; }
+.form-hint.success { color: #3775B5; }
+
+
+
+
+
+
 
