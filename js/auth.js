@@ -33,6 +33,9 @@ provider.setCustomParameters({ prompt: 'select_account' });
 const modal     = document.getElementById('loginModal');
 const form      = document.getElementById('loginForm');
 const linkReg   = document.querySelector('.link-register');
+const linkLoginBack = document.querySelector('.link-login-back');
+const footRegister = document.querySelector('.auth-footnote-register');
+const footLogin = document.querySelector('.auth-footnote-login');
 const submitBtn = form?.querySelector('.btn-login-submit');
 let isAdmin = false;
 
@@ -179,12 +182,20 @@ function setFormMode(register){
   const title = modal?.querySelector('#loginTitle');
   if(title) title.textContent = register ? 'Buat Akun' : 'Selamat Datang';
   const divider = modal?.querySelector('.divider span');
-  if(divider) divider.textContent = register ? 'atau' : 'atau';
+  if(divider) divider.textContent = 'atau';
+  if(footRegister && footLogin){
+    footRegister.style.display = register ? 'none' : 'inline';
+    footLogin.style.display = register ? 'inline' : 'none';
+  }
 }
 
 linkReg?.addEventListener('click', (e)=>{
   e.preventDefault();
   setFormMode(!isRegister);
+});
+linkLoginBack?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  setFormMode(false);
 });
 
 form?.addEventListener('submit', async (e)=>{
