@@ -4,8 +4,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
   getRedirectResult, onAuthStateChanged, signOut, getIdTokenResult,
-  setPersistence, browserLocalPersistence,
-  signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile
+  setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // === Config proyekmu ===
@@ -172,78 +171,6 @@ document.addEventListener('click', async (e)=>{
 getRedirectResult(auth)
   .then(async (res) => { if(res?.user){ await renderAfterAuth(res.user); closeModal(); } })
   .catch(err => console.error('Redirect error:', err.code));
-
-// ——— EMAIL/PASSWORD: toggle daftar & submit
-let isRegister = false;
-
-function setFormMode(register){
-  isRegister = register;
-  if(submitBtn) submitBtn.textContent = register ? 'Daftar' : 'Login';
-  const title = modal?.querySelector('#loginTitle');
-  if(title) title.textContent = register ? 'Buat Akun' : 'Selamat Datang';
-  const divider = modal?.querySelector('.divider span');
-  if(divider) divider.textContent = 'atau';
-  if(footRegister && footLogin){
-    footRegister.style.display = register ? 'none' : 'inline';
-    footLogin.style.display = register ? 'inline' : 'none';
-  }
-}
-
-linkReg?.addEventListener('click', (e)=>{
-  e.preventDefault();
-  setFormMode(!isRegister);
-});
-linkLoginBack?.addEventListener('click', (e)=>{
-  e.preventDefault();
-  setFormMode(false);
-});
-
-form?.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  if(authBusy) return;
-  authBusy = true;
-  try{
-    const data = Object.fromEntries(new FormData(form).entries());
-    const email = String(data.email || '').trim();
-    const password = String(data.password || '');
-
-    if(!email || !password){
-      alert('Email dan password wajib diisi.');
-      return;
-    }
-
-    if(isRegister){
-      const { user } = await createUserWithEmailAndPassword(auth, email, password);
-      // opsional: set displayName dari bagian sebelum '@'
-      const guessName = email.split('@')[0];
-      try{ await updateProfile(user, { displayName: guessName }); }catch{}
-      await renderAfterAuth(user);
-      closeModal();
-    }else{
-      const { user } = await signInWithEmailAndPassword(auth, email, password);
-      await renderAfterAuth(user);
-      closeModal();
-    }
-  }catch(err){
-    const msg = mapAuthError(err?.code);
-    alert(msg);
-    console.error(err);
-  }finally{
-    authBusy = false;
-  }
-});
-
-function mapAuthError(code){
-  switch(code){
-    case 'auth/email-already-in-use': return 'Email sudah terdaftar. Silakan login.';
-    case 'auth/invalid-email': return 'Format email tidak valid.';
-    case 'auth/weak-password': return 'Password terlalu lemah (min. 6 karakter).';
-    case 'auth/user-not-found': return 'Akun tidak ditemukan.';
-    case 'auth/wrong-password': return 'Password salah.';
-    case 'auth/too-many-requests': return 'Terlalu banyak percobaan. Coba lagi nanti.';
-    default: return 'Terjadi kesalahan: ' + (code || 'unknown');
-  }
-}
 
 // ——— Observer state
 onAuthStateChanged(auth, (user)=>{
