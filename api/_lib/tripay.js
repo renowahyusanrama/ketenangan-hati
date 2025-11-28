@@ -86,8 +86,8 @@ function verifyTripayCallback(body = {}, headers = {}) {
     body.amount_total ??
     body.amount_received ??
     body.amount_received_raw;
-  const status = body.status || "";
-  const basePayload = `${merchantRef}${TRIPAY_MERCHANT_CODE}${amount}${status}`;
+  if (!merchantRef || amount == null) return false;
+  const basePayload = `${merchantRef}${TRIPAY_MERCHANT_CODE}${amount}`;
   const altPayload = `${TRIPAY_MERCHANT_CODE}${merchantRef}${amount}`;
   const expected = crypto.createHmac("sha256", TRIPAY_PRIVATE_KEY).update(basePayload).digest("hex");
   const altExpected = crypto.createHmac("sha256", TRIPAY_PRIVATE_KEY).update(altPayload).digest("hex");

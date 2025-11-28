@@ -103,11 +103,47 @@ module.exports = async (req, res) => {
   if (!event) {
     return send(res, 400, { error: "Event tidak dikenal." });
   }
-  if (!event.amount || Number(event.amount) <= 0) {
-    return send(res, 400, { error: "Event ini gratis, tidak perlu pembayaran." });
-  }
+  const eventAmount = Number(event.amount) || 0;
+  const isFree = eventAmount <= 0;
   if (!["bank_transfer", "qris"].includes(paymentType)) {
     return send(res, 400, { error: "paymentType harus bank_transfer atau qris." });
+  }
+
+  // Jika gratis: skip Tripay, langsung set status paid dan kirim e-ticket
+  if (isFree) {
+    const merchantRef = `${eventId}-${Date.now()}`;
+    const freeOrder = {
+      provider: "free",
+      eventId,
+      eventTitle: event.title,
+      amount: 0,
+      paymentType: "free",
+      bank: null,
+      method: "free",
+      merchantRef,
+      reference: merchantRef,
+      customer: {
+        name: customer?.name || "Peserta",
+        email: customer?.email || "peserta@example.com",
+        phone: customer?.phone || "",
+      },
+      status: "paid",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.collection("orders").doc(merchantRef).set(freeOrder);
+
+    // Kirim e-ticket langsung
+    sendTicketEmail({
+      ...freeOrder,
+      payCode: "GRATIS",
+      vaNumber: "GRATIS",
+    }).catch((err) => console.error("Email send error (free):", err?.message || err));
+
+    return send(res, 200, {
+      ...freeOrder,
+      free: true,
+    });
   }
 
   const method = resolveTripayMethod(paymentType, bank);
@@ -116,25 +152,25 @@ module.exports = async (req, res) => {
   const callbackUrl =
     TRIPAY_CALLBACK_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/payments/webhook` : "");
-  const payload = {
-    method,
-    merchant_ref: merchantRef,
-    amount: Number(event.amount),
-    customer_name: customer?.name || "Peserta",
-    customer_email: customer?.email || "peserta@example.com",
-    customer_phone: customer?.phone || "",
-    order_items: [
-      {
-        sku: eventId,
-        name: event.title,
-        price: Number(event.amount),
-        quantity: 1,
-        subtotal: Number(event.amount),
-      },
-    ],
-    signature: createTripaySignature(merchantRef, event.amount),
-    expired_time: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
-  };
+    const payload = {
+      method,
+      merchant_ref: merchantRef,
+      amount: eventAmount,
+      customer_name: customer?.name || "Peserta",
+      customer_email: customer?.email || "peserta@example.com",
+      customer_phone: customer?.phone || "",
+      order_items: [
+        {
+          sku: eventId,
+          name: event.title,
+          price: eventAmount,
+          quantity: 1,
+          subtotal: eventAmount,
+        },
+      ],
+      signature: createTripaySignature(merchantRef, eventAmount),
+      expired_time: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+    };
 
   if (callbackUrl) payload.callback_url = callbackUrl;
   if (TRIPAY_RETURN_URL) payload.return_url = TRIPAY_RETURN_URL;

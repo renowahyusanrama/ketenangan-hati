@@ -160,6 +160,25 @@ function renderPaymentResult(container, data) {
     return;
   }
 
+  if (data.paymentType === "free") {
+    container.innerHTML = `
+      <div class="payment-info-row">
+        <div>
+          <span>Metode</span>
+          <strong>Gratis</strong>
+        </div>
+        <div>
+          <span>Total</span>
+          <strong>${formatCurrency(0)}</strong>
+        </div>
+      </div>
+      <p class="form-hint success">Pendaftaran berhasil. E-ticket telah dikirim ke email.</p>
+      ${data.reference ? `<p class="form-hint">Ref: ${data.reference}</p>` : ""}
+    `;
+    container.classList.remove("hidden");
+    return;
+  }
+
   const checkoutLink = data.checkoutUrl
     ? `<a class="btn btn-outline" href="${data.checkoutUrl}" target="_blank" rel="noopener">Buka halaman pembayaran</a>`
     : "";
