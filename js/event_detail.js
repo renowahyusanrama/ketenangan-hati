@@ -258,6 +258,12 @@ function initPaymentForm(event) {
     if (variant !== "info") hint.classList.add(variant);
   }
 
+  // Jika event gratis, ganti teks tombol & hint
+  if (event && !event.amount) {
+    if (payBtn) payBtn.textContent = "Kirim E-Ticket";
+    setHint("Event gratis, e-ticket akan dikirim tanpa pembayaran.", "success");
+  }
+
   function activateButton(target) {
     methodButtons.forEach((btn) => btn.classList.toggle("active", btn === target));
   }
