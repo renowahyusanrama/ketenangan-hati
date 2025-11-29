@@ -71,9 +71,14 @@
     <h1 id="title">E-Ticket</h1>
     <p id="desc">Tunjukkan kode tiket ini saat registrasi.</p>
     <div id="refBox" class="ref">-</div>
+    <div id="qrWrap" class="hidden" style="margin:16px 0;">
+      <p style="color: var(--muted); margin-bottom: 8px;">Tunjukkan QR ini ke panitia untuk dipindai.</p>
+      <div id="qrBox" style="display:inline-block; padding:12px; background: rgba(59,130,246,0.08); border-radius: 12px; border:1px solid var(--border);"></div>
+    </div>
     <p id="note">Jika QR di email tidak terbuka, gunakan kode di atas.</p>
     <a class="home" href="index.html#event">Kembali ke event</a>
   </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-DQ9p4frFxCcnONTRqGQmToPnNTJG9nN0QL+6n+CHtYRfhwghtgaFYmUAdkQXJgVr0YK2Jwsykzk8X2pP1cCq1g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>
     (function() {
       const params = new URLSearchParams(window.location.search);
@@ -81,8 +86,22 @@
       const refBox = document.getElementById("refBox");
       const desc = document.getElementById("desc");
       const note = document.getElementById("note");
+      const qrWrap = document.getElementById("qrWrap");
+      const qrBox = document.getElementById("qrBox");
+
       if (ref) {
         refBox.textContent = ref;
+        // Tampilkan QR yang berisi URL tiket (termasuk ref) agar panitia bisa scan
+        if (window.QRCode && qrWrap && qrBox) {
+          const qrValue = window.location.href;
+          new QRCode(qrBox, {
+            text: qrValue,
+            width: 180,
+            height: 180,
+            correctLevel: QRCode.CorrectLevel.M,
+          });
+          qrWrap.classList.remove("hidden");
+        }
       } else {
         refBox.textContent = "Referensi tidak ditemukan";
         desc.textContent = "Tautan tiket tidak memiliki parameter ref.";

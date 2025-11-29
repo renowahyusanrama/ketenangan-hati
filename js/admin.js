@@ -22,6 +22,7 @@ import {
   query,
   limit,
   startAfter,
+  where,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // === Konfigurasi Firebase (samakan dengan proyekmu) ===
@@ -77,6 +78,13 @@ const orderStatusFilter = document.getElementById("orderStatusFilter");
 const orderSearch = document.getElementById("orderSearch");
 const refreshOrdersBtn = document.getElementById("refreshOrdersBtn");
 const loadMoreOrdersBtn = document.getElementById("loadMoreOrders");
+const toggleQrPanelBtn = document.getElementById("toggleQrPanel");
+const qrPanel = document.getElementById("qrPanel");
+const qrStatus = document.getElementById("qrStatus");
+const qrReaderEl = document.getElementById("qrReader");
+const qrInput = document.getElementById("qrInput");
+const qrSubmitBtn = document.getElementById("qrSubmitBtn");
+const qrStopBtn = document.getElementById("qrStopBtn");
 
 let currentUser = null;
 let isAdmin = false;
@@ -86,9 +94,11 @@ const eventsCache = new Map();
 let lastOrderDoc = null;
 let ordersLoading = false;
 const ORDERS_PAGE_SIZE = 25;
+let qrScanner = null;
+let qrScanning = false;
 
 async function updateCheckin(orderId, verified) {
-  if (!isAdmin || !orderId) return;
+  if (!isAdmin || !orderId) return false;
   const ref = firestoreDoc(db, "orders", orderId);
   try {
     await setDoc(
@@ -101,9 +111,142 @@ async function updateCheckin(orderId, verified) {
       { merge: true },
     );
     await loadOrders(true);
+    return true;
   } catch (err) {
     console.error("Gagal update check-in:", err);
     alert("Gagal update check-in: " + (err?.message || err));
+    return false;
+  }
+}
+
+function setQrStatus(message, isError = false) {
+  if (!qrStatus) return;
+  qrStatus.textContent = message;
+  qrStatus.style.color = isError ? "#f87171" : "#cbd5e1";
+}
+
+function extractRefFromQr(text) {
+  if (!text) return "";
+  const raw = String(text).trim();
+  // Jika berupa URL, coba ambil ?ref=
+  try {
+    const url = new URL(raw);
+    const fromParam = url.searchParams.get("ref");
+    if (fromParam) return fromParam;
+  } catch (err) {
+    // bukan URL, lanjut fallback
+  }
+  const match = raw.match(/ref=([^&]+)/i);
+  if (match && match[1]) return decodeURIComponent(match[1]);
+  return raw;
+}
+
+async function findOrderIdByRef(refValue) {
+  const code = (refValue || "").trim();
+  if (!code) return null;
+
+  // 1) coba akses langsung dokumen dengan ID = code
+  try {
+    const directRef = firestoreDoc(db, "orders", code);
+    const snap = await getDoc(directRef);
+    if (snap.exists()) return directRef.id;
+  } catch (err) {
+    console.warn("Lookup direct doc gagal:", err?.message || err);
+  }
+
+  // 2) cari berdasarkan field reference atau merchantRef
+  try {
+    const col = collection(db, "orders");
+    const byRef = query(col, where("reference", "==", code), limit(1));
+    let snap = await getDocs(byRef);
+    if (snap?.docs?.length) return snap.docs[0].id;
+
+    const byMerchant = query(col, where("merchantRef", "==", code), limit(1));
+    snap = await getDocs(byMerchant);
+    if (snap?.docs?.length) return snap.docs[0].id;
+  } catch (err) {
+    console.error("findOrderIdByRef error:", err?.message || err);
+  }
+
+  return null;
+}
+
+async function verifyByRef(refValue) {
+  const code = (refValue || "").trim();
+  if (!code) {
+    setQrStatus("Kode/ref kosong.", true);
+    return false;
+  }
+  if (!isAdmin) {
+    setQrStatus("Hanya admin yang bisa verifikasi.", true);
+    return false;
+  }
+  setQrStatus(`Memeriksa ref ${code}...`);
+
+  const orderId = await findOrderIdByRef(code);
+  if (!orderId) {
+    setQrStatus(`Order dengan ref ${code} tidak ditemukan.`, true);
+    return false;
+  }
+
+  const ok = await updateCheckin(orderId, true);
+  setQrStatus(ok ? `Berhasil verifikasi ${code}.` : `Gagal verifikasi ${code}.`, !ok);
+  if (ok && qrInput) qrInput.value = "";
+  return ok;
+}
+
+async function stopQrScan() {
+  if (qrScanner && qrScanning) {
+    try {
+      await qrScanner.stop();
+      await qrScanner.clear();
+    } catch (err) {
+      console.warn("Stop QR scanner:", err?.message || err);
+    }
+  }
+  qrScanner = null;
+  qrScanning = false;
+  setQrStatus("Scanner berhenti.");
+}
+
+async function startQrScan() {
+  if (!qrReaderEl) {
+    setQrStatus("Elemen scanner tidak tersedia.", true);
+    return;
+  }
+  if (qrScanning) {
+    setQrStatus("Scanner sudah aktif.");
+    return;
+  }
+  if (typeof window.Html5Qrcode === "undefined") {
+    setQrStatus("Library scanner belum dimuat.", true);
+    return;
+  }
+
+  try {
+    qrScanner = new Html5Qrcode(qrReaderEl.id);
+    await qrScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 220 },
+      async (decodedText) => {
+        const ref = extractRefFromQr(decodedText);
+        if (!ref) {
+          setQrStatus("QR tidak memuat kode ref.", true);
+          return;
+        }
+        await verifyByRef(ref);
+      },
+      () => {
+        // abaikan error scan per frame
+      },
+    );
+    qrScanning = true;
+    setQrStatus("Memindai... arahkan kamera ke QR tiket.");
+  } catch (err) {
+    console.error("QR start error:", err);
+    setQrStatus("Tidak bisa memulai kamera: " + (err?.message || err), true);
+    qrScanner = null;
+    qrScanning = false;
   }
 }
 
@@ -572,6 +715,28 @@ refreshOrdersBtn?.addEventListener("click", () => loadOrders(true));
 loadMoreOrdersBtn?.addEventListener("click", () => loadOrders(false));
 orderStatusFilter?.addEventListener("change", () => loadOrders(true));
 orderSearch?.addEventListener("input", () => loadOrders(true));
+toggleQrPanelBtn?.addEventListener("click", () => {
+  if (!qrPanel) return;
+  const hidden = qrPanel.classList.contains("hidden");
+  if (hidden) {
+    qrPanel.classList.remove("hidden");
+    startQrScan();
+  } else {
+    qrPanel.classList.add("hidden");
+    stopQrScan();
+  }
+});
+qrStopBtn?.addEventListener("click", () => {
+  stopQrScan();
+  qrPanel?.classList.add("hidden");
+});
+qrSubmitBtn?.addEventListener("click", () => verifyByRef(qrInput?.value));
+qrInput?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    verifyByRef(qrInput?.value);
+  }
+});
 
 tableBody?.addEventListener("click", (e) => {
   const editBtn = e.target.closest("[data-edit]");
@@ -620,6 +785,8 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   if (!user) {
     isAdmin = false;
+    stopQrScan();
+    qrPanel?.classList.add("hidden");
     setDashboardVisible(false);
     setGuard("Silakan login dengan akun admin.");
     userInfo.textContent = "Belum login";
@@ -644,6 +811,8 @@ onAuthStateChanged(auth, async (user) => {
   adminStatus.className = isAdmin ? "badge green" : "badge gray";
 
   if (!isAdmin) {
+    stopQrScan();
+    qrPanel?.classList.add("hidden");
     setDashboardVisible(false);
     setGuard("Akun ini tidak memiliki akses admin. Minta panitia menambahkan custom claim admin.", false);
     return;

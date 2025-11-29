@@ -661,6 +661,18 @@
             </select>
             <input id="orderSearch" type="text" placeholder="Cari ref/email" style="width: 180px;" />
             <button id="refreshOrdersBtn" class="outline"><i class="fa-solid fa-rotate"></i> Refresh</button>
+            <button id="toggleQrPanel" class="outline"><i class="fa-solid fa-qrcode"></i> Scan QR</button>
+          </div>
+        </div>
+        <div class="flex" style="gap: 8px; margin: 12px 0;">
+          <div id="qrStatus" class="muted">Scan QR untuk verifikasi check-in.</div>
+        </div>
+        <div id="qrPanel" class="hidden" style="margin-bottom: 12px; display: grid; gap: 8px;">
+          <div id="qrReader" style="width: 100%; max-width: 420px; margin: 0 auto; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;"></div>
+          <div class="flex" style="gap: 8px; flex-wrap: wrap;">
+            <input id="qrInput" type="text" placeholder="Kode ref / merchantRef" style="flex: 1; min-width: 180px;" />
+            <button id="qrSubmitBtn" class="outline">Verifikasi kode</button>
+            <button id="qrStopBtn" class="outline">Stop kamera</button>
           </div>
         </div>
         <div style="overflow-x:auto;">
@@ -691,6 +703,7 @@
   </div>
 
   <script src="https://widget.cloudinary.com/v2.0/global/all.js" async></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js"></script>
   <script type="module" src="js/admin.js"></script>
 </body>
 </html>
