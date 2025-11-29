@@ -117,6 +117,10 @@ function setGuard(message, isOk = false) {
 function setDashboardVisible(visible) {
   dashboard.classList.toggle("hidden", !visible);
   guardPanel.classList.toggle("hidden", visible);
+  if (!visible) {
+    adminStatus.textContent = "bukan admin";
+    adminStatus.className = "badge gray";
+  }
 }
 
 function setLoadingForm(loading) {
@@ -302,7 +306,8 @@ function renderPosterPreview(url) {
 
 async function requireAdmin(user) {
   if (!user) return false;
-  const tokenResult = await getIdTokenResult(user);
+  // force refresh token agar klaim admin terbaru terambil
+  const tokenResult = await getIdTokenResult(user, true);
   return tokenResult?.claims?.admin === true;
 }
 
