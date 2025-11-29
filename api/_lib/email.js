@@ -1,5 +1,6 @@
 // api/_lib/email.js
 const { Resend } = require("resend");
+const QRCode = require("qrcode");
 
 // 🔑 pastikan ini di-set di Vercel (Production env)
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -23,6 +24,8 @@ function buildTicketHtml({
   payCode,
   amount,
   reference,
+  ticketUrl,
+  qrDataUrl,
 }) {
   return `
     <div style="font-family:Arial, sans-serif; max-width:560px; margin:auto; color:#0f172a">
@@ -40,6 +43,15 @@ function buildTicketHtml({
         ).toLocaleString("id-ID")}</td></tr>
         <tr><td style="padding:6px 0; color:#475569;">Ref</td><td style="padding:6px 0;">${reference || eventId}</td></tr>
       </table>
+      ${
+        qrDataUrl
+          ? `<div style="margin-top:16px; text-align:center;">
+              <p style="margin:0 0 8px; color:#475569;">Tunjukkan QR ini saat check-in:</p>
+              <img src="${qrDataUrl}" alt="QR E-Ticket" style="width:200px; height:200px; border:1px solid #e2e8f0; border-radius:12px;" />
+              ${ticketUrl ? `<p style="margin-top:8px;"><a href="${ticketUrl}" style="color:#2563eb;">Buka tiket</a></p>` : ""}
+            </div>`
+          : ""
+      }
       <p style="margin-top:16px;">Silakan tunjukkan email ini saat registrasi / check-in.</p>
       <p style="margin-top:8px; color:#475569;">Email ini otomatis, mohon tidak dibalas.</p>
     </div>
@@ -99,7 +111,19 @@ async function sendTicketEmail(order) {
       : order.method || "Pembayaran";
 
   const payCode = order.vaNumber || order.payCode || (amount === 0 ? "GRATIS" : "-");
-  const reference = order.reference || order.merchantRef || eventId;
+  const reference = order.reference || order.merchantRef || order.orderId || order.id || eventId;
+  const ticketUrl = reference
+    ? `https://renowahysanrama.github.io/ketenangan-jiwa/ticket.html?ref=${encodeURIComponent(reference)}`
+    : "";
+
+  let qrDataUrl = "";
+  if ((order.status || "").toLowerCase() === "paid" && ticketUrl) {
+    try {
+      qrDataUrl = await QRCode.toDataURL(ticketUrl);
+    } catch (err) {
+      console.error("QR generate error:", err?.message || err);
+    }
+  }
 
   const baseHtml = buildTicketHtml({
     name,
@@ -111,6 +135,8 @@ async function sendTicketEmail(order) {
     payCode,
     amount,
     reference,
+    ticketUrl,
+    qrDataUrl,
   });
 
   let finalTo = originalEmail;

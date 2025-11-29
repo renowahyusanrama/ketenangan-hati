@@ -22,6 +22,8 @@ import {
   query,
   limit,
   startAfter,
+  doc,
+  setDoc as setDocDirect,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // === Konfigurasi Firebase (samakan dengan proyekmu) ===
@@ -86,6 +88,26 @@ const eventsCache = new Map();
 let lastOrderDoc = null;
 let ordersLoading = false;
 const ORDERS_PAGE_SIZE = 25;
+
+async function updateCheckin(orderId, verified) {
+  if (!isAdmin || !orderId) return;
+  const ref = doc(db, "orders", orderId);
+  try {
+    await setDocDirect(
+      ref,
+      {
+        verified: !!verified,
+        checkedInAt: verified ? serverTimestamp() : null,
+        verifiedAt: verified ? serverTimestamp() : null,
+      },
+      { merge: true },
+    );
+    await loadOrders(true);
+  } catch (err) {
+    console.error("Gagal update check-in:", err);
+    alert("Gagal update check-in: " + (err?.message || err));
+  }
+}
 
 function setGuard(message, isOk = false) {
   guardMessage.textContent = message;
@@ -198,12 +220,19 @@ async function loadOrders(reset = true) {
 
   if (ordersTableBody) {
     if (!filtered.length && reset) {
-      ordersTableBody.innerHTML = `<tr><td colspan="7" class="muted">Tidak ada transaksi pada filter ini.</td></tr>`;
+      ordersTableBody.innerHTML = `<tr><td colspan="8" class="muted">Tidak ada transaksi pada filter ini.</td></tr>`;
     } else if (filtered.length) {
       const html = filtered
         .map((o) => {
           const total = Number(o.totalAmount ?? o.amount ?? 0);
           const createdAt = formatDateTime(o.createdAt || o.created_at);
+          const verified = o.verified ? "Terverifikasi" : "Belum";
+          const verifyBtn =
+            (o.status || "").toLowerCase() === "paid"
+              ? `<button class="outline" data-checkin="${o.id}" data-verified="${o.verified ? "false" : "true"}">${
+                  o.verified ? "Batalkan" : "Verifikasi"
+                }</button>`
+              : `<span class="muted">-</span>`;
           return `
             <tr>
               <td>${o.merchantRef || o.reference || "-"}</td>
@@ -211,6 +240,7 @@ async function loadOrders(reset = true) {
               <td>${o.customer?.name || "-"}<br><span class="muted">${o.customer?.email || ""}</span></td>
               <td>${formatMethod(o)}</td>
               <td>${formatStatusBadge(o.status)}</td>
+              <td>${o.verified ? `<span class="badge green">Terverifikasi</span>` : `<span class="badge gray">Belum</span>`}<br>${verifyBtn}</td>
               <td>${formatCurrency(total)}</td>
               <td>${createdAt}</td>
             </tr>
@@ -544,6 +574,7 @@ tableBody?.addEventListener("click", (e) => {
   const editBtn = e.target.closest("[data-edit]");
   const delBtn = e.target.closest("[data-delete]");
   const dupBtn = e.target.closest("[data-duplicate]");
+  const checkinBtn = e.target.closest("[data-checkin]");
   if (editBtn) {
     const slug = editBtn.dataset.edit;
     const data = eventsCache.get(slug);
@@ -567,6 +598,11 @@ tableBody?.addEventListener("click", (e) => {
       editingSlug = null;
       fillForm(clone);
     }
+  }
+  if (checkinBtn) {
+    const id = checkinBtn.dataset.checkin;
+    const val = checkinBtn.dataset.verified === "true";
+    updateCheckin(id, val);
   }
 });
 
