@@ -66,6 +66,29 @@ function computeFees(paymentType, bank, baseAmount) {
   return { platformTax, tripayFee, amountForTripay, totalCustomer, baseAmount: base };
 }
 
+async function reserveSeatAndSaveOrder(db, eventDocId, orderDocId, orderData) {
+  const eventRef = db.collection("events").doc(eventDocId);
+  const orderRef = db.collection("orders").doc(orderDocId);
+
+  await db.runTransaction(async (tx) => {
+    const evSnap = await tx.get(eventRef);
+    const evData = evSnap.exists ? evSnap.data() || {} : {};
+    const capacity = Number(evData.capacity) || 0;
+    const used = Number(evData.seatsUsed) || 0;
+    if (capacity > 0 && used >= capacity) {
+      throw new Error("Kuota event sudah penuh.");
+    }
+
+    if (evSnap.exists) {
+      tx.update(eventRef, { seatsUsed: admin.firestore.FieldValue.increment(1) });
+    } else {
+      tx.set(eventRef, { seatsUsed: admin.firestore.FieldValue.increment(1) }, { merge: true });
+    }
+
+    tx.set(orderRef, orderData);
+  });
+}
+
 function send(res, status, body) {
   Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
   res.status(status).json(body);
@@ -120,50 +143,51 @@ module.exports = async (req, res) => {
 
   const eventAmount = Number(event.amount) || 0;
   const isFree = eventAmount <= 0;
+  const merchantRef = `${eventId}-${Date.now()}`;
 
-  // 🔹 1) EVENT GRATIS
+  // 1) EVENT GRATIS
   if (isFree) {
-    const merchantRef = `${eventId}-${Date.now()}`;
     const freeOrder = {
       provider: "free",
       eventId,
       eventTitle: event.title,
       amount: 0,
+      baseAmount: 0,
+      platformTax: 0,
+      tripayFee: 0,
+      totalAmount: 0,
+      amountForTripay: 0,
       paymentType: "free",
       bank: null,
       method: "free",
       merchantRef,
       reference: merchantRef,
+      reserved: true,
       customer: {
         name: customer?.name || "Peserta",
-        email: customer?.email || body.email || "peserta@example.com",
-        phone: customer?.phone || body.phone || "",
+        email: customer?.email || "peserta@example.com",
+        phone: customer?.phone || "",
       },
       status: "paid",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    await db.collection("orders").doc(merchantRef).set(freeOrder);
-
-    // ⬇⬇⬇ WAJIB di-await supaya Resend benar2 terpanggil sebelum function selesai
     try {
-      await sendTicketEmail({
-        ...freeOrder,
-        payCode: "GRATIS",
-        vaNumber: "GRATIS",
-      });
+      await reserveSeatAndSaveOrder(db, event.id, merchantRef, freeOrder);
     } catch (err) {
-      console.error("Email send error (free):", err?.message || err);
+      return send(res, 400, { error: err?.message || "Kuota event sudah penuh." });
     }
 
-    return send(res, 200, {
+    sendTicketEmail({
       ...freeOrder,
-      free: true,
-    });
+      payCode: "GRATIS",
+      vaNumber: "GRATIS",
+    }).catch((err) => console.error("Email send error (free):", err?.message || err));
+
+    return send(res, 200, { ...freeOrder, free: true });
   }
 
-  // 🔹 2) EVENT BERBAYAR → Tripay
-
+  // 2) EVENT BERBAYAR (Tripay)
   if (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) {
     return send(res, 500, { error: "Tripay belum dikonfigurasi." });
   }
@@ -173,7 +197,6 @@ module.exports = async (req, res) => {
   }
 
   const method = resolveTripayMethod(paymentType, bank);
-  const merchantRef = `${eventId}-${Date.now()}`;
   const { platformTax, tripayFee, amountForTripay, totalCustomer, baseAmount } = computeFees(
     paymentType,
     bank,
@@ -229,33 +252,37 @@ module.exports = async (req, res) => {
       amountForTripay,
     });
 
-    await db
-      .collection("orders")
-      .doc(merchantRef)
-      .set({
-        provider: "tripay",
-        eventId,
-        eventTitle: event.title,
-        amount: totalCustomer,
-        baseAmount,
-        platformTax,
-        tripayFee,
-        totalAmount: totalCustomer,
-        amountForTripay,
-        paymentType,
-        bank: bank || null,
-        method,
-        merchantRef,
-        reference: normalized.reference,
-        customer: {
-          name: customer?.name || "Peserta",
-          email: customer?.email || "peserta@example.com",
-          phone: customer?.phone || "",
-        },
-        tripay: tripayResponse,
-        status: mapStatus(tripayData?.status || tripayResponse?.status),
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    const orderDoc = {
+      provider: "tripay",
+      eventId,
+      eventTitle: event.title,
+      amount: totalCustomer,
+      baseAmount,
+      platformTax,
+      tripayFee,
+      totalAmount: totalCustomer,
+      amountForTripay,
+      paymentType,
+      bank: bank || null,
+      method,
+      merchantRef,
+      reference: normalized.reference,
+      customer: {
+        name: customer?.name || "Peserta",
+        email: customer?.email || "peserta@example.com",
+        phone: customer?.phone || "",
+      },
+      tripay: tripayResponse,
+      status: mapStatus(tripayData?.status || tripayResponse?.status),
+      reserved: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await reserveSeatAndSaveOrder(db, event.id, merchantRef, orderDoc);
+    } catch (err) {
+      return send(res, 400, { error: err?.message || "Kuota event sudah penuh." });
+    }
 
     return send(res, 200, normalized);
   } catch (error) {

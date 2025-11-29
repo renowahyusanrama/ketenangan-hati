@@ -13,6 +13,19 @@ function send(res, status, body) {
   res.status(status).json(body);
 }
 
+async function releaseSeatIfNeeded(db, eventId) {
+  if (!eventId) return;
+  const eventRef = db.collection("events").doc(eventId);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(eventRef);
+    if (!snap.exists) return;
+    const data = snap.data() || {};
+    const used = Number(data.seatsUsed) || 0;
+    const next = used > 0 ? used - 1 : 0;
+    tx.set(eventRef, { seatsUsed: next }, { merge: true });
+  });
+}
+
 // Baca raw body persis seperti yang dikirim Tripay
 function getRawBody(req) {
   return new Promise((resolve, reject) => {
@@ -92,6 +105,19 @@ module.exports = async (req, res) => {
       },
       { merge: true },
     );
+
+    const releaseStatuses = ["expired", "failed", "canceled", "refunded"];
+    const shouldRelease =
+      previous &&
+      previous.reserved &&
+      previous.eventId &&
+      releaseStatuses.includes(newStatus) &&
+      previous.status !== "paid";
+
+    if (shouldRelease) {
+      await releaseSeatIfNeeded(db, previous.eventId);
+      await docRef.set({ reserved: false }, { merge: true });
+    }
 
     const wasPaid = previous && previous.status === "paid";
     const nowPaid = newStatus === "paid";
