@@ -12,7 +12,7 @@ import {
 import {
   getFirestore,
   collection,
-  doc,
+  doc as firestoreDoc,
   getDoc,
   getDocs,
   setDoc,
@@ -89,7 +89,7 @@ const ORDERS_PAGE_SIZE = 25;
 
 async function updateCheckin(orderId, verified) {
   if (!isAdmin || !orderId) return;
-  const ref = doc(db, "orders", orderId);
+  const ref = firestoreDoc(db, "orders", orderId);
   try {
     await setDoc(
       ref,
@@ -182,7 +182,7 @@ async function loadOrders(reset = true) {
     existingHtml = ordersTableBody.innerHTML;
     if (reset) {
       existingHtml = "";
-      ordersTableBody.innerHTML = `<tr><td colspan="7" class="muted">Memuat data...</td></tr>`;
+      ordersTableBody.innerHTML = `<tr><td colspan="8" class="muted">Memuat data...</td></tr>`;
     }
   }
   if (reset) lastOrderDoc = null;
@@ -251,7 +251,7 @@ async function loadOrders(reset = true) {
         .join("");
       ordersTableBody.innerHTML = reset ? html : existingHtml + html;
     } else if (!reset) {
-      ordersTableBody.innerHTML = existingHtml || `<tr><td colspan="7" class="muted">Tidak ada transaksi.</td></tr>`;
+      ordersTableBody.innerHTML = existingHtml || `<tr><td colspan="8" class="muted">Tidak ada transaksi.</td></tr>`;
     }
   }
 
@@ -277,7 +277,7 @@ function updatePreviewFromForm() {
   const location = eventForm.location?.value?.trim() || "Lokasi";
   const speaker = eventForm.speaker?.value?.trim() || "Pemateri";
   const amount = Number(eventForm.amount?.value) || 0;
-  const image = eventForm.imageUrl?.value?.trim() || "./assets/img/event-1.jpg";
+  const image = eventForm.imageUrl?.value?.trim() || "./images/placeholder.jpg";
 
   if (previewTitle) previewTitle.textContent = title;
   if (previewTagline) previewTagline.textContent = tagline;
@@ -466,7 +466,7 @@ async function saveEvent(e) {
     updatedBy: currentUser.uid,
   };
 
-  const ref = doc(db, "events", slug);
+  const ref = firestoreDoc(db, "events", slug);
   const isNew = editingSlug !== slug;
   if (isNew) {
     data.createdAt = serverTimestamp();
@@ -502,7 +502,7 @@ async function deleteEvent(slug) {
   const ok = confirm(`Hapus event ${slug}?`);
   if (!ok) return;
   try {
-    await deleteDoc(doc(db, "events", slug));
+    await deleteDoc(firestoreDoc(db, "events", slug));
     await loadEvents();
   } catch (err) {
     console.error(err);
@@ -577,7 +577,7 @@ tableBody?.addEventListener("click", (e) => {
   const editBtn = e.target.closest("[data-edit]");
   const delBtn = e.target.closest("[data-delete]");
   const dupBtn = e.target.closest("[data-duplicate]");
-  const checkinBtn = e.target.closest("[data-checkin]");
+
   if (editBtn) {
     const slug = editBtn.dataset.edit;
     const data = eventsCache.get(slug);
@@ -588,9 +588,11 @@ tableBody?.addEventListener("click", (e) => {
       alert("Data event tidak ditemukan di cache.");
     }
   }
+
   if (delBtn) {
     deleteEvent(delBtn.dataset.delete);
   }
+
   if (dupBtn) {
     const slug = dupBtn.dataset.duplicate;
     const data = eventsCache.get(slug);
@@ -602,6 +604,10 @@ tableBody?.addEventListener("click", (e) => {
       fillForm(clone);
     }
   }
+});
+
+ordersTableBody?.addEventListener("click", (e) => {
+  const checkinBtn = e.target.closest("[data-checkin]");
   if (checkinBtn) {
     const id = checkinBtn.dataset.checkin;
     const val = checkinBtn.dataset.verified === "true";

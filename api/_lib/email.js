@@ -14,6 +14,12 @@ const RESEND_OWNER_EMAIL = "ketenanganjiwa.id@gmail.com";
 // SELAGI BELUM VERIFY DOMAIN → biarkan true
 const RESEND_TEST_MODE = true;
 
+// Base URL halaman tiket di GitHub Pages
+// Bisa dioverride pakai env TICKET_BASE_URL kalau nanti ganti domain.
+const TICKET_BASE_URL =
+  process.env.TICKET_BASE_URL ||
+  "https://renowahysanrama.github.io/ketenangan-jiwa";
+
 function buildTicketHtml({
   name,
   email,
@@ -124,10 +130,10 @@ async function sendTicketEmail(order) {
   const reference =
     order.reference || order.merchantRef || order.orderId || order.id || eventId;
 
+  // ⚠️ Di sini kita pastikan selalu pakai /ketenangan-jiwa
+  const base = TICKET_BASE_URL.replace(/\/$/, "");
   const ticketUrl = reference
-    ? `https://renowahysanrama.github.io/ketenangan-jiwa/ticket.html?ref=${encodeURIComponent(
-        reference,
-      )}`
+    ? `${base}/ticket.html?ref=${encodeURIComponent(reference)}`
     : "";
 
   // ==== QR CODE (inline attachment pakai CID) ====
