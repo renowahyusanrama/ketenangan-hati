@@ -60,9 +60,7 @@ function computeFees(paymentType, bank, baseAmount) {
     tripayFee = Math.ceil(750 + base * 0.007); // 750 + 0.70%
   }
 
-  // amountForTripay: yang dikirim ke Tripay (belum termasuk fee channel karena Tripay akan tambah sendiri jika dibebankan ke pelanggan)
   const amountForTripay = Math.max(0, Math.ceil(base + platformTax));
-  // totalCustomer: jumlah akhir yang harus dibayar pelanggan (amount Tripay + fee channel)
   const totalCustomer = Math.max(0, amountForTripay + tripayFee);
 
   return { platformTax, tripayFee, amountForTripay, totalCustomer, baseAmount: base };
@@ -110,10 +108,6 @@ module.exports = async (req, res) => {
     return send(res, 405, { error: "Method not allowed" });
   }
 
-  if (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) {
-    return send(res, 500, { error: "Tripay belum dikonfigurasi." });
-  }
-
   const body = parseBody(req);
   const { eventId, paymentType, bank, customer } = body || {};
 
@@ -123,13 +117,11 @@ module.exports = async (req, res) => {
   if (!event) {
     return send(res, 400, { error: "Event tidak dikenal." });
   }
+
   const eventAmount = Number(event.amount) || 0;
   const isFree = eventAmount <= 0;
-  if (!["bank_transfer", "qris"].includes(paymentType)) {
-    return send(res, 400, { error: "paymentType harus bank_transfer atau qris." });
-  }
 
-  // Jika gratis: skip Tripay, langsung set status paid dan kirim e-ticket
+  // 🔹 1) TANGANI EVENT GRATIS DULU
   if (isFree) {
     const merchantRef = `${eventId}-${Date.now()}`;
     const freeOrder = {
@@ -144,8 +136,8 @@ module.exports = async (req, res) => {
       reference: merchantRef,
       customer: {
         name: customer?.name || "Peserta",
-        email: customer?.email || "peserta@example.com",
-        phone: customer?.phone || "",
+        email: customer?.email || body.email || "peserta@example.com",
+        phone: customer?.phone || body.phone || "",
       },
       status: "paid",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -153,7 +145,7 @@ module.exports = async (req, res) => {
 
     await db.collection("orders").doc(merchantRef).set(freeOrder);
 
-    // Kirim e-ticket langsung
+    // Kirim e-ticket langsung (event gratis)
     sendTicketEmail({
       ...freeOrder,
       payCode: "GRATIS",
@@ -164,6 +156,16 @@ module.exports = async (req, res) => {
       ...freeOrder,
       free: true,
     });
+  }
+
+  // 🔹 2) EVENT BERBAYAR → BUTUH TRIPAY
+
+  if (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) {
+    return send(res, 500, { error: "Tripay belum dikonfigurasi." });
+  }
+
+  if (!["bank_transfer", "qris"].includes(paymentType)) {
+    return send(res, 400, { error: "paymentType harus bank_transfer atau qris." });
   }
 
   const method = resolveTripayMethod(paymentType, bank);
@@ -177,6 +179,7 @@ module.exports = async (req, res) => {
   const callbackUrl =
     TRIPAY_CALLBACK_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/payments/webhook` : "");
+
   const payload = {
     method,
     merchant_ref: merchantRef,
@@ -214,7 +217,7 @@ module.exports = async (req, res) => {
       bank,
       method,
       merchantRef,
-      amount: totalCustomer, // tampilkan ke user jumlah yang harus dibayar
+      amount: totalCustomer,
       baseAmount,
       platformTax,
       tripayFee,
