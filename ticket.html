@@ -78,26 +78,9 @@
     <p id="note">Jika QR di email tidak terbuka, gunakan kode di atas.</p>
     <a class="home" href="index.html#event">Kembali ke event</a>
   </div>
+  <script src="js/vendor/qrcode.min.js"></script>
   <script>
-    (function() {
-      function loadQrLib(onReady) {
-        if (window.QRCode) {
-          onReady();
-          return;
-        }
-        const primary = document.createElement("script");
-        primary.src = "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js";
-        primary.onload = onReady;
-        primary.onerror = () => {
-          const fallback = document.createElement("script");
-          fallback.src = "https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js";
-          fallback.onload = onReady;
-          fallback.onerror = () => onReady(new Error("Gagal memuat library QR"));
-          document.body.appendChild(fallback);
-        };
-        document.body.appendChild(primary);
-      }
-
+    (function () {
       const params = new URLSearchParams(window.location.search);
       const ref = params.get("ref");
       const refBox = document.getElementById("refBox");
@@ -106,17 +89,10 @@
       const qrWrap = document.getElementById("qrWrap");
       const qrBox = document.getElementById("qrBox");
 
-      function renderQr(err) {
-        if (!ref) return;
-        if (!qrWrap || !qrBox) return;
-        const qrValue = window.location.href;
-        if (err) {
-          qrBox.textContent = "QR tidak bisa dimuat. Gunakan kode di atas.";
-          qrBox.style.color = "#e2e8f0";
-          qrWrap.classList.remove("hidden");
-          return;
-        }
-        try {
+      if (ref) {
+        refBox.textContent = ref;
+        if (window.QRCode && qrWrap && qrBox) {
+          const qrValue = window.location.href;
           new QRCode(qrBox, {
             text: qrValue,
             width: 180,
@@ -124,16 +100,11 @@
             correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.M : 1,
           });
           qrWrap.classList.remove("hidden");
-        } catch (e) {
+        } else if (qrWrap && qrBox) {
           qrBox.textContent = "QR tidak bisa dimuat. Gunakan kode di atas.";
           qrBox.style.color = "#e2e8f0";
           qrWrap.classList.remove("hidden");
         }
-      }
-
-      if (ref) {
-        refBox.textContent = ref;
-        loadQrLib(renderQr);
       } else {
         refBox.textContent = "Referensi tidak ditemukan";
         desc.textContent = "Tautan tiket tidak memiliki parameter ref.";
