@@ -148,7 +148,8 @@ module.exports = async (req, res) => {
       });
     }
 
-    return send(res, 200, { received: true });
+    Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+    return res.status(200).type("text/plain").send("OK");
   } catch (error) {
     console.error("Webhook error:", error.message || error);
     return send(res, 500, { error: "Webhook error" });
