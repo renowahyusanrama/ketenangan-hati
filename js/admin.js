@@ -20,6 +20,8 @@ import {
   serverTimestamp,
   orderBy,
   query,
+  limit,
+  startAfter,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // === Konfigurasi Firebase (samakan dengan proyekmu) ===
@@ -69,12 +71,21 @@ const previewSchedule = document.getElementById("previewSchedule");
 const previewLocation = document.getElementById("previewLocation");
 const previewSpeaker = document.getElementById("previewSpeaker");
 const previewPrice = document.getElementById("previewPrice");
+const ordersTableBody = document.querySelector("#ordersTable tbody");
+const ordersStatusText = document.getElementById("ordersStatus");
+const orderStatusFilter = document.getElementById("orderStatusFilter");
+const orderSearch = document.getElementById("orderSearch");
+const refreshOrdersBtn = document.getElementById("refreshOrdersBtn");
+const loadMoreOrdersBtn = document.getElementById("loadMoreOrders");
 
 let currentUser = null;
 let isAdmin = false;
 let editingSlug = null;
 let cloudinaryWidget = null;
 const eventsCache = new Map();
+let lastOrderDoc = null;
+let ordersLoading = false;
+const ORDERS_PAGE_SIZE = 25;
 
 function setGuard(message, isOk = false) {
   guardMessage.textContent = message;
@@ -95,6 +106,134 @@ function formatCurrency(num) {
   const n = Number(num) || 0;
   if (!n) return "Gratis";
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(n);
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  try {
+    const d = value.toDate ? value.toDate() : new Date(value);
+    return new Intl.DateTimeFormat("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+  } catch (err) {
+    return "-";
+  }
+}
+
+function formatStatusBadge(status) {
+  const map = {
+    paid: "green",
+    pending: "yellow",
+    expired: "gray",
+    failed: "red",
+    canceled: "red",
+    refunded: "blue",
+  };
+  const cls = map[status?.toLowerCase?.()] || "gray";
+  const label = status ? status.toUpperCase() : "-";
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function formatMethod(order) {
+  if (!order) return "-";
+  if (order.paymentType === "bank_transfer") {
+    const bank = order.bank || order.method || "";
+    return bank ? `VA ${String(bank).toUpperCase()}` : "Bank Transfer";
+  }
+  if (order.paymentType === "qris") return "QRIS";
+  return order.method || order.paymentType || "-";
+}
+
+async function loadOrders(reset = true) {
+  if (!isAdmin) return;
+  if (ordersLoading) return;
+  ordersLoading = true;
+
+  let existingHtml = "";
+  if (ordersTableBody) {
+    existingHtml = ordersTableBody.innerHTML;
+    if (reset) {
+      existingHtml = "";
+      ordersTableBody.innerHTML = `<tr><td colspan="7" class="muted">Memuat data...</td></tr>`;
+    }
+  }
+  if (reset) lastOrderDoc = null;
+
+  const statusFilter = (orderStatusFilter?.value || "").toLowerCase();
+  const searchTerm = (orderSearch?.value || "").trim().toLowerCase();
+
+  const ref = collection(db, "orders");
+  let q = query(ref, orderBy("createdAt", "desc"), limit(ORDERS_PAGE_SIZE));
+  if (lastOrderDoc) {
+    q = query(ref, orderBy("createdAt", "desc"), startAfter(lastOrderDoc), limit(ORDERS_PAGE_SIZE));
+  }
+
+  let snap;
+  try {
+    snap = await getDocs(q);
+  } catch (err) {
+    console.warn("loadOrders fallback getDocs:", err?.message || err);
+    snap = await getDocs(ref);
+  }
+
+  const rows = [];
+  snap?.forEach((d) => {
+    const data = d.data() || {};
+    rows.push({ id: d.id, ...data, _snap: d });
+  });
+
+  const filtered = rows.filter((o) => {
+    const status = (o.status || "").toLowerCase();
+    if (statusFilter && status !== statusFilter) return false;
+    if (searchTerm) {
+      const haystack = `${o.merchantRef || ""} ${o.reference || ""} ${o.customer?.email || ""} ${o.customer?.name || ""}`.toLowerCase();
+      if (!haystack.includes(searchTerm)) return false;
+    }
+    return true;
+  });
+
+  if (ordersTableBody) {
+    if (!filtered.length && reset) {
+      ordersTableBody.innerHTML = `<tr><td colspan="7" class="muted">Tidak ada transaksi pada filter ini.</td></tr>`;
+    } else if (filtered.length) {
+      const html = filtered
+        .map((o) => {
+          const total = Number(o.totalAmount ?? o.amount ?? 0);
+          const createdAt = formatDateTime(o.createdAt || o.created_at);
+          return `
+            <tr>
+              <td>${o.merchantRef || o.reference || "-"}</td>
+              <td>${o.eventTitle || o.eventId || "-"}</td>
+              <td>${o.customer?.name || "-"}<br><span class="muted">${o.customer?.email || ""}</span></td>
+              <td>${formatMethod(o)}</td>
+              <td>${formatStatusBadge(o.status)}</td>
+              <td>${formatCurrency(total)}</td>
+              <td>${createdAt}</td>
+            </tr>
+          `;
+        })
+        .join("");
+      ordersTableBody.innerHTML = reset ? html : existingHtml + html;
+    } else if (!reset) {
+      ordersTableBody.innerHTML = existingHtml || `<tr><td colspan="7" class="muted">Tidak ada transaksi.</td></tr>`;
+    }
+  }
+
+  if (snap && snap.docs && snap.docs.length) {
+    lastOrderDoc = snap.docs[snap.docs.length - 1];
+  }
+  if (ordersStatusText) {
+    ordersStatusText.textContent = `Memuat ${filtered.length} transaksi (batch ${snap?.size || 0}).`;
+  }
+  if (loadMoreOrdersBtn) {
+    const allowPaging = !searchTerm; // saat pencarian aktif, matikan paging agar tidak membingungkan
+    loadMoreOrdersBtn.disabled = !allowPaging || !snap || !snap.docs || snap.docs.length < ORDERS_PAGE_SIZE;
+  }
+  ordersLoading = false;
 }
 
 function updatePreviewFromForm() {
@@ -392,6 +531,10 @@ newEventBtn?.addEventListener("click", resetForm);
 eventForm?.addEventListener("submit", saveEvent);
 eventForm?.addEventListener("input", updatePreviewFromForm);
 uploadPosterBtn?.addEventListener("click", openUpload);
+refreshOrdersBtn?.addEventListener("click", () => loadOrders(true));
+loadMoreOrdersBtn?.addEventListener("click", () => loadOrders(false));
+orderStatusFilter?.addEventListener("change", () => loadOrders(true));
+orderSearch?.addEventListener("input", () => loadOrders(true));
 
 tableBody?.addEventListener("click", (e) => {
   const editBtn = e.target.closest("[data-edit]");
@@ -461,5 +604,6 @@ onAuthStateChanged(auth, async (user) => {
   setDashboardVisible(true);
   resetForm();
   loadEvents();
+  loadOrders(true);
   initCloudinaryWidget();
 });

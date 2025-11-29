@@ -13,12 +13,10 @@ const BREVO_FROM = process.env.BREVO_FROM || SMTP_FROM;
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM = process.env.RESEND_FROM || "onboarding@resend.dev";
 
-// 👇 email akun kamu di Resend (yang di-log error tadi)
+// email akun kamu di Resend
 const RESEND_OWNER_EMAIL = "ketenanganjiwa.id@gmail.com";
 
-// 👇 SELAGI BELUM PUNYA DOMAIN, BIARKAN TRUE
-// kalau sudah verify domain + ganti RESEND_FROM ke domain-mu,
-// ubah ini ke: false supaya email dikirim langsung ke jamaah
+// SELAGI BELUM VERIFY DOMAIN → biarkan true
 const RESEND_TEST_MODE = true;
 
 function createTransporter() {
@@ -74,16 +72,22 @@ function buildTicketHtml({
         ).toLocaleString("id-ID")}</td></tr>
         <tr><td style="padding:6px 0; color:#475569;">Ref</td><td style="padding:6px 0;">${reference || eventId}</td></tr>
       </table>
-      <p style="margin-top:16px;">Silakan selesaikan pembayaran sesuai petunjuk di halaman pembayaran.</p>
+      <p style="margin-top:16px;">Silakan tunjukkan email ini saat registrasi / check-in.</p>
       <p style="margin-top:8px; color:#475569;">Email ini otomatis, mohon tidak dibalas.</p>
     </div>
   `;
 }
 
 async function sendTicketEmail(order) {
-  const to = order?.customer?.email;
-  if (!to) {
-    console.warn("sendTicketEmail: order.customer.email kosong", order);
+  if (!order) {
+    console.warn("sendTicketEmail: order kosong");
+    return;
+  }
+
+  // 🔥 FIX PENTING: support event GRATIS yang mungkin pakai order.email, bukan order.customer.email
+  const rawEmail = order?.customer?.email || order?.email;
+  if (!rawEmail) {
+    console.warn("sendTicketEmail: tidak ada email penerima di order", order);
     return;
   }
 
@@ -91,34 +95,51 @@ async function sendTicketEmail(order) {
     order.eventTitle || order.eventId || "Acara"
   }`;
 
+  const name = order.customer?.name || order.name || "Peserta";
+  const email = rawEmail;
+  const phone = order.customer?.phone || order.phone || "-";
+
+  const eventTitle = order.eventTitle || order.eventId || "Acara";
+  const eventId = order.eventId || "-";
+
+  // Kalau amount 0 / kosong → anggap event gratis
+  const amount = order.amount ?? 0;
+
+  const method =
+    order.paymentType === "bank_transfer"
+      ? `VA ${order.bank?.toUpperCase() || order.method || "-"}`
+      : order.paymentType === "qris"
+      ? "QRIS"
+      : amount === 0
+      ? "GRATIS / Tanpa Pembayaran"
+      : order.method || "Pembayaran";
+
+  const payCode = order.vaNumber || order.payCode || "-";
+  const reference = order.reference || order.merchantRef || eventId;
+
   const baseHtml = buildTicketHtml({
-    name: order.customer?.name,
-    email: order.customer?.email,
-    phone: order.customer?.phone,
-    eventTitle: order.eventTitle,
-    eventId: order.eventId,
-    method:
-      order.paymentType === "bank_transfer"
-        ? `VA ${order.bank?.toUpperCase() || order.method}`
-        : "QRIS",
-    payCode: order.vaNumber || order.payCode,
-    amount: order.amount,
-    reference: order.reference || order.merchantRef,
+    name,
+    email,
+    phone,
+    eventTitle,
+    eventId,
+    method,
+    payCode,
+    amount,
+    reference,
   });
 
-  let finalTo = to;
+  let finalTo = rawEmail;
   let finalHtml = baseHtml;
 
-  // ---------- MODE TEST RESEEND ----------
-  // Selagi belum verify domain, Resend cuma boleh kirim ke email pemilik akun.
-  // Jadi kita redirect semua email ke RESEND_OWNER_EMAIL, tapi di atas email
-  // kita kasih info "seharusnya untuk siapa".
+  // MODE TEST: semua email dialihkan ke inbox kamu
   if (RESEND_API_KEY && RESEND_TEST_MODE) {
     finalTo = RESEND_OWNER_EMAIL;
     finalHtml = `
       <div style="font-family:Arial, sans-serif; max-width:560px; margin:auto; color:#0f172a">
         <p style="padding:8px; background:#fef3c7; border-radius:6px; border:1px solid #facc15; font-size:13px;">
-          <strong>TEST MODE:</strong> Aslinya email ini untuk <strong>${to}</strong>. Karena domain belum diverifikasi di Resend, semua email dialihkan ke <strong>${RESEND_OWNER_EMAIL}</strong>.
+          <strong>TEST MODE:</strong> Aslinya email ini untuk <strong>${rawEmail}</strong>. 
+          Karena domain Resend belum diverifikasi, semua email dialihkan ke <strong>${RESEND_OWNER_EMAIL}</strong>.
         </p>
       </div>
       <hr style="margin:16px 0;" />
@@ -126,7 +147,7 @@ async function sendTicketEmail(order) {
     `;
   }
 
-  // Kirim via Resend jika API key tersedia
+  // Kirim via Resend kalau sudah di-set
   if (RESEND_API_KEY) {
     const resend = new Resend(RESEND_API_KEY);
     await resend.emails.send({
@@ -138,7 +159,7 @@ async function sendTicketEmail(order) {
     return;
   }
 
-  // Fallback ke Brevo/SMTP (kalau nanti kamu mau pakai ini)
+  // Fallback (kalau nanti mau pakai SMTP/Brevo)
   const transporter = createTransporter();
   await transporter.sendMail({
     from: BREVO_FROM || SMTP_FROM,
