@@ -178,11 +178,15 @@ module.exports = async (req, res) => {
       return send(res, 400, { error: err?.message || "Kuota event sudah penuh." });
     }
 
-    sendTicketEmail({
-      ...freeOrder,
-      payCode: "GRATIS",
-      vaNumber: "GRATIS",
-    }).catch((err) => console.error("Email send error (free):", err?.message || err));
+    try {
+      await sendTicketEmail({
+        ...freeOrder,
+        payCode: "GRATIS",
+        vaNumber: "GRATIS",
+      });
+    } catch (err) {
+      console.error("Email send error (free):", err?.message || err);
+    }
 
     return send(res, 200, { ...freeOrder, free: true });
   }
