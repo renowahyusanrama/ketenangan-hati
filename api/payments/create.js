@@ -121,7 +121,7 @@ module.exports = async (req, res) => {
   const eventAmount = Number(event.amount) || 0;
   const isFree = eventAmount <= 0;
 
-  // 🔹 1) TANGANI EVENT GRATIS DULU
+  // 🔹 1) EVENT GRATIS
   if (isFree) {
     const merchantRef = `${eventId}-${Date.now()}`;
     const freeOrder = {
@@ -145,12 +145,16 @@ module.exports = async (req, res) => {
 
     await db.collection("orders").doc(merchantRef).set(freeOrder);
 
-    // Kirim e-ticket langsung (event gratis)
-    sendTicketEmail({
-      ...freeOrder,
-      payCode: "GRATIS",
-      vaNumber: "GRATIS",
-    }).catch((err) => console.error("Email send error (free):", err?.message || err));
+    // ⬇⬇⬇ WAJIB di-await supaya Resend benar2 terpanggil sebelum function selesai
+    try {
+      await sendTicketEmail({
+        ...freeOrder,
+        payCode: "GRATIS",
+        vaNumber: "GRATIS",
+      });
+    } catch (err) {
+      console.error("Email send error (free):", err?.message || err);
+    }
 
     return send(res, 200, {
       ...freeOrder,
@@ -158,7 +162,7 @@ module.exports = async (req, res) => {
     });
   }
 
-  // 🔹 2) EVENT BERBAYAR → BUTUH TRIPAY
+  // 🔹 2) EVENT BERBAYAR → Tripay
 
   if (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) {
     return send(res, 500, { error: "Tripay belum dikonfigurasi." });
