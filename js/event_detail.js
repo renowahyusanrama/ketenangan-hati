@@ -432,6 +432,8 @@ function normalizeEvent(raw, slug) {
     notes: raw.notes || [],
     preparation: raw.preparation || [],
     contact: raw.contact || null,
+    capacity: raw.capacity ?? null,
+    seatsUsed: raw.seatsUsed ?? null,
   };
 }
 
@@ -458,6 +460,20 @@ function renderEvent(event) {
   setText("eventPrice", event.amount ? formatCurrency(event.amount) : event.priceLabel || "Gratis");
   setText("eventTime", event.time);
   setText("eventAddress", event.address);
+
+  const quotaEl = document.getElementById("quotaInfo");
+  if (quotaEl) {
+    const capacity = Number(event.capacity) || 0;
+    const used = Number(event.seatsUsed) || 0;
+    if (capacity > 0) {
+      const remaining = Math.max(capacity - used, 0);
+      quotaEl.innerHTML = `<div><i class="fa-regular fa-user"></i><span>Sisa kuota: ${remaining} / ${capacity}</span></div>`;
+      quotaEl.classList.remove("hidden");
+    } else {
+      quotaEl.innerHTML = "";
+      quotaEl.classList.add("hidden");
+    }
+  }
 
   renderList("eventHighlights", event.highlights);
   renderList("eventAgenda", event.agenda, renderAgendaItem);

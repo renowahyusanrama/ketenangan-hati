@@ -299,6 +299,9 @@ async function loadEvents() {
       .map((e) => {
         const statusClass = e.status === "published" ? "green" : "gray";
         const img = e.imageUrl ? `<a href="${e.imageUrl}" target="_blank">Lihat</a>` : "-";
+        const capacity = Number(e.capacity) || 0;
+        const used = Number(e.seatsUsed) || 0;
+        const quotaText = capacity ? `${used}/${capacity}` : "∞";
         return `
           <tr>
             <td>${e.title || "-"}</td>
@@ -307,6 +310,7 @@ async function loadEvents() {
             <td>${e.schedule || "-"}</td>
             <td>${e.location || "-"}</td>
             <td>${formatCurrency(e.amount)}</td>
+            <td>${quotaText}</td>
             <td>${img}</td>
             <td>
               <button class="outline" data-edit="${e.id}">Edit</button>
