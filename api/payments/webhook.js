@@ -25,6 +25,63 @@ function parseBody(req) {
   return {};
 }
 
+function extractRawBody(req) {
+  if (req.rawBody) {
+    if (Buffer.isBuffer(req.rawBody)) return req.rawBody.toString("utf8");
+    if (typeof req.rawBody === "string") return req.rawBody;
+  }
+  if (req.body) {
+    if (typeof req.body === "string") return req.body;
+    if (Buffer.isBuffer(req.body)) return req.body.toString("utf8");
+    try {
+      return JSON.stringify(req.body);
+    } catch (err) {
+      return "";
+    }
+  }
+  return "";
+}
+
+async function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    try {
+      const chunks = [];
+      req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+      req.on("error", reject);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+async function getPayloadAndRaw(req) {
+  // Usahakan pakai raw stream terlebih dahulu supaya signature HMAC cocok
+  let rawBody = "";
+  try {
+    rawBody = await readRawBody(req);
+  } catch (err) {
+    rawBody = "";
+  }
+
+  if (!rawBody) {
+    rawBody = extractRawBody(req);
+  }
+
+  let payload = {};
+  if (rawBody) {
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (err) {
+      payload = parseBody(req);
+    }
+  } else {
+    payload = parseBody(req);
+  }
+
+  return { rawBody, payload };
+}
+
 module.exports = async (req, res) => {
   if (req.method === "OPTIONS") {
     Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
@@ -34,13 +91,16 @@ module.exports = async (req, res) => {
     return send(res, 405, { error: "Method not allowed" });
   }
 
-  const payload = parseBody(req);
+  const { rawBody, payload } = await getPayloadAndRaw(req);
+  req.rawBody = rawBody;
+  req.body = payload;
+
   const merchantRef = payload.merchant_ref || payload.merchantRef || payload.reference;
   if (!merchantRef) {
     return send(res, 400, { error: "merchant_ref tidak ditemukan." });
   }
 
-  if (!verifyTripayCallback(payload, req.headers)) {
+  if (!verifyTripayCallback(payload, req.headers, rawBody)) {
     console.warn("Signature Tripay tidak valid untuk order", merchantRef);
     return send(res, 403, { error: "Invalid signature" });
   }
@@ -93,4 +153,11 @@ module.exports = async (req, res) => {
     console.error("Webhook error:", error.message || error);
     return send(res, 500, { error: "Webhook error" });
   }
+};
+
+// Matikan bodyParser bawaan Vercel supaya rawBody tersedia untuk HMAC signature
+module.exports.config = {
+  api: {
+    bodyParser: false,
+  },
 };

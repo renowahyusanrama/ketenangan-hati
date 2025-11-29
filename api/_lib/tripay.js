@@ -71,27 +71,56 @@ function normalizeTripayResponse(
   };
 }
 
-function verifyTripayCallback(body = {}, headers = {}) {
+function verifyTripayCallback(body = {}, headers = {}, rawBody = "") {
   if (!TRIPAY_PRIVATE_KEY) return false;
+
   const headerSig =
     headers["x-callback-signature"] ||
     headers["X-CALLBACK-SIGNATURE"] ||
     headers["x-callback-signature".toLowerCase()];
   const signature = body.signature || body.sign || headerSig;
   if (!signature) return false;
+
+  // Tripay callback signature resmi: HMAC SHA256 dari raw JSON callback.
+  const candidates = [];
+  if (typeof rawBody === "string" && rawBody.length > 0) candidates.push(rawBody);
+  try {
+    const stringified = JSON.stringify(body);
+    if (stringified) candidates.push(stringified);
+  } catch (err) {
+    // ignore
+  }
+
+  const expectedCandidates = [];
+  for (const candidate of candidates) {
+    const expectedFromBody = crypto.createHmac("sha256", TRIPAY_PRIVATE_KEY).update(candidate).digest("hex");
+    expectedCandidates.push(expectedFromBody);
+    if (signature === expectedFromBody) return true;
+  }
+
+  // Fallback ke pola lama (merchant_code + merchant_ref + amount) jika diperlukan.
   const merchantRef = body.merchant_ref || body.merchantRef || body.reference;
   const amount =
-    body.total_amount ??
-    body.amount ??
-    body.amount_total ??
-    body.amount_received ??
-    body.amount_received_raw;
+    body.total_amount ?? body.amount ?? body.amount_total ?? body.amount_received ?? body.amount_received_raw;
   if (!merchantRef || amount == null) return false;
   const basePayload = `${merchantRef}${TRIPAY_MERCHANT_CODE}${amount}`;
   const altPayload = `${TRIPAY_MERCHANT_CODE}${merchantRef}${amount}`;
   const expected = crypto.createHmac("sha256", TRIPAY_PRIVATE_KEY).update(basePayload).digest("hex");
   const altExpected = crypto.createHmac("sha256", TRIPAY_PRIVATE_KEY).update(altPayload).digest("hex");
-  return signature === expected || signature === altExpected;
+  const matched = signature === expected || signature === altExpected;
+
+  if (!matched) {
+    console.warn("Tripay callback signature mismatch", {
+      signature,
+      expectedCandidates,
+      expectedFallback: [expected, altExpected],
+      merchantRef,
+      amount,
+      hasRawBody: !!rawBody,
+    });
+  }
+
+  return matched;
 }
 
 function mapStatus(status = "") {
