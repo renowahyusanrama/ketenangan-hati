@@ -25,7 +25,7 @@ function buildTicketHtml({
   amount,
   reference,
   ticketUrl,
-  qrDataUrl,
+  qrDataUrl, // sekarang diisi "cid:..." kalau ada QR
 }) {
   return `
     <div style="font-family:Arial, sans-serif; max-width:560px; margin:auto; color:#0f172a">
@@ -48,7 +48,11 @@ function buildTicketHtml({
           ? `<div style="margin-top:16px; text-align:center;">
               <p style="margin:0 0 8px; color:#475569;">Tunjukkan QR ini saat check-in:</p>
               <img src="${qrDataUrl}" alt="QR E-Ticket" style="width:200px; height:200px; border:1px solid #e2e8f0; border-radius:12px;" />
-              ${ticketUrl ? `<p style="margin-top:8px;"><a href="${ticketUrl}" style="color:#2563eb;">Buka tiket</a></p>` : ""}
+              ${
+                ticketUrl
+                  ? `<p style="margin-top:8px;"><a href="${ticketUrl}" style="color:#2563eb;">Buka tiket</a></p>`
+                  : ""
+              }
             </div>`
           : ""
       }
@@ -69,6 +73,7 @@ async function sendTicketEmail(order) {
     eventId: order?.eventId,
     amount: order?.amount,
     paymentType: order?.paymentType,
+    status: order?.status,
   });
 
   if (!RESEND_API_KEY) {
@@ -110,20 +115,44 @@ async function sendTicketEmail(order) {
       ? "QRIS"
       : order.method || "Pembayaran";
 
-  const payCode = order.vaNumber || order.payCode || (amount === 0 ? "GRATIS" : "-");
-  const reference = order.reference || order.merchantRef || order.orderId || order.id || eventId;
+  const payCode =
+    order.vaNumber || order.payCode || (amount === 0 ? "GRATIS" : "-");
+
+  const reference =
+    order.reference || order.merchantRef || order.orderId || order.id || eventId;
+
   const ticketUrl = reference
-    ? `https://renowahysanrama.github.io/ketenangan-jiwa/ticket.html?ref=${encodeURIComponent(reference)}`
+    ? `https://renowahysanrama.github.io/ketenangan-jiwa/ticket.html?ref=${encodeURIComponent(
+        reference,
+      )}`
     : "";
 
-  let qrDataUrl = "";
+  // ------ QR CODE (hanya kalau status paid) + INLINE ATTACHMENT ------
+  let qrDataUrl = ""; // ini nanti diisi "cid:..." kalau ada QR
+  const attachments = [];
+
   if ((order.status || "").toLowerCase() === "paid" && ticketUrl) {
     try {
-      qrDataUrl = await QRCode.toDataURL(ticketUrl);
+      const dataUrl = await QRCode.toDataURL(ticketUrl);
+      const base64 = dataUrl.split(",")[1]; // buang "data:image/png;base64,"
+
+      const contentId = `ticket-qr-${reference || eventId}`.slice(0, 120);
+
+      qrDataUrl = `cid:${contentId}`;
+
+      attachments.push({
+        content: base64,
+        filename: `qr-${reference || eventId}.png`,
+        contentType: "image/png",
+        contentId, // dipakai di src="cid:..."
+      });
+
+      console.log("QR inline attachment disiapkan untuk:", ticketUrl);
     } catch (err) {
       console.error("QR generate error:", err?.message || err);
     }
   }
+  // -------------------------------------------------------------------
 
   const baseHtml = buildTicketHtml({
     name,
@@ -160,15 +189,24 @@ async function sendTicketEmail(order) {
   const resend = new Resend(RESEND_API_KEY);
 
   try {
-    const result = await resend.emails.send({
+    const payload = {
       from: RESEND_FROM,
       to: finalTo,
       subject,
       html: finalHtml,
-    });
+    };
+
+    if (attachments.length > 0) {
+      payload.attachments = attachments;
+    }
+
+    const result = await resend.emails.send(payload);
     console.log("Resend API result:", result);
   } catch (err) {
-    console.error("Resend API error:", err?.response?.data || err?.message || err);
+    console.error(
+      "Resend API error:",
+      err?.response?.data || err?.message || err,
+    );
   }
 }
 
