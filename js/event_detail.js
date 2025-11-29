@@ -251,7 +251,7 @@ function initPaymentForm(event) {
 
   let method = "qris";
   let bank = null;
-  const isFree = event && !event.amount;
+  const isFree = event && !event.amount; // amount 0 => gratis
 
   function setHint(message, variant = "info") {
     if (!hint) return;
@@ -260,16 +260,19 @@ function initPaymentForm(event) {
     if (variant !== "info") hint.classList.add(variant);
   }
 
-  // Jika event gratis, sembunyikan pilihan metode & ubah CTA
+  // Event GRATIS: sembunyikan pilihan metode & ubah CTA
   if (isFree) {
-    method = "qris";
+    method = "free";
     bank = null;
     methodGrid?.classList.add("hidden");
-    methodButtons.forEach((btn) => btn.setAttribute("disabled", "true"));
+    methodButtons.forEach((btn) => {
+      btn.setAttribute("disabled", "true");
+      btn.classList.remove("active");
+    });
     if (payBtn) payBtn.textContent = "Kirim E-Ticket";
     setHint("Event gratis, e-ticket akan dikirim otomatis tanpa pembayaran.", "success");
   } else {
-    // Default pilih tombol pertama untuk event berbayar
+    // Event BERBAYAR: pilihan QRIS / VA tetap seperti biasa
     methodButtons.forEach((btn, index) => {
       btn.addEventListener("click", () => {
         method = btn.dataset.method === "va" ? "bank_transfer" : "qris";
@@ -295,12 +298,13 @@ function initPaymentForm(event) {
     resultBox?.classList.add("hidden");
     setHint(isFree ? "Memproses e-ticket gratis..." : "Membuat tagihan pembayaran...", "info");
     payBtn.disabled = true;
-    payBtn.textContent = isFree ? "Memproses..." : "Memproses...";
+    payBtn.textContent = "Memproses...";
 
     const formData = new FormData(form);
     const payload = {
       eventId: event.id,
-      paymentType: isFree ? "qris" : method, // backend free branch akan override ke paymentType "free"
+      // 🔥 GRATIS → kirim paymentType "free" (backend akan langsung bikin order tanpa Tripay)
+      paymentType: isFree ? "free" : method,
       bank: isFree ? null : method === "bank_transfer" ? bank || "bca" : null,
       customer: {
         name: formData.get("name")?.toString() || "",
