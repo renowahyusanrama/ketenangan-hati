@@ -22,8 +22,6 @@ import {
   query,
   limit,
   startAfter,
-  doc,
-  setDoc as setDocDirect,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // === Konfigurasi Firebase (samakan dengan proyekmu) ===
@@ -93,7 +91,7 @@ async function updateCheckin(orderId, verified) {
   if (!isAdmin || !orderId) return;
   const ref = doc(db, "orders", orderId);
   try {
-    await setDocDirect(
+    await setDoc(
       ref,
       {
         verified: !!verified,

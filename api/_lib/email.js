@@ -25,7 +25,7 @@ function buildTicketHtml({
   amount,
   reference,
   ticketUrl,
-  qrDataUrl, // sekarang diisi "cid:..." kalau ada QR
+  qrDataUrl, // bisa kosong atau "cid:xxx"
 }) {
   return `
     <div style="font-family:Arial, sans-serif; max-width:560px; margin:auto; color:#0f172a">
@@ -54,6 +54,11 @@ function buildTicketHtml({
                   : ""
               }
             </div>`
+          : ticketUrl
+          ? `<div style="margin-top:16px; text-align:center;">
+              <p style="margin:0 0 8px; color:#475569;">Jika QR tidak muncul di email, klik tautan berikut:</p>
+              <a href="${ticketUrl}" style="color:#2563eb;">Buka tiket</a>
+            </div>`
           : ""
       }
       <p style="margin-top:16px;">Silakan tunjukkan email ini saat registrasi / check-in.</p>
@@ -63,7 +68,6 @@ function buildTicketHtml({
 }
 
 async function sendTicketEmail(order) {
-  // --- DEBUG LOG: ini yang nanti kita lihat di Vercel ---
   console.log("sendTicketEmail() dipanggil:", {
     hasApiKey: !!RESEND_API_KEY,
     from: RESEND_FROM,
@@ -86,7 +90,6 @@ async function sendTicketEmail(order) {
     return;
   }
 
-  // berbayar: order.customer.email, gratis: boleh pakai order.email
   const originalEmail = order?.customer?.email || order?.email;
   if (!originalEmail) {
     console.error("sendTicketEmail: tidak ada email penerima di order");
@@ -127,34 +130,34 @@ async function sendTicketEmail(order) {
       )}`
     : "";
 
-  // ------ QR CODE (hanya kalau status paid) + INLINE ATTACHMENT ------
-  let qrDataUrl = ""; // ini nanti diisi "cid:..." kalau ada QR
-  const attachments = [];
+  // ==== QR CODE (inline attachment pakai CID) ====
+  const isPaid = (order.status || "").toLowerCase() === "paid";
+  let qrSrcForHtml = ""; // "cid:..." kalau berhasil
+  let qrAttachment = null;
 
-  if ((order.status || "").toLowerCase() === "paid" && ticketUrl) {
+  if (isPaid && ticketUrl) {
     try {
       const dataUrl = await QRCode.toDataURL(ticketUrl);
-      const base64 = dataUrl.split(",")[1]; // buang "data:image/png;base64,"
+      const base64 = dataUrl.split(",")[1]; // buang prefix "data:image/png;base64,"
 
-      const contentId = `ticket-qr-${reference || eventId}`.slice(0, 120);
+      const contentId = "ticket-qr"; // cukup satu ID sederhana
+      qrSrcForHtml = `cid:${contentId}`;
 
-      qrDataUrl = `cid:${contentId}`;
-
-      attachments.push({
+      qrAttachment = {
         content: base64,
         filename: `qr-${reference || eventId}.png`,
-        contentType: "image/png",
-        contentId, // dipakai di src="cid:..."
-      });
+        contentId, // penting untuk inline image
+      };
 
       console.log("QR inline attachment disiapkan untuk:", ticketUrl);
     } catch (err) {
       console.error("QR generate error:", err?.message || err);
     }
   }
-  // -------------------------------------------------------------------
+  // ===============================================
 
-  const baseHtml = buildTicketHtml({
+  // HTML versi dengan QR (kalau ada) dan tanpa QR (fallback)
+  const baseHtmlWithQr = buildTicketHtml({
     name,
     email,
     phone,
@@ -165,16 +168,30 @@ async function sendTicketEmail(order) {
     amount,
     reference,
     ticketUrl,
-    qrDataUrl,
+    qrDataUrl: qrSrcForHtml,
+  });
+
+  const baseHtmlNoQr = buildTicketHtml({
+    name,
+    email,
+    phone,
+    eventTitle,
+    eventId,
+    method,
+    payCode,
+    amount,
+    reference,
+    ticketUrl,
+    qrDataUrl: "",
   });
 
   let finalTo = originalEmail;
-  let finalHtml = baseHtml;
+  let htmlWithQr = baseHtmlWithQr;
+  let htmlNoQr = baseHtmlNoQr;
 
-  // TEST MODE: alihkan semuanya ke email kamu
   if (RESEND_TEST_MODE) {
     finalTo = RESEND_OWNER_EMAIL;
-    finalHtml = `
+    const banner = `
       <div style="font-family:Arial, sans-serif; max-width:560px; margin:auto; color:#0f172a">
         <p style="padding:8px; background:#fef3c7; border-radius:6px; border:1px solid #facc15; font-size:13px;">
           <strong>TEST MODE:</strong> Aslinya email ini untuk <strong>${originalEmail}</strong>.<br/>
@@ -182,31 +199,48 @@ async function sendTicketEmail(order) {
         </p>
       </div>
       <hr style="margin:16px 0;" />
-      ${baseHtml}
     `;
+    htmlWithQr = `${banner}${baseHtmlWithQr}`;
+    htmlNoQr = `${banner}${baseHtmlNoQr}`;
   }
 
   const resend = new Resend(RESEND_API_KEY);
+  const basePayload = {
+    from: RESEND_FROM,
+    to: finalTo,
+    subject,
+  };
 
+  // Coba kirim dengan QR (kalau ada attachment)
   try {
-    const payload = {
-      from: RESEND_FROM,
-      to: finalTo,
-      subject,
-      html: finalHtml,
+    const payloadWithQr = {
+      ...basePayload,
+      html: htmlWithQr,
+      ...(qrAttachment ? { attachments: [qrAttachment] } : {}),
     };
 
-    if (attachments.length > 0) {
-      payload.attachments = attachments;
-    }
-
-    const result = await resend.emails.send(payload);
-    console.log("Resend API result:", result);
+    const result = await resend.emails.send(payloadWithQr);
+    console.log("Resend API result (with QR):", result);
   } catch (err) {
     console.error(
-      "Resend API error:",
+      "Resend API error (with attachments), mencoba fallback tanpa QR:",
       err?.response?.data || err?.message || err,
     );
+
+    // Fallback: kirim ulang TANPA attachment & TANPA QR
+    try {
+      const fallbackPayload = {
+        ...basePayload,
+        html: htmlNoQr,
+      };
+      const result2 = await resend.emails.send(fallbackPayload);
+      console.log("Resend API result (fallback no QR):", result2);
+    } catch (err2) {
+      console.error(
+        "Resend API fallback error (no attachments):",
+        err2?.response?.data || err2?.message || err2,
+      );
+    }
   }
 }
 
