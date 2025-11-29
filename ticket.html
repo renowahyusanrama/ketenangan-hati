@@ -92,7 +92,8 @@
       if (ref) {
         refBox.textContent = ref;
         if (window.QRCode && qrWrap && qrBox) {
-          const qrValue = window.location.href;
+          // QR berisi kode ref agar bisa dipindai di dashboard admin
+          const qrValue = ref;
           new QRCode(qrBox, {
             text: qrValue,
             width: 180,

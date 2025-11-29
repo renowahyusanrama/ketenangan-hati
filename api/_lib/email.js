@@ -137,8 +137,7 @@ async function sendTicketEmail(order) {
 
   const reference =
     order.reference || order.merchantRef || order.orderId || order.id || eventId;
-
-  // ⚠️ Di sini kita pastikan selalu pakai /ketenangan-jiwa
+  // Link tiket
   const base = TICKET_BASE_URL.replace(/\/$/, "");
   const ticketUrl = reference
     ? `${base}/ticket.html?ref=${encodeURIComponent(reference)}`
