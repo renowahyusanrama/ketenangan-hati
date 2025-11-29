@@ -44,16 +44,34 @@ async function createTripayTransaction(payload) {
 
 function normalizeTripayResponse(
   trx,
-  { eventId, eventTitle, paymentType, bank, method, merchantRef, amount },
+  {
+    eventId,
+    eventTitle,
+    paymentType,
+    bank,
+    method,
+    merchantRef,
+    amount,
+    baseAmount,
+    platformTax,
+    tripayFee,
+    totalAmount,
+  },
 ) {
   const payCode = trx?.pay_code || trx?.va_number || trx?.payment_code || null;
+  const total = totalAmount || amount;
+  const base = baseAmount != null ? baseAmount : amount;
   return {
     provider: "tripay",
     orderId: merchantRef,
     reference: trx?.reference || trx?.reference_id,
     eventId,
     eventTitle,
-    amount,
+    amount: total,
+    baseAmount: base,
+    platformTax: platformTax ?? null,
+    tripayFee: tripayFee ?? null,
+    totalAmount: total,
     paymentType,
     bank: bank || null,
     method,

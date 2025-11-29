@@ -48,6 +48,22 @@ const eventsMap = {
   },
 };
 
+function computeFees(paymentType, bank, baseAmount) {
+  const base = Number(baseAmount) || 0;
+  const platformTax = Math.ceil(base * 0.01); // 1% dari harga tiket
+
+  let tripayFee = 0;
+  if (paymentType === "bank_transfer") {
+    const normalizedBank = (bank || "").toLowerCase();
+    tripayFee = normalizedBank === "bca" ? 5500 : 4250;
+  } else if (paymentType === "qris") {
+    tripayFee = Math.ceil(750 + base * 0.007); // 750 + 0.70%
+  }
+
+  const totalAmount = Math.max(0, Math.ceil(base + platformTax + tripayFee));
+  return { platformTax, tripayFee, totalAmount, baseAmount: base };
+}
+
 function send(res, status, body) {
   Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
   res.status(status).json(body);
@@ -148,29 +164,34 @@ module.exports = async (req, res) => {
 
   const method = resolveTripayMethod(paymentType, bank);
   const merchantRef = `${eventId}-${Date.now()}`;
+  const { platformTax, tripayFee, totalAmount, baseAmount } = computeFees(
+    paymentType,
+    bank,
+    eventAmount,
+  );
 
   const callbackUrl =
     TRIPAY_CALLBACK_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/payments/webhook` : "");
-    const payload = {
-      method,
-      merchant_ref: merchantRef,
-      amount: eventAmount,
-      customer_name: customer?.name || "Peserta",
-      customer_email: customer?.email || "peserta@example.com",
-      customer_phone: customer?.phone || "",
-      order_items: [
-        {
-          sku: eventId,
-          name: event.title,
-          price: eventAmount,
-          quantity: 1,
-          subtotal: eventAmount,
-        },
-      ],
-      signature: createTripaySignature(merchantRef, eventAmount),
-      expired_time: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
-    };
+  const payload = {
+    method,
+    merchant_ref: merchantRef,
+    amount: totalAmount,
+    customer_name: customer?.name || "Peserta",
+    customer_email: customer?.email || "peserta@example.com",
+    customer_phone: customer?.phone || "",
+    order_items: [
+      {
+        sku: eventId,
+        name: event.title,
+        price: totalAmount,
+        quantity: 1,
+        subtotal: totalAmount,
+      },
+    ],
+    signature: createTripaySignature(merchantRef, totalAmount),
+    expired_time: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+  };
 
   if (callbackUrl) payload.callback_url = callbackUrl;
   if (TRIPAY_RETURN_URL) payload.return_url = TRIPAY_RETURN_URL;
@@ -189,7 +210,11 @@ module.exports = async (req, res) => {
       bank,
       method,
       merchantRef,
-      amount: Number(event.amount),
+      amount: totalAmount,
+      baseAmount,
+      platformTax,
+      tripayFee,
+      totalAmount,
     });
 
     await db
@@ -199,7 +224,11 @@ module.exports = async (req, res) => {
         provider: "tripay",
         eventId,
         eventTitle: event.title,
-        amount: Number(event.amount),
+        amount: totalAmount,
+        baseAmount,
+        platformTax,
+        tripayFee,
+        totalAmount,
         paymentType,
         bank: bank || null,
         method,
