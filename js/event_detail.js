@@ -245,11 +245,13 @@ function initPaymentForm(event) {
   const resultBox = document.getElementById("paymentResult");
   const hint = document.getElementById("paymentHint");
   const payBtn = document.getElementById("payNowBtn");
+  const methodGrid = document.querySelector(".method-grid");
 
-  if (!form || !methodButtons.length) return;
+  if (!form) return;
 
   let method = "qris";
   let bank = null;
+  const isFree = event && !event.amount;
 
   function setHint(message, variant = "info") {
     if (!hint) return;
@@ -258,29 +260,30 @@ function initPaymentForm(event) {
     if (variant !== "info") hint.classList.add(variant);
   }
 
-  // Jika event gratis, ganti teks tombol & hint
-  if (event && !event.amount) {
+  // Jika event gratis, sembunyikan pilihan metode & ubah CTA
+  if (isFree) {
+    method = "qris";
+    bank = null;
+    methodGrid?.classList.add("hidden");
+    methodButtons.forEach((btn) => btn.setAttribute("disabled", "true"));
     if (payBtn) payBtn.textContent = "Kirim E-Ticket";
-    setHint("Event gratis, e-ticket akan dikirim tanpa pembayaran.", "success");
-  }
-
-  function activateButton(target) {
-    methodButtons.forEach((btn) => btn.classList.toggle("active", btn === target));
-  }
-
-  methodButtons.forEach((btn, index) => {
-    btn.addEventListener("click", () => {
-      method = btn.dataset.method === "va" ? "bank_transfer" : "qris";
-      bank = btn.dataset.bank || null;
-      activateButton(btn);
-      setHint(
-        method === "bank_transfer"
-          ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
-          : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
-      );
+    setHint("Event gratis, e-ticket akan dikirim otomatis tanpa pembayaran.", "success");
+  } else {
+    // Default pilih tombol pertama untuk event berbayar
+    methodButtons.forEach((btn, index) => {
+      btn.addEventListener("click", () => {
+        method = btn.dataset.method === "va" ? "bank_transfer" : "qris";
+        bank = btn.dataset.bank || null;
+        methodButtons.forEach((b) => b.classList.toggle("active", b === btn));
+        setHint(
+          method === "bank_transfer"
+            ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
+            : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
+        );
+      });
+      if (index === 0) btn.click();
     });
-    if (index === 0) btn.click();
-  });
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -290,15 +293,15 @@ function initPaymentForm(event) {
     }
 
     resultBox?.classList.add("hidden");
-    setHint("Membuat tagihan pembayaran...", "info");
+    setHint(isFree ? "Memproses e-ticket gratis..." : "Membuat tagihan pembayaran...", "info");
     payBtn.disabled = true;
-    payBtn.textContent = "Memproses...";
+    payBtn.textContent = isFree ? "Memproses..." : "Memproses...";
 
     const formData = new FormData(form);
     const payload = {
       eventId: event.id,
-      paymentType: method,
-      bank: method === "bank_transfer" ? bank || "bca" : null,
+      paymentType: isFree ? "qris" : method, // backend free branch akan override ke paymentType "free"
+      bank: isFree ? null : method === "bank_transfer" ? bank || "bca" : null,
       customer: {
         name: formData.get("name")?.toString() || "",
         email: formData.get("email")?.toString() || "",
@@ -320,13 +323,18 @@ function initPaymentForm(event) {
 
       const data = await response.json();
       renderPaymentResult(resultBox, data);
-      setHint("Tagihan berhasil dibuat. Segera selesaikan pembayaran.", "success");
+      setHint(
+        isFree
+          ? "E-ticket berhasil dikirim ke email. Cek inbox/spam."
+          : "Tagihan berhasil dibuat. Segera selesaikan pembayaran.",
+        "success",
+      );
     } catch (error) {
       console.error(error);
       setHint(error.message || "Gagal membuat pembayaran.", "error");
     } finally {
       payBtn.disabled = false;
-      payBtn.textContent = "Buat Tagihan";
+      payBtn.textContent = isFree ? "Kirim E-Ticket" : "Buat Tagihan";
     }
   });
 }
