@@ -56,11 +56,13 @@ function normalizeTripayResponse(
     platformTax,
     tripayFee,
     totalAmount,
+    amountForTripay,
   },
 ) {
   const payCode = trx?.pay_code || trx?.va_number || trx?.payment_code || null;
-  const total = totalAmount || amount;
+  const total = totalAmount != null ? totalAmount : amount;
   const base = baseAmount != null ? baseAmount : amount;
+  const chargeAmount = amountForTripay != null ? amountForTripay : base + (platformTax || 0);
   return {
     provider: "tripay",
     orderId: merchantRef,
@@ -72,6 +74,7 @@ function normalizeTripayResponse(
     platformTax: platformTax ?? null,
     tripayFee: tripayFee ?? null,
     totalAmount: total,
+    amountForTripay: chargeAmount,
     paymentType,
     bank: bank || null,
     method,

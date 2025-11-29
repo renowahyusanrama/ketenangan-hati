@@ -60,8 +60,12 @@ function computeFees(paymentType, bank, baseAmount) {
     tripayFee = Math.ceil(750 + base * 0.007); // 750 + 0.70%
   }
 
-  const totalAmount = Math.max(0, Math.ceil(base + platformTax + tripayFee));
-  return { platformTax, tripayFee, totalAmount, baseAmount: base };
+  // amountForTripay: yang dikirim ke Tripay (belum termasuk fee channel karena Tripay akan tambah sendiri jika dibebankan ke pelanggan)
+  const amountForTripay = Math.max(0, Math.ceil(base + platformTax));
+  // totalCustomer: jumlah akhir yang harus dibayar pelanggan (amount Tripay + fee channel)
+  const totalCustomer = Math.max(0, amountForTripay + tripayFee);
+
+  return { platformTax, tripayFee, amountForTripay, totalCustomer, baseAmount: base };
 }
 
 function send(res, status, body) {
@@ -164,7 +168,7 @@ module.exports = async (req, res) => {
 
   const method = resolveTripayMethod(paymentType, bank);
   const merchantRef = `${eventId}-${Date.now()}`;
-  const { platformTax, tripayFee, totalAmount, baseAmount } = computeFees(
+  const { platformTax, tripayFee, amountForTripay, totalCustomer, baseAmount } = computeFees(
     paymentType,
     bank,
     eventAmount,
@@ -176,7 +180,7 @@ module.exports = async (req, res) => {
   const payload = {
     method,
     merchant_ref: merchantRef,
-    amount: totalAmount,
+    amount: amountForTripay,
     customer_name: customer?.name || "Peserta",
     customer_email: customer?.email || "peserta@example.com",
     customer_phone: customer?.phone || "",
@@ -184,12 +188,12 @@ module.exports = async (req, res) => {
       {
         sku: eventId,
         name: event.title,
-        price: totalAmount,
+        price: amountForTripay,
         quantity: 1,
-        subtotal: totalAmount,
+        subtotal: amountForTripay,
       },
     ],
-    signature: createTripaySignature(merchantRef, totalAmount),
+    signature: createTripaySignature(merchantRef, amountForTripay),
     expired_time: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
   };
 
@@ -210,11 +214,12 @@ module.exports = async (req, res) => {
       bank,
       method,
       merchantRef,
-      amount: totalAmount,
+      amount: totalCustomer, // tampilkan ke user jumlah yang harus dibayar
       baseAmount,
       platformTax,
       tripayFee,
-      totalAmount,
+      totalAmount: totalCustomer,
+      amountForTripay,
     });
 
     await db
@@ -224,11 +229,12 @@ module.exports = async (req, res) => {
         provider: "tripay",
         eventId,
         eventTitle: event.title,
-        amount: totalAmount,
+        amount: totalCustomer,
         baseAmount,
         platformTax,
         tripayFee,
-        totalAmount,
+        totalAmount: totalCustomer,
+        amountForTripay,
         paymentType,
         bank: bank || null,
         method,
