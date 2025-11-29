@@ -14,11 +14,19 @@ const RESEND_OWNER_EMAIL = "ketenanganjiwa.id@gmail.com";
 // SELAGI BELUM VERIFY DOMAIN → biarkan true
 const RESEND_TEST_MODE = true;
 
-// Base URL halaman tiket di GitHub Pages
-// Bisa dioverride pakai env TICKET_BASE_URL kalau nanti ganti domain.
-const TICKET_BASE_URL =
+// Base URL halaman tiket. Urutan prioritas:
+// 1) TICKET_BASE_URL (manual/custom domain)
+// 2) VERCEL_URL (otomatis di Vercel)
+// 3) CF_PAGES_URL (Cloudflare Pages)
+// 4) Fallback GitHub Pages
+const VERCEL_BASE_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "";
+const CF_PAGES_BASE_URL = process.env.CF_PAGES_URL ? `https://${process.env.CF_PAGES_URL}` : "";
+const TICKET_BASE_URL = (
   process.env.TICKET_BASE_URL ||
-  "https://renowahysanrama.github.io/ketenangan-jiwa";
+  VERCEL_BASE_URL ||
+  CF_PAGES_BASE_URL ||
+  "https://renowahysanrama.github.io/ketenangan-jiwa"
+).replace(/\/$/, "");
 
 function buildTicketHtml({
   name,
