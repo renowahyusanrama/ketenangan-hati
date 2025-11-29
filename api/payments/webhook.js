@@ -13,98 +13,68 @@ function send(res, status, body) {
   res.status(status).json(body);
 }
 
-function parseBody(req) {
-  if (req.body && typeof req.body === "object") return req.body;
-  if (typeof req.body === "string" && req.body.trim()) {
-    try {
-      return JSON.parse(req.body);
-    } catch (err) {
-      return {};
-    }
-  }
-  return {};
-}
-
-function extractRawBody(req) {
-  if (req.rawBody) {
-    if (Buffer.isBuffer(req.rawBody)) return req.rawBody.toString("utf8");
-    if (typeof req.rawBody === "string") return req.rawBody;
-  }
-  if (req.body) {
-    if (typeof req.body === "string") return req.body;
-    if (Buffer.isBuffer(req.body)) return req.body.toString("utf8");
-    try {
-      return JSON.stringify(req.body);
-    } catch (err) {
-      return "";
-    }
-  }
-  return "";
-}
-
-async function readRawBody(req) {
+// Baca raw body persis seperti yang dikirim Tripay
+function getRawBody(req) {
   return new Promise((resolve, reject) => {
-    try {
-      const chunks = [];
-      req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-      req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-      req.on("error", reject);
-    } catch (err) {
+    const chunks = [];
+    req.on("data", (chunk) => {
+      chunks.push(Buffer.from(chunk));
+    });
+    req.on("end", () => {
+      resolve(Buffer.concat(chunks).toString("utf8"));
+    });
+    req.on("error", (err) => {
       reject(err);
-    }
+    });
   });
 }
 
-async function getPayloadAndRaw(req) {
-  // Usahakan pakai raw stream terlebih dahulu supaya signature HMAC cocok
-  let rawBody = "";
-  try {
-    rawBody = await readRawBody(req);
-  } catch (err) {
-    rawBody = "";
-  }
-
-  if (!rawBody) {
-    rawBody = extractRawBody(req);
-  }
-
-  let payload = {};
-  if (rawBody) {
-    try {
-      payload = JSON.parse(rawBody);
-    } catch (err) {
-      payload = parseBody(req);
-    }
-  } else {
-    payload = parseBody(req);
-  }
-
-  return { rawBody, payload };
-}
-
 module.exports = async (req, res) => {
+  // Preflight CORS
   if (req.method === "OPTIONS") {
     Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
     return res.status(200).end();
   }
+
   if (req.method !== "POST") {
     return send(res, 405, { error: "Method not allowed" });
   }
 
-  const { rawBody, payload } = await getPayloadAndRaw(req);
-  req.rawBody = rawBody;
-  req.body = payload;
+  let rawBody = "";
+  let payload = {};
 
-  const merchantRef = payload.merchant_ref || payload.merchantRef || payload.reference;
+  // 1. Baca RAW body dari Tripay
+  try {
+    rawBody = await getRawBody(req);
+  } catch (err) {
+    console.error("Gagal membaca raw body:", err);
+    return send(res, 400, { error: "Failed to read body" });
+  }
+
+  // 2. Parse JSON payload
+  try {
+    payload = JSON.parse(rawBody);
+  } catch (err) {
+    console.error("Gagal parse JSON Tripay:", err, rawBody);
+    return send(res, 400, { error: "Invalid JSON body" });
+  }
+
+  const merchantRef =
+    payload.merchant_ref || payload.merchantRef || payload.reference;
+
   if (!merchantRef) {
+    console.error("merchant_ref tidak ditemukan di payload:", payload);
     return send(res, 400, { error: "merchant_ref tidak ditemukan." });
   }
 
-  if (!verifyTripayCallback(payload, req.headers, rawBody)) {
+  // 3. Verifikasi signature Tripay dengan rawBody asli
+  const valid = verifyTripayCallback(payload, req.headers, rawBody);
+  if (!valid) {
     console.warn("Signature Tripay tidak valid untuk order", merchantRef);
-    return send(res, 403, { error: "Invalid signature" });
+    return send(res, 403, { success: false, error: "Invalid signature" });
   }
 
+  // 4. Update Firestore & kirim email (kalau perlu)
   try {
     const db = getDb();
     const docRef = db.collection("orders").doc(merchantRef);
@@ -112,6 +82,7 @@ module.exports = async (req, res) => {
     const previous = snap.exists ? snap.data() : null;
 
     const newStatus = mapStatus(payload.status);
+
     await docRef.set(
       {
         status: newStatus,
@@ -126,7 +97,6 @@ module.exports = async (req, res) => {
     const nowPaid = newStatus === "paid";
 
     if (!wasPaid && nowPaid && previous) {
-      // Ambil kode bayar dari payload sebagai backup
       const payCode =
         payload.pay_code ||
         payload.payment_code ||
@@ -143,21 +113,21 @@ module.exports = async (req, res) => {
         vaNumber: payCode,
       };
 
+      // kirim email async, kalau error cukup di-log
       sendTicketEmail(orderForEmail).catch((err) => {
         console.error("Email send error (webhook):", err?.message || err);
       });
     }
 
-    Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
-    res.setHeader("Content-Type", "text/plain");
-    return res.status(200).send("OK");
+    // 5. BALAS KE TRIPAY DENGAN FORMAT YANG DIMINTA
+    return send(res, 200, { success: true });
   } catch (error) {
     console.error("Webhook error:", error.message || error);
     return send(res, 500, { error: "Webhook error" });
   }
 };
 
-// Matikan bodyParser bawaan Vercel supaya rawBody tersedia untuk HMAC signature
+// WAJIB: matikan bodyParser supaya raw body tidak diutak-atik Next/Vercel
 module.exports.config = {
   api: {
     bodyParser: false,
