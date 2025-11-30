@@ -1,6 +1,7 @@
 // api/_lib/email.js
 const { Resend } = require("resend");
 const QRCode = require("qrcode");
+const { generateTicketPdf } = require("./ticket_pdf");
 
 // 🔑 pastikan ini di-set di Vercel (Production env)
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -217,6 +218,24 @@ async function sendTicketEmail(order) {
     htmlNoQr = `${banner}${baseHtmlNoQr}`;
   }
 
+  // Siapkan PDF lampiran (best effort)
+  let pdfAttachment = null;
+  try {
+    const pdfBuf = await generateTicketPdf({
+      ...order,
+      reference,
+      ticketUrl,
+      eventTitle,
+    });
+    pdfAttachment = {
+      content: pdfBuf.toString("base64"),
+      filename: `tiket-${reference || "order"}.pdf`,
+      contentType: "application/pdf",
+    };
+  } catch (err) {
+    console.error("Gagal generate PDF tiket:", err?.message || err);
+  }
+
   const resend = new Resend(RESEND_API_KEY);
   const basePayload = {
     from: RESEND_FROM,
@@ -226,10 +245,13 @@ async function sendTicketEmail(order) {
 
   // Coba kirim dengan QR (kalau ada attachment)
   try {
+    const attachments = [];
+    if (qrAttachment) attachments.push(qrAttachment);
+    if (pdfAttachment) attachments.push(pdfAttachment);
     const payloadWithQr = {
       ...basePayload,
       html: htmlWithQr,
-      ...(qrAttachment ? { attachments: [qrAttachment] } : {}),
+      ...(attachments.length ? { attachments } : {}),
     };
 
     const result = await resend.emails.send(payloadWithQr);
@@ -242,9 +264,12 @@ async function sendTicketEmail(order) {
 
     // Fallback: kirim ulang TANPA attachment & TANPA QR
     try {
+      const attachments2 = [];
+      if (pdfAttachment) attachments2.push(pdfAttachment);
       const fallbackPayload = {
         ...basePayload,
         html: htmlNoQr,
+        ...(attachments2.length ? { attachments: attachments2 } : {}),
       };
       const result2 = await resend.emails.send(fallbackPayload);
       console.log("Resend API result (fallback no QR):", result2);
