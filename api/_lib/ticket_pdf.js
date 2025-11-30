@@ -86,7 +86,7 @@ async function generateTicketPdf(order = {}) {
   }
 
   // ================== HEADER (LOGO TENGAH ATAS) ==================
-  const logoAreaHeight = 60; // tinggi area reserved untuk logo
+  const logoAreaHeight = 60;
   const logoBoxWidth = 230;
   const logoMaxHeight = logoAreaHeight;
   const logoX = left + (contentWidth - logoBoxWidth) / 2;
@@ -99,7 +99,6 @@ async function generateTicketPdf(order = {}) {
       valign: "center",
     });
   } else {
-    // fallback text logo, di tengah
     doc
       .font("Helvetica-Bold")
       .fontSize(22)
@@ -126,7 +125,7 @@ async function generateTicketPdf(order = {}) {
       });
   }
 
-  // garis biru DI BAWAH logo
+  // garis biru di bawah logo
   const topLineY = top + logoAreaHeight + 10;
   const topLineHeight = 6;
   doc
@@ -135,7 +134,7 @@ async function generateTicketPdf(order = {}) {
     .fill(COLORS.primary)
     .restore();
 
-  // kalimat "Alhamdulillah..." di bawah garis biru
+  // kalimat Alhamdulillah
   const subHeaderY = topLineY + 12;
   doc
     .font("Helvetica")
@@ -152,7 +151,7 @@ async function generateTicketPdf(order = {}) {
   const colWidth = (contentWidth - colGap) / 2;
   const sectionsTop = subHeaderY + 30;
 
-  // --- Informasi Pesanan (kiri) ---
+  // Informasi Pesanan
   doc
     .font("Helvetica-Bold")
     .fontSize(14)
@@ -188,7 +187,7 @@ async function generateTicketPdf(order = {}) {
     lineY += 22;
   });
 
-  // --- Detail Pesanan (kanan) ---
+  // Detail Pesanan
   const detailX = left + colWidth + colGap;
   doc
     .font("Helvetica-Bold")
@@ -228,7 +227,6 @@ async function generateTicketPdf(order = {}) {
     lineY += 22;
   });
 
-  // garis + total pembayaran di dalam box kanan
   const totalLineY = detailBoxY + detailBoxH - 30;
   doc
     .moveTo(detailX + 12, totalLineY)
@@ -254,7 +252,6 @@ async function generateTicketPdf(order = {}) {
       { width: colWidth / 2 - 18, align: "right" }
     );
 
-  // status + ref kecil di bawah box
   doc
     .font("Helvetica")
     .fontSize(8)
@@ -276,23 +273,14 @@ async function generateTicketPdf(order = {}) {
 
   const qrBoxSize = 210;
   const acaraBoxY = acaraTitleY + 18;
-  const acaraBoxHeight = 170;
   const qrBoxX = left + contentWidth - qrBoxSize;
   const qrBoxY = acaraBoxY;
 
-  // box acara di kiri (sisakan ruang QR di kanan)
+  // lebar box acara
   const acaraBoxWidth = contentWidth - qrBoxSize - 24;
-  drawRoundedBox(
-    doc,
-    left,
-    acaraBoxY,
-    acaraBoxWidth,
-    acaraBoxHeight,
-    12,
-    { bg: "#ffffff", color: COLORS.primaryLight }
-  );
 
-  const acaraTitleText =
+  // ambil data acara (SISTEM TETAP SAMA)
+  const acaraTitle =
     eventTitle ||
     order.eventTitle ||
     (order.event && (order.event.title || order.event.name)) ||
@@ -324,30 +312,65 @@ async function generateTicketPdf(order = {}) {
     "-";
 
   const infoAcara = [
-    ["Judul Kajian/Event", acaraTitleText],
+    ["Judul Kajian/Event", acaraTitle],
     ["Pemateri", acaraSpeaker],
     ["Tanggal", acaraDate],
     ["Waktu", acaraTime],
     ["Lokasi", acaraLocation],
   ];
 
-  // titik dua dibikin lebih dekat ke label
+  // ====== PERUBAHAN: tinggi baris & tinggi box otomatis ======
+  doc.font("Helvetica").fontSize(11);
+
   const acaraLabelX = left + 18;
   const acaraValueX = left + 135;
+  const valueWidth = acaraBoxWidth - (acaraValueX - left) - 15;
 
-  lineY = acaraBoxY + 22;
-  doc.font("Helvetica").fontSize(11);
-  infoAcara.forEach(([label, val]) => {
-    doc.fillColor(COLORS.muted).text(label, acaraLabelX, lineY);
-    doc
-      .fillColor(COLORS.text)
-      .text(`: ${val}`, acaraValueX, lineY, {
-        width: acaraBoxWidth - (acaraValueX - left) - 15,
-      });
-    lineY += 22;
+  const paddingTop = 22;
+  const paddingBottom = 22;
+  const minRowHeight = 18;
+  const extraRowPadding = 4;
+
+  let contentHeight = 0;
+  const rowInfos = infoAcara.map(([label, val]) => {
+    const valueText = `: ${val}`;
+    const valueHeight = doc.heightOfString(valueText, {
+      width: valueWidth,
+    });
+    const rowHeight = Math.max(
+      minRowHeight,
+      valueHeight + extraRowPadding
+    );
+    contentHeight += rowHeight;
+    return { label, valueText, rowHeight };
   });
 
-  // kotak QR kanan
+  const acaraBoxHeight = paddingTop + contentHeight + paddingBottom;
+
+  // gambar box setelah tahu tingginya
+  drawRoundedBox(
+    doc,
+    left,
+    acaraBoxY,
+    acaraBoxWidth,
+    acaraBoxHeight,
+    12,
+    { bg: "#ffffff", color: COLORS.primaryLight }
+  );
+
+  // gambar isi baris dengan jarak dinamis
+  lineY = acaraBoxY + paddingTop;
+  rowInfos.forEach((row) => {
+    doc.fillColor(COLORS.muted).text(row.label, acaraLabelX, lineY);
+    doc
+      .fillColor(COLORS.text)
+      .text(row.valueText, acaraValueX, lineY, {
+        width: valueWidth,
+      });
+    lineY += row.rowHeight;
+  });
+
+  // kotak QR kanan (tetap)
   drawRoundedBox(
     doc,
     qrBoxX,
