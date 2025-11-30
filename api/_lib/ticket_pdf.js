@@ -392,7 +392,7 @@ async function generateTicketPdf(order = {}) {
     .fontSize(9)
     .fillColor(COLORS.muted)
     .text(
-      "Gunakan barcode untuk melakukan check-in pada saat acara.",
+      "Gunakan barcode untuk penukaran ticket",
       qrBoxX,
       qrBoxY + qrBoxSize + 10,
       { width: qrBoxSize, align: "center" }
