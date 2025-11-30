@@ -10,7 +10,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM = process.env.RESEND_FROM || "onboarding@resend.dev";
 
 // email akun kamu di Resend (yang boleh terima email di mode testing)
-const RESEND_OWNER_EMAIL = "ketenanganjiwa.id@gmail.com";
+const RESEND_OWNER_EMAIL = "onmeren@gmail.com";
 
 // SELAGI BELUM VERIFY DOMAIN → biarkan true
 const RESEND_TEST_MODE = true;
