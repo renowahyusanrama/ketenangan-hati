@@ -85,19 +85,58 @@ async function generateTicketPdf(order = {}) {
     logoPath = null;
   }
 
-  // ================== HEADER ==================
-  const topLineY = top + 6;
-  const topLineHeight = 6;
+  // ================== HEADER (LOGO TENGAH ATAS) ==================
+  const logoAreaHeight = 60; // tinggi area reserved untuk logo
+  const logoBoxWidth = 230;
+  const logoMaxHeight = logoAreaHeight;
+  const logoX = left + (contentWidth - logoBoxWidth) / 2;
+  const logoY = top + 4;
 
-  // garis biru atas
+  if (logoPath) {
+    doc.image(logoPath, logoX, logoY, {
+      fit: [logoBoxWidth, logoMaxHeight],
+      align: "center",
+      valign: "center",
+    });
+  } else {
+    // fallback text logo, di tengah
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(22)
+      .fillColor(COLORS.primary)
+      .text("ketenangan", left, logoY + 10, {
+        width: contentWidth,
+        align: "center",
+      });
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(22)
+      .fillColor(COLORS.primaryAccent)
+      .text("jiwa", left, logoY + 10, {
+        width: contentWidth,
+        align: "center",
+      });
+    doc
+      .font("Helvetica")
+      .fontSize(9)
+      .fillColor(COLORS.muted)
+      .text("Temukan Arah, Temukan Makna", left, logoY + 34, {
+        width: contentWidth,
+        align: "center",
+      });
+  }
+
+  // garis biru DI BAWAH logo
+  const topLineY = top + logoAreaHeight + 10;
+  const topLineHeight = 6;
   doc
     .save()
     .rect(left, topLineY, contentWidth, topLineHeight)
     .fill(COLORS.primary)
     .restore();
 
-  // hanya kalimat "Alhamdulillah..." (tanpa salam di atasnya)
-  const subHeaderY = topLineY + 18;
+  // kalimat "Alhamdulillah..." di bawah garis biru
+  const subHeaderY = topLineY + 12;
   doc
     .font("Helvetica")
     .fontSize(11)
@@ -107,46 +146,6 @@ async function generateTicketPdf(order = {}) {
       left,
       subHeaderY
     );
-
-  // logo kanan atas
-  const logoBoxWidth = 230;
-  const logoMaxHeight = 70;
-  const logoX = left + contentWidth - logoBoxWidth;
-  const logoY = subHeaderY - 6;
-
-  if (logoPath) {
-    doc.image(logoPath, logoX, logoY, {
-      fit: [logoBoxWidth, logoMaxHeight],
-      align: "right",
-      valign: "center",
-    });
-  } else {
-    // fallback text logo
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(22)
-      .fillColor(COLORS.primary)
-      .text("ketenangan", logoX, subHeaderY, {
-        width: logoBoxWidth,
-        align: "right",
-      });
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(22)
-      .fillColor(COLORS.primaryAccent)
-      .text("jiwa", logoX, subHeaderY, {
-        width: logoBoxWidth,
-        align: "right",
-      });
-    doc
-      .font("Helvetica")
-      .fontSize(9)
-      .fillColor(COLORS.muted)
-      .text("Temukan Arah, Temukan Makna", logoX, subHeaderY + 24, {
-        width: logoBoxWidth,
-        align: "right",
-      });
-  }
 
   // ================== DUA KOLOM ATAS ==================
   const colGap = 18;
@@ -293,22 +292,57 @@ async function generateTicketPdf(order = {}) {
     { bg: "#ffffff", color: COLORS.primaryLight }
   );
 
+  const acaraTitleText =
+    eventTitle ||
+    order.eventTitle ||
+    (order.event && (order.event.title || order.event.name)) ||
+    "Kajian / Event";
+  const acaraSpeaker =
+    speaker ||
+    order.presenter ||
+    order.speaker ||
+    (order.event && order.event.speaker) ||
+    "-";
+  const acaraDate =
+    eventDate ||
+    order.schedule ||
+    order.eventSchedule ||
+    (order.event && (order.event.schedule || order.event.date)) ||
+    "-";
+  const acaraTime =
+    eventTime ||
+    order.time ||
+    order.eventTime ||
+    (order.event && order.event.time) ||
+    "-";
+  const acaraLocation =
+    eventLocation ||
+    order.location ||
+    order.eventLocation ||
+    (order.event && (order.event.location || order.event.address)) ||
+    order.address ||
+    "-";
+
   const infoAcara = [
-    ["Judul Kajian/Event", eventTitle],
-    ["Pemateri", speaker || "-"],
-    ["Tanggal", eventDate || "-"],
-    ["Waktu", eventTime || "-"],
-    ["Lokasi", eventLocation || "-"],
+    ["Judul Kajian/Event", acaraTitleText],
+    ["Pemateri", acaraSpeaker],
+    ["Tanggal", acaraDate],
+    ["Waktu", acaraTime],
+    ["Lokasi", acaraLocation],
   ];
+
+  // titik dua dibikin lebih dekat ke label
+  const acaraLabelX = left + 18;
+  const acaraValueX = left + 135;
 
   lineY = acaraBoxY + 22;
   doc.font("Helvetica").fontSize(11);
   infoAcara.forEach(([label, val]) => {
-    doc.fillColor(COLORS.muted).text(label, left + 18, lineY);
+    doc.fillColor(COLORS.muted).text(label, acaraLabelX, lineY);
     doc
       .fillColor(COLORS.text)
-      .text(`: ${val}`, left + 170, lineY, {
-        width: acaraBoxWidth - 180,
+      .text(`: ${val}`, acaraValueX, lineY, {
+        width: acaraBoxWidth - (acaraValueX - left) - 15,
       });
     lineY += 22;
   });
@@ -375,7 +409,7 @@ async function generateTicketPdf(order = {}) {
       { width: contentWidth * 0.7 }
     );
 
-  // kontak DIPINDAH ke bawah alamat
+  // kontak di bawah alamat
   const contactY = addressY + 30;
   doc
     .font("Helvetica")
