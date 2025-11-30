@@ -189,6 +189,18 @@ async function verifyByRef(refValue) {
     return false;
   }
 
+  // Cegah pemindaian ulang tiket yang sudah digunakan
+  try {
+    const snap = await getDoc(firestoreDoc(db, "orders", orderId));
+    const data = snap.exists() ? snap.data() || {} : {};
+    if (data.verified || data.checkedInAt) {
+      setQrStatus("QR telah digunakan untuk check-in.", true);
+      return false;
+    }
+  } catch (err) {
+    console.warn("Gagal membaca status order:", err?.message || err);
+  }
+
   const ok = await updateCheckin(orderId, true);
   setQrStatus(ok ? `Berhasil verifikasi ${code}.` : `Gagal verifikasi ${code}.`, !ok);
   if (ok && qrInput) qrInput.value = "";
