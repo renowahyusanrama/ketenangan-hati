@@ -67,33 +67,9 @@ async function generateTicketPdf(order = {}) {
   const chunks = [];
   doc.on("data", (c) => chunks.push(c));
 
-  const { left, right, top, bottom } = doc.page.margins;
+  const { left, right, top } = doc.page.margins;
   const pageWidth = doc.page.width;
   const contentWidth = pageWidth - left - right;
-
-  // ================== FONT ARAB OPSIONAL ==================
-  let arabicFontName = "Helvetica-Bold";
-  let useArabicHeader = false;
-  try {
-    const candidates = [
-      path.join(__dirname, "arabic.ttf"),
-      path.join(__dirname, "..", "fonts", "arabic.ttf"),
-      path.join(__dirname, "..", "arabic.ttf"),
-    ];
-    const arabicPath = candidates.find((p) => fs.existsSync(p));
-    if (arabicPath) {
-      doc.registerFont("ArabicHeader", arabicPath);
-      arabicFontName = "ArabicHeader";
-      useArabicHeader = true;
-    }
-  } catch (_) {
-    useArabicHeader = false;
-  }
-
-  const arabicHeader =
-    "ٱلسَّلَامُ عَلَيْكُمْ وَرَحْمَةُ ٱللَّٰهِ وَبَرَكَاتُهُ";
-  const latinHeader = "Assalamu'alaikum warahmatullahi wabarakatuh";
-  const headerText = useArabicHeader ? arabicHeader : latinHeader;
 
   // ================== CARI LOGO.PNG ==================
   let logoPath = null;
@@ -120,20 +96,8 @@ async function generateTicketPdf(order = {}) {
     .fill(COLORS.primary)
     .restore();
 
-  const headerTextY = topLineY + 18;
-
-  // salam (arab/latin) kiri
-  doc
-    .font(useArabicHeader ? arabicFontName : "Helvetica-Bold")
-    .fontSize(useArabicHeader ? 22 : 16)
-    .fillColor(COLORS.primary)
-    .text(headerText, left, headerTextY, {
-      width: contentWidth * 0.6,
-      align: "left",
-    });
-
-  // kalimat bawahnya
-  const subHeaderY = headerTextY + (useArabicHeader ? 32 : 24);
+  // hanya kalimat "Alhamdulillah..." (tanpa salam di atasnya)
+  const subHeaderY = topLineY + 18;
   doc
     .font("Helvetica")
     .fontSize(11)
@@ -148,7 +112,7 @@ async function generateTicketPdf(order = {}) {
   const logoBoxWidth = 230;
   const logoMaxHeight = 70;
   const logoX = left + contentWidth - logoBoxWidth;
-  const logoY = headerTextY - 8;
+  const logoY = subHeaderY - 6;
 
   if (logoPath) {
     doc.image(logoPath, logoX, logoY, {
@@ -162,7 +126,7 @@ async function generateTicketPdf(order = {}) {
       .font("Helvetica-Bold")
       .fontSize(22)
       .fillColor(COLORS.primary)
-      .text("ketenangan", logoX, headerTextY, {
+      .text("ketenangan", logoX, subHeaderY, {
         width: logoBoxWidth,
         align: "right",
       });
@@ -170,7 +134,7 @@ async function generateTicketPdf(order = {}) {
       .font("Helvetica-Bold")
       .fontSize(22)
       .fillColor(COLORS.primaryAccent)
-      .text("jiwa", logoX, headerTextY, {
+      .text("jiwa", logoX, subHeaderY, {
         width: logoBoxWidth,
         align: "right",
       });
@@ -178,7 +142,7 @@ async function generateTicketPdf(order = {}) {
       .font("Helvetica")
       .fontSize(9)
       .fillColor(COLORS.muted)
-      .text("Temukan Arah, Temukan Makna", logoX, headerTextY + 24, {
+      .text("Temukan Arah, Temukan Makna", logoX, subHeaderY + 24, {
         width: logoBoxWidth,
         align: "right",
       });
@@ -187,7 +151,7 @@ async function generateTicketPdf(order = {}) {
   // ================== DUA KOLOM ATAS ==================
   const colGap = 18;
   const colWidth = (contentWidth - colGap) / 2;
-  const sectionsTop = subHeaderY + 28;
+  const sectionsTop = subHeaderY + 30;
 
   // --- Informasi Pesanan (kiri) ---
   doc
@@ -408,22 +372,21 @@ async function generateTicketPdf(order = {}) {
       "Jalan Taman Internasional I Blok B8 No. 11\nSambikerep, Kota Surabaya, Jawa Timur, Indonesia 60219",
       left,
       addressY,
-      { width: contentWidth * 0.4 }
+      { width: contentWidth * 0.7 }
     );
 
-  // kontak (tengah)
-  const contactX = left + contentWidth * 0.4 + 14;
-  const contactY = footerTopY + 2;
+  // kontak DIPINDAH ke bawah alamat
+  const contactY = addressY + 30;
   doc
     .font("Helvetica")
     .fontSize(10)
     .fillColor(COLORS.muted)
-    .text("Telepon :", contactX, contactY);
+    .text("Telepon :", left, contactY);
   doc
     .font("Helvetica-Bold")
     .fontSize(10)
     .fillColor(COLORS.text)
-    .text(" 0882-0176-75614 / 0812-3497-5501", contactX + 58, contactY, {
+    .text(" 0882-0176-75614 / 0812-3497-5501", left + 58, contactY, {
       lineBreak: false,
     });
 
@@ -431,12 +394,12 @@ async function generateTicketPdf(order = {}) {
     .font("Helvetica")
     .fontSize(10)
     .fillColor(COLORS.muted)
-    .text("Email   :", contactX, contactY + 16);
+    .text("Email   :", left, contactY + 16);
   doc
     .font("Helvetica-Bold")
     .fontSize(10)
     .fillColor(COLORS.text)
-    .text(" ketenanganjiwa.id@gmail.com", contactX + 58, contactY + 16, {
+    .text(" ketenanganjiwa.id@gmail.com", left + 58, contactY + 16, {
       lineBreak: false,
     });
 
@@ -444,12 +407,12 @@ async function generateTicketPdf(order = {}) {
     .font("Helvetica")
     .fontSize(10)
     .fillColor(COLORS.muted)
-    .text("Instagram :", contactX, contactY + 32);
+    .text("Instagram :", left, contactY + 32);
   doc
     .font("Helvetica-Bold")
     .fontSize(10)
     .fillColor(COLORS.text)
-    .text(" @ketenanganjiwa.id", contactX + 58, contactY + 32, {
+    .text(" @ketenanganjiwa.id", left + 58, contactY + 32, {
       lineBreak: false,
     });
 
