@@ -96,6 +96,10 @@ let ordersLoading = false;
 const ORDERS_PAGE_SIZE = 25;
 let qrScanner = null;
 let qrScanning = false;
+const SCAN_DELAY_MS = 300;
+const SCAN_COOLDOWN_MS = 1200;
+let scanBusy = false;
+let lastUsedWarningRef = null;
 
 async function updateCheckin(orderId, verified) {
   if (!isAdmin || !orderId) return false;
@@ -194,9 +198,13 @@ async function verifyByRef(refValue) {
     const snap = await getDoc(firestoreDoc(db, "orders", orderId));
     const data = snap.exists() ? snap.data() || {} : {};
     if (data.verified || data.checkedInAt) {
-      setQrStatus("QR telah digunakan untuk check-in.", true);
+      if (lastUsedWarningRef !== code) {
+        setQrStatus("QR telah digunakan untuk check-in.", true);
+        lastUsedWarningRef = code;
+      }
       return false;
     }
+    lastUsedWarningRef = null;
   } catch (err) {
     console.warn("Gagal membaca status order:", err?.message || err);
   }
@@ -246,7 +254,16 @@ async function startQrScan() {
           setQrStatus("QR tidak memuat kode ref.", true);
           return;
         }
-        await verifyByRef(ref);
+        if (scanBusy) return;
+        scanBusy = true;
+        try {
+          await new Promise((resolve) => setTimeout(resolve, SCAN_DELAY_MS)); // beri jeda agar tidak spam
+          await verifyByRef(ref);
+        } finally {
+          setTimeout(() => {
+            scanBusy = false;
+          }, SCAN_COOLDOWN_MS);
+        }
       },
       () => {
         // abaikan error scan per frame
