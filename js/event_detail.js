@@ -27,23 +27,25 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const PROD_FUNCTION_BASE = "https://www.ketenanganjiwa.id/api";
-const DEFAULT_FUNCTION_BASE = "https://us-central1-pengajian-online.cloudfunctions.net/api"; // fallback lama
-const LOCAL_FUNCTION_BASE = "http://localhost:5001/pengajian-online/us-central1/api";
-const shouldUseRelativeApi =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" ||
-    window.location.hostname.endsWith("web.app") ||
-    window.location.hostname.endsWith("firebaseapp.com"));
+// ==== BASE URL UNTUK API (Vercel / Firebase Functions) ====
 
-const API_BASE =
-  typeof window !== "undefined" && window.__API_BASE_URL__
-    ? window.__API_BASE_URL__
-    : shouldUseRelativeApi
-      ? window.location.hostname === "localhost"
-        ? LOCAL_FUNCTION_BASE
-        : "/api"
-      : PROD_FUNCTION_BASE;
+const PROD_FUNCTION_BASE = "https://www.ketenanganjiwa.id/api";
+const LOCAL_FUNCTION_BASE = "http://localhost:5001/pengajian-online/us-central1/api";
+// const DEFAULT_FUNCTION_BASE = "https://us-central1-pengajian-online.cloudfunctions.net/api"; // fallback lama jika masih diperlukan
+
+const isBrowser = typeof window !== "undefined";
+
+// Di browser:
+// - localhost / 127.0.0.1  -> pakai emulator Firebase Functions
+// - domain apa pun (vercel app / ketenanganjiwa.id / www.ketenanganjiwa.id) -> pakai path relatif "/api"
+// Di luar browser (SSR / script server) -> pakai PROD_FUNCTION_BASE
+const API_BASE = !isBrowser
+  ? PROD_FUNCTION_BASE
+  : window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  ? LOCAL_FUNCTION_BASE
+  : "/api";
+
+// =========================================================
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("id-ID", {
