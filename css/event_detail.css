@@ -352,6 +352,28 @@
   font-size: 0.9rem;
   color: #6b7280;
 }
+.form-hint.warning {
+  color: #c05621;
+  font-weight: 600;
+}
+.form-hint.error {
+  color: #e11d48;
+  font-weight: 600;
+}
+.form-hint.success {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.method-btn.danger {
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #b91c1c;
+}
+.method-btn.danger.active {
+  background: #b91c1c;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(185, 28, 28, 0.28);
+}
 
 .payment-result {
   margin-top: 16px;

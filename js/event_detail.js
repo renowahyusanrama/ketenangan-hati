@@ -252,12 +252,23 @@ function initPaymentForm(event) {
   let method = "qris";
   let bank = null;
   const isFree = event && !event.amount; // amount 0 => gratis
+  const defaultPayLabel = isFree ? "Kirim E-Ticket" : "Buat Tagihan";
 
   function setHint(message, variant = "info") {
     if (!hint) return;
     hint.textContent = message;
-    hint.classList.remove("error", "success");
+    hint.classList.remove("error", "success", "warning");
     if (variant !== "info") hint.classList.add(variant);
+  }
+
+  function setPayLabel(label) {
+    if (payBtn) payBtn.textContent = label;
+  }
+
+  function handleCancelSelection() {
+    setPayLabel("Batalkan Pesanan");
+    setHint("Mode batalkan pesanan: tidak ada tagihan dibuat.", "warning");
+    bank = null;
   }
 
   // Event GRATIS: sembunyikan pilihan metode & ubah CTA
@@ -269,20 +280,27 @@ function initPaymentForm(event) {
       btn.setAttribute("disabled", "true");
       btn.classList.remove("active");
     });
-    if (payBtn) payBtn.textContent = "Kirim E-Ticket";
+    setPayLabel("Kirim E-Ticket");
     setHint("Event gratis, e-ticket akan dikirim otomatis tanpa pembayaran.", "success");
   } else {
     // Event BERBAYAR: pilihan QRIS / VA tetap seperti biasa
     methodButtons.forEach((btn, index) => {
       btn.addEventListener("click", () => {
-        method = btn.dataset.method === "va" ? "bank_transfer" : "qris";
-        bank = btn.dataset.bank || null;
+        const chosen = btn.dataset.method;
+        method =
+          chosen === "va" ? "bank_transfer" : chosen === "cancel" ? "cancel" : "qris";
+        bank = chosen === "va" ? btn.dataset.bank || null : null;
         methodButtons.forEach((b) => b.classList.toggle("active", b === btn));
-        setHint(
-          method === "bank_transfer"
-            ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
-            : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
-        );
+        if (method === "cancel") {
+          handleCancelSelection();
+        } else {
+          setPayLabel(defaultPayLabel);
+          setHint(
+            method === "bank_transfer"
+              ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
+              : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
+          );
+        }
       });
       if (index === 0) btn.click();
     });
@@ -298,17 +316,35 @@ function initPaymentForm(event) {
     resultBox?.classList.add("hidden");
     setHint(isFree ? "Memproses e-ticket gratis..." : "Membuat tagihan pembayaran...", "info");
     payBtn.disabled = true;
-    payBtn.textContent = "Memproses...";
+    setPayLabel("Memproses...");
 
     const formData = new FormData(form);
+    const email = formData.get("email")?.toString().trim() || "";
+    if (!/@gmail\.com$/i.test(email)) {
+      setHint("Email harus menggunakan Gmail (contoh: nama@gmail.com).", "error");
+      payBtn.disabled = false;
+      setPayLabel(defaultPayLabel);
+      return;
+    }
+
+    if (method === "cancel") {
+      if (resultBox) {
+        resultBox.innerHTML = `<p class="form-hint warning">Pesanan dibatalkan. Tidak ada tagihan dibuat.</p>`;
+        resultBox.classList.remove("hidden");
+      }
+      setHint("Pesanan dibatalkan sesuai permintaan.", "success");
+      payBtn.disabled = false;
+      setPayLabel(defaultPayLabel);
+      return;
+    }
+
     const payload = {
       eventId: event.id,
-      // 🔥 GRATIS → kirim paymentType "free" (backend akan langsung bikin order tanpa Tripay)
       paymentType: isFree ? "free" : method,
       bank: isFree ? null : method === "bank_transfer" ? bank || "bca" : null,
       customer: {
         name: formData.get("name")?.toString() || "",
-        email: formData.get("email")?.toString() || "",
+        email,
         phone: formData.get("phone")?.toString() || "",
       },
     };
@@ -338,7 +374,7 @@ function initPaymentForm(event) {
       setHint(error.message || "Gagal membuat pembayaran.", "error");
     } finally {
       payBtn.disabled = false;
-      payBtn.textContent = isFree ? "Kirim E-Ticket" : "Buat Tagihan";
+      setPayLabel(defaultPayLabel);
     }
   });
 }

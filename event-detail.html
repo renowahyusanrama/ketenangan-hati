@@ -4,6 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Detail Event | ketenangan jiwa</title>
+  <meta name="description" content="Lihat detail jadwal, lokasi, dan pemateri untuk kajian serta event Islami di ketenangan jiwa.">
+  <link rel="canonical" href="https://ketenanganjiwa.id/event-detail.html">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Detail Event | ketenangan jiwa">
+  <meta property="og:description" content="Detail lengkap jadwal, lokasi, pemateri, dan pendaftaran kajian/event Islami.">
+  <meta property="og:url" content="https://ketenanganjiwa.id/event-detail.html">
+  <meta property="og:image" content="https://ketenanganjiwa.id/images/logo.png">
+  <meta property="og:image:alt" content="Logo ketenangan jiwa">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Detail Event | ketenangan jiwa">
+  <meta name="twitter:description" content="Jadwal, lokasi, pemateri, dan pendaftaran kajian/event Islami.">
+  <meta name="twitter:image" content="https://ketenanganjiwa.id/images/logo.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -111,7 +127,8 @@
                 <input type="text" class="input" name="name" placeholder="Nama peserta" required>
 
                 <label class="label">Email</label>
-                <input type="email" class="input" name="email" placeholder="nama@email.com" required>
+                <input type="email" class="input" name="email" placeholder="nama@gmail.com" required>
+                <p class="form-hint warning">Pendaftaran wajib menggunakan Gmail (contoh: nama@gmail.com).</p>
 
                 <label class="label">No. WhatsApp</label>
                 <input type="tel" class="input" name="phone" placeholder="08xxxxxxxxxx" required>
@@ -123,10 +140,11 @@
                   <button type="button" class="method-btn" data-method="va" data-bank="bni">VA BNI</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="bri">VA BRI</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="mandiri">VA Mandiri</button>
+                  <button type="button" class="method-btn danger" data-method="cancel">Batalkan Pesanan</button>
                 </div>
 
                 <button class="btn btn-primary btn-full" type="submit" id="payNowBtn">Buat Tagihan</button>
-                <p class="form-hint" id="paymentHint">Silakan isi data peserta lalu pilih metode pembayaran.</p>
+                <p class="form-hint" id="paymentHint">Silakan isi data peserta dengan email Gmail lalu pilih metode pembayaran.</p>
               </form>
             </div>
 
@@ -168,9 +186,8 @@
   </footer>
 
   <div class="floating-social">
-    <a class="fs-btn wa" href="https://wa.me/62811456999" aria-label="WhatsApp" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i></a>
-    <a class="fs-btn ig" href="https://www.instagram.com/renowahyusanramaa?igsh=dnMwZno0OHo2Z3E5" aria-label="Instagram" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i></a>
-    <a class="fs-btn tk" href="https://www.tiktok.com/@buagusejagat?_t=ZS-90xZDTff8AK&_r=1" aria-label="TikTok" target="_blank" rel="noopener"><i class="fa-brands fa-tiktok"></i></a>
+    <a class="fs-btn ig" href="https://www.instagram.com/ketenanganjiwa.id?igsh=MWVtajRueWcxMjVxdQ==" aria-label="Instagram" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i></a>
+    <a class="fs-btn tk" href="https://www.tiktok.com/@ketenanganjiwa.id?_r=1&_t=ZS-91rXS6E2GHQ" aria-label="TikTok" target="_blank" rel="noopener"><i class="fa-brands fa-tiktok"></i></a>
   </div>
 
   <div id="loginModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
