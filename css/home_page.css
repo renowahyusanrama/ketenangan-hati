@@ -1,4 +1,6 @@
 /* ===== Base ===== */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600&display=swap');
+
 :root{
     --primary:#3775B5;
     --primary-700:#2f64a0;
@@ -10,7 +12,7 @@
     --border:#d6e3f2;
     --radius:16px;
     --shadow:0 18px 48px rgba(55,117,181,.15);
-    --accent-font:'Kalam', cursive;
+    --accent-font:'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
 
     /* Variabel default untuk kartu event (bisa dioverride per kartu) */
     --card-border-width:1px;
@@ -21,7 +23,7 @@
 *{ box-sizing:border-box }
 html,body{
     margin:0; padding:0;
-    font-family:"Poppins",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
     color:var(--text);
     scroll-behavior:smooth;
     background: linear-gradient(135deg, #f5f9ff 0%, #e6f2ff 50%, #f0f8ff 100%);
