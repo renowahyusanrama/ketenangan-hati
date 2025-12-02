@@ -42,6 +42,22 @@ async function createTripayTransaction(payload) {
   return data;
 }
 
+async function cancelTripayTransaction({ reference, merchantRef }) {
+  const ref = reference || merchantRef;
+  if (!ref) throw new Error("reference atau merchantRef wajib untuk cancel Tripay");
+
+  const payload = { reference: ref };
+  if (merchantRef && !payload.merchant_ref) payload.merchant_ref = merchantRef;
+
+  const { data } = await axios.post(`${TRIPAY_BASE_URL}/transaction/cancel`, payload, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${TRIPAY_API_KEY}`,
+    },
+  });
+  return data;
+}
+
 function normalizeTripayResponse(
   trx,
   {
@@ -170,6 +186,7 @@ module.exports = {
   createTripaySignature,
   resolveTripayMethod,
   createTripayTransaction,
+  cancelTripayTransaction,
   normalizeTripayResponse,
   verifyTripayCallback,
   mapStatus,

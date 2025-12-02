@@ -90,6 +90,22 @@ async function createTripayTransaction(payload) {
   return data;
 }
 
+async function cancelTripayTransaction({ reference, merchantRef }) {
+  const ref = reference || merchantRef;
+  if (!ref) throw new Error("reference atau merchantRef wajib untuk cancel Tripay");
+
+  const payload = { reference: ref };
+  if (merchantRef && !payload.merchant_ref) payload.merchant_ref = merchantRef;
+
+  const { data } = await axios.post(`${TRIPAY_BASE_URL}/transaction/cancel`, payload, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${TRIPAY_API_KEY}`,
+    },
+  });
+  return data;
+}
+
 function normalizeTripayResponse(
   trx,
   { eventId, eventTitle, paymentType, bank, method, merchantRef, amount },
@@ -250,6 +266,73 @@ app.post("/payments/create", async (req, res) => {
       error: "Gagal membuat pembayaran.",
       details: error.response?.data || error.message,
     });
+  }
+});
+
+app.post("/payments/cancel", async (req, res) => {
+  try {
+    const { reference, merchantRef, orderId } = req.body || {};
+    const refValue = reference || merchantRef || orderId;
+    if (!refValue) {
+      return res.status(400).json({ error: "reference atau merchantRef wajib diisi." });
+    }
+
+    const docRef = db.collection("orders").doc(refValue);
+    let snap = await docRef.get();
+
+    if (!snap.exists) {
+      const byRef = await db.collection("orders").where("reference", "==", refValue).limit(1).get();
+      if (!byRef.empty) {
+        snap = byRef.docs[0];
+      }
+    }
+
+    if (!snap || !snap.exists) {
+      return res.status(404).json({ error: "Pesanan tidak ditemukan." });
+    }
+
+    const order = snap.data() || {};
+    const currentStatus = (order.status || "").toLowerCase();
+    if (currentStatus === "paid") {
+      return res.status(400).json({ error: "Pesanan sudah dibayar, tidak bisa dibatalkan." });
+    }
+    if (["failed", "expired", "canceled", "refunded"].includes(currentStatus)) {
+      return res.json({ success: true, status: currentStatus, reference: order.reference || refValue });
+    }
+    if ((order.provider || "").toLowerCase() !== "tripay") {
+      return res.status(400).json({ error: "Pesanan ini bukan transaksi Tripay." });
+    }
+
+    const tripayReference = reference || order.reference || order.reference_id || refValue;
+    const merchant = merchantRef || order.merchantRef || refValue;
+
+    const cancelResult = await cancelTripayTransaction({ reference: tripayReference, merchantRef: merchant });
+    if (cancelResult?.success === false) {
+      return res.status(502).json({ error: cancelResult?.message || "Gagal membatalkan di Tripay." });
+    }
+
+    const tripayStatus = cancelResult?.data?.status || cancelResult?.status;
+    let newStatus = mapStatus(tripayStatus);
+    if (!newStatus || newStatus === "pending") newStatus = "failed";
+
+    await db
+      .collection("orders")
+      .doc(snap.id)
+      .set(
+        {
+          status: newStatus,
+          reference: tripayReference,
+          tripayCancel: cancelResult,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          canceledAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+    res.json({ success: true, status: newStatus, reference: tripayReference });
+  } catch (error) {
+    console.error("Cancel error:", error.response?.data || error.message || error);
+    res.status(500).json({ error: "Gagal membatalkan pesanan.", details: error.response?.data || error.message });
   }
 });
 
