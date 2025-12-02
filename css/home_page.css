@@ -541,7 +541,7 @@ img{ max-width:100%; display:block }
 /* FOOTER*/
 .footer-dizzy {
     margin-top: 80px;
-    background: #0b1531;
+    background: #3775B5;
     padding: 60px 0 30px;
     color: #dcdcdc;
     font-family: "Plus Jakarta Sans", sans-serif;
@@ -550,7 +550,7 @@ img{ max-width:100%; display:block }
 .footer-box {
     width: min(1200px, 92%);
     margin: auto;
-    background: #0b1531;
+    background: #3775B5;
     border-radius: 40px;
     padding: 50px;
 }
@@ -711,3 +711,40 @@ img{ max-width:100%; display:block }
   background: #8FAEC7 !important;
 }
 
+/* ==== FOOTER RESPONSIVE FIX ==== */
+@media (max-width: 900px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .footer-col {
+    text-align: left !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .footer-box {
+    padding: 30px;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .footer-brand-row {
+    justify-content: flex-start !important;
+  }
+
+  .footer-col {
+    width: 100%;
+    text-align: left !important;
+  }
+
+  .footer-bottom {
+    text-align: center;
+    font-size: 14px;
+    margin-top: 25px;
+  }
+}
