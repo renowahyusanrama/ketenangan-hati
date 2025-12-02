@@ -748,3 +748,7 @@ img{ max-width:100%; display:block }
     margin-top: 25px;
   }
 }
+
+* {
+  font-family: 'Libre Baskerville', serif !important;
+}
