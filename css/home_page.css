@@ -100,12 +100,6 @@ img{ max-width:100%; display:block }
 .nav-links a.active::after{ width:100% }
 
 /* Tombol — base kecil, aman untuk semua termasuk "Daftar" */
-.btn{
-    display:inline-flex; align-items:center; justify-content:center;
-    padding:12px 24px; border-radius:12px; border:1px solid transparent;
-    font-weight:600; text-decoration:none; transition:all 0.3s ease;
-    cursor:pointer;
-}
 
 /* Khusus tombol di HERO (biar besar & pill) */
 .hero .btn{
@@ -165,39 +159,11 @@ img{ max-width:100%; display:block }
     justify-content:center; 
     flex-wrap:wrap 
 }
-.btn-light{ 
-    background:#fff; 
-    color:var(--primary); 
-    border:1px solid #fff; 
-    box-shadow:0 8px 24px rgba(0,0,0,.15);
-}
-.btn-light:hover{ 
-    transform:translateY(-3px); 
-    box-shadow:0 12px 32px rgba(0,0,0,.2);
-}
-.btn-outline{ 
-    background:transparent; 
-    color:#fff; 
-    border:2px solid #fff;
-}
-.btn-outline:hover{ 
-    background:rgba(255,255,255,.15); 
-    transform:translateY(-3px);
-}
 
 /* ===== Sections ===== */
 .section{ 
     padding:80px 0; 
     position:relative;
-}
-.section::before{
-    content:'';
-    position:absolute;
-    top:0;
-    left:0;
-    right:0;
-    height:1px;
-    background:linear-gradient(90deg, transparent, var(--primary-soft), transparent);
 }
 .section-muted{ 
     background:linear-gradient(135deg, #f5f9ff 0%, #e6f2ff 50%, #f0f8ff 100%); 
@@ -568,3 +534,180 @@ img{ max-width:100%; display:block }
   transition:color 0.3s ease;
 }
 .modal-footnote .link-register:hover{ color:var(--primary-700); text-decoration:underline }
+
+
+
+
+/* FOOTER*/
+.footer-dizzy {
+    margin-top: 80px;
+    background: #0b1531;
+    padding: 60px 0 30px;
+    color: #dcdcdc;
+    font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+.footer-box {
+    width: min(1200px, 92%);
+    margin: auto;
+    background: #0b1531;
+    border-radius: 40px;
+    padding: 50px;
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 40px;
+}
+
+.footer-col { line-height: 1.7; }
+
+.footer-brand-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.footer-logo {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: white;
+    padding: 6px;
+}
+
+.footer-title {
+    color: white;
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.footer-desc {
+    margin-top: 12px;
+    color: #c8d3e7;
+    font-size: 15px;
+}
+
+.footer-heading {
+    color: white;
+    font-weight: 700;
+    margin-bottom: 16px;
+    font-size: 18px;
+}
+
+.footer-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.footer-list li a {
+    color: #c8d3e7;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.footer-list li a:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+.footer-soc {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.soc-btn {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    border-radius: 8px;
+    text-decoration: none;
+    color: white;
+    transition: 0.25s;
+}
+
+.soc-ig { background: #d62976; }
+.soc-tt { background: #000; }
+
+.soc-btn:hover {
+    transform: translateY(-3px);
+    opacity: 0.85;
+}
+
+.footer-support {
+    color: #ffffff;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.footer-sup-text {
+    color: #c8d3e7;
+}
+
+.footer-bottom {
+    margin-top: 35px;
+    text-align: center;
+    color: #d1d1d1;
+    font-size: 15px;
+}
+    
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+    .footer-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .footer-grid {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    .footer-brand-row {
+        justify-content: center;
+    }
+}
+
+.footer-info-description {
+    margin-top: 20px; 
+    line-height: 1.8; 
+    max-width: 850px;
+}
+
+/* Hero slider dots */
+.indicator {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+
+
+
+.indicator {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #8FAEC7 !important; /* non-aktif, lebih tua */
+  opacity: 1;
+  transition: 0.25s ease;
+}
+
+/* Slide aktif */
+.indicator.active,
+.indicator.bg-white\/80 {
+  background: #4E7CA8 !important; /* aktif, lebih gelap */
+}
+
+/* non-aktif override */
+.indicator.bg-white\/40 {
+  background: #8FAEC7 !important;
+}
+

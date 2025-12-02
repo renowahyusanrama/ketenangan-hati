@@ -5,16 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ketenangan jiwa</title>
 
-  <!-- Google Font -->
+  <!-- TAILWIND WAJIB PALING ATAS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Poppins:wght@300;400;500;600;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
 
-  <!-- Icon set (Font Awesome) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer" />
-  <link rel="icon" type="image/png" href="images/logo.png" />
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-  <link rel="stylesheet" href="css/home_page.css" />
+  <!-- CSS lokal -->
+  <link rel="stylesheet" href="css/home_page.css">
 </head>
 <body>
   <!-- Gate: wajib login sebelum akses konten -->
@@ -57,24 +60,63 @@
     </div>
   </header>
 
-  <!-- ================= HERO ================= -->
-  <section id="beranda" class="hero">
-    <img src="images/hero.jpg" alt="Ilustrasi shaf shalat" class="hero-bg">
-    <div class="hero-overlay"></div>
+  <!-- ================= HERO (DENGAN SLIDER) ================= -->
+<section class="relative w-full overflow-hidden">
 
-    <div class="container hero-content" data-animate="fade-up">
-      <p class="eyebrow">Bergabunglah dalam Pengajian Islamic</p>
-      <h1 class="hero-title">
-        Mari tingkatkan ilmu agama dan keimanan bersama para ustadz terbaik.<br />
-        Daftar sekarang untuk mengikuti kajian dan event Islamic.
-      </h1>
+  <!-- Wrapper -->
+  <div class="w-full overflow-hidden relative">
+    <div id="heroSlider" class="flex transition-transform duration-700 ease-in-out">
 
-      <div class="hero-actions">
-        <a href="#event" class="btn btn-light">Lihat Event</a>
-        <a href="#tentang" class="btn btn-outline">Pelajari Lebih Lanjut</a>
+      <!-- SLIDE 1 -->
+      <div class="flex-shrink-0 w-full relative">
+        <img src="images/hero.jpg" class="w-full h-[500px] object-cover brightness-75">
+        <div class="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-6">
+          <p class="eyebrow">Bergabunglah dalam Pengajian Islamic</p>
+          <h1 class="hero-title">
+            Mari tingkatkan ilmu agama dan keimanan bersama para ustadz terbaik.
+          </h1>
+          <div class="hero-actions mt-6">
+          </div>
+        </div>
       </div>
+
+      <!-- SLIDE 2 -->
+      <div class="flex-shrink-0 w-full relative">
+        <img src="images/masjid.webp" class="w-full h-[500px] object-cover brightness-75">
+        <div class="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-6">
+          <p class="eyebrow">Majelis Ilmu Setiap Pekan</p>
+          <h1 class="hero-title">
+            Ikuti kajian tafsir, hadits, fiqih & sirah langsung dari ustadz terpercaya.
+          </h1>
+          <div class="hero-actions mt-6">
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3 -->
+      <div class="flex-shrink-0 w-full relative">
+        <img src="images/masjid2.jpg" class="w-full h-[500px] object-cover brightness-75">
+        <div class="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-6">
+          <p class="eyebrow">Kajian Online & Offline</p>
+          <h1 class="hero-title">
+            Temukan majelis ilmu terdekat dan daftarkan diri dengan mudah.
+          </h1>
+          <div class="hero-actions mt-6">
+          </div>
+        </div>
+      </div>
+
     </div>
-  </section>
+  </div>
+
+<div class="flex justify-center mt-4 gap-3">
+    <button class="indicator w-3 h-3 bg-white/80 rounded-full" data-index="0"></button>
+    <button class="indicator w-3 h-3 bg-white/40 rounded-full" data-index="1"></button>
+    <button class="indicator w-3 h-3 bg-white/40 rounded-full" data-index="2"></button>
+</div>
+
+</section>
+
 
   <!-- ========== SECTION: EVENT & KAJIAN MENDATANG ========== -->
   <section id="event" class="section">
@@ -223,43 +265,56 @@
     </div>
   </section>
 
-  <!-- ========== SECTION: TENTANG (placeholder) ========== -->
-  <section id="tentang" class="section section-muted">
-    <div class="container" data-animate="fade-up">
-      <h2 class="section-title">Tentang</h2>
-      <p class="lead">
-        ketenangan jiwa adalah platform yang memudahkan muslimin untuk menemukan, mendaftar, dan mengikuti kajian serta event Islami yang terpercaya. Kami menghadirkan informasi kajian tafsir, hadits, fiqih, tahsin, sirah, hingga parenting Islami—dari masjid, pesantren, dan komunitas dakwah—dalam satu tempat yang rapi dan mudah diakses.
-      </p>
-      <p class="lead">
-        Misi kami adalah menyebarkan ilmu yang bermanfaat dengan menjaga amanah, adab, dan keilmuan. Melalui kurasi pemateri, detail acara yang jelas, serta pengingat yang membantu, kami berharap pengalaman menuntut ilmu menjadi lebih teratur dan nyaman bagi siapa pun, baik hadir luring maupun daring.
-      </p>
-      <p class="lead">
-        Kami terbuka untuk kolaborasi dengan DKM, panitia kajian, lembaga pendidikan, dan komunitas. Bersama-sama, mari memakmurkan masjid dan menghidupkan majelis ilmu yang menentramkan hati.
-      </p>
-    </div>
-  </section>
+<!-- =============== FOOTER MIRIP DIZZY STORE (FINAL) =============== -->
+<footer class="text-gray-300 py-16">
+  <div class="mx-auto bg-[#0b1531] rounded-[40px] p-16 shadow-xl max-w-[95%]">
 
-  <!-- ========== SECTION: KONTAK (placeholder) ========== -->
-  <section id="kontak" class="section">
-    <div class="container" data-animate="fade-up">
-      <h2 class="section-title">Kontak</h2>
-      <p class="lead">INSTAGRAM: @ketenanganjiwa.id</p>
-      <p class="lead">TIKTOK: @ketenanganjiwa.id</p>
-    </div>
-  </section>
+    <div class="flex flex-col md:flex-row md:justify-between gap-16 items-start">
 
-  <!-- ================= FOOTER ================= -->
-  <footer class="footer">
-    <div class="container footer-inner">
-      <div class="footer-brand">
-        <!-- HANYA LOGO YANG TERSISA -->
-        <span class="brand-logo"><img src="images/logo.png" alt="ketenangan jiwa" /></span>
+
+      <!-- BRAND -->
+      <div>
+        <div class="flex items-center gap-4 mb-6">
+          <img src="images/logo.png" class="w-14 h-14 rounded-full bg-white p-1">
+          <h2 class="text-white font-extrabold text-3xl tracking-wide">Ketenangan Jiwa</h2>
+        </div>
+
+        <p class="text-lg text-gray-300 leading-relaxed font-medium">
+          ketenangan jiwa hadir untuk memudahkan setiap muslim menemukan, mendaftar, dan mengikuti kajian islami terpercaya dalam satu tempat yang rapi dan mudah diakses. Kami mengumpulkan kajian tafsir, hadits, fiqih, tahsin, sirah, hingga parenting Islami dari masjid, pesantren, dan komunitas dakwah agar ilmu dapat dijangkau dengan lebih sederhana. 
+          Misi kami adalah menghadirkan ilmu yang bermanfaat—dengan adab, amanah, dan kejernihan.
+          Melalui kurasi pemateri, jadwal yang rapi, dan pengingat yang membantu, kami berharap perjalanan menuntut ilmu menjadi lebih tertata, nyaman, dan menentramkan hati—baik hadir secara langsung maupun daring.
+        </p>
       </div>
-      <div class="footer-copy">
-        &copy; <span id="year"></span> ketenangan jiwa. All rights reserved.
+
+      <!-- KONTAK SAJA (BANTUAN & IKUTI KAMI DIHAPUS) -->
+      <div>
+        <h4 class="text-white font-bold mb-5 text-lg uppercase">Kontak Kami</h4>
+        <ul class="space-y-3 text-[17px] font-medium">
+          <li><strong>Instagram:</strong> @ketenanganjiwa.id</li>
+          <li><strong>TikTok:</strong> @ketenanganjiwa.id</li>
+          <li><strong>Email:</strong> ketenanganjiwa.id@gmail.com</li>
+          <li><strong>Alamat:</strong> Indonesia</li>
+        </ul>
       </div>
+
     </div>
-  </footer>
+
+    <div class="border-t border-gray-700 mt-16 pt-6 flex justify-center">
+      <p class="text-center text-[16px] text-gray-300 font-semibold tracking-wide leading-relaxed">
+        © <span id="year"></span> Ketenangan Jiwa — All Rights Reserved.
+      </p>
+    </div>
+
+  </div>
+</footer>
+
+
+<script>
+  document.getElementById("year").textContent = new Date().getFullYear();
+</script>
+
+
+
 
   <!-- ===== Floating Socials (WA/IG/TikTok) ===== -->
   <div class="floating-social">
@@ -309,7 +364,38 @@
       </div>
     </div>
   </div>
-  <!-- =============== END LOGIN MODAL =============== -->
+
+<!-- ========== HERO SLIDER SCRIPT (WAJIB DI PALING BAWAH) ========== -->
+<!-- Script SLIDER OTOMATIS -->
+<script>
+  let indexHero = 0;
+  const sliderHero = document.getElementById("heroSlider");
+  const totalHero = sliderHero.children.length;
+  const dotsHero = document.querySelectorAll(".indicator");
+
+  function updateHeroSlider() {
+    sliderHero.style.transform = `translateX(-${indexHero * 100}%)`;
+    dotsHero.forEach((dot, i) => {
+      dot.classList.toggle("bg-white/80", i === indexHero);
+      dot.classList.toggle("bg-white/40", i !== indexHero);
+    });
+  }
+
+  setInterval(() => {
+    indexHero = (indexHero + 1) % totalHero;
+    updateHeroSlider();
+  }, 4000);
+</script>
+
+<!-- Script DOT KLIK MANUAL -->
+<script>
+  dotsHero.forEach(dot => {
+    dot.addEventListener("click", () => {
+      indexHero = parseInt(dot.getAttribute("data-index"));
+      updateHeroSlider();
+    });
+  });
+</script>
 
   <script type="module" src="js/events_feed.js"></script>
   <script src="js/home_page.js"></script>
