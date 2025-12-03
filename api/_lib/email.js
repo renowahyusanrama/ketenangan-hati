@@ -1,6 +1,5 @@
 // api/_lib/email.js
 const { Resend } = require("resend");
-const QRCode = require("qrcode");
 const { generateTicketPdf } = require("./ticket_pdf");
 
 // 🔑 pastikan ini di-set di Vercel (Production env)
@@ -29,19 +28,7 @@ const TICKET_BASE_URL = (
   "https://renowahysanrama.github.io/ketenangan-jiwa"
 ).replace(/\/$/, "");
 
-function buildTicketHtml({
-  name,
-  email,
-  phone,
-  eventTitle,
-  eventId,
-  method,
-  payCode,
-  amount,
-  reference,
-  ticketUrl,
-  qrDataUrl, // bisa kosong atau "cid:xxx"
-}) {
+function buildTicketHtml({ name, email, phone, eventTitle, eventId, method, payCode, amount, reference, ticketUrl }) {
   return `
     <div style="font-family:Arial, sans-serif; max-width:560px; margin:auto; color:#0f172a">
       <h2 style="color:#2563eb; margin-bottom:4px;">E-Ticket / Konfirmasi</h2>
@@ -59,19 +46,9 @@ function buildTicketHtml({
         <tr><td style="padding:6px 0; color:#475569;">Ref</td><td style="padding:6px 0;">${reference || eventId}</td></tr>
       </table>
       ${
-        qrDataUrl
+        ticketUrl
           ? `<div style="margin-top:16px; text-align:center;">
-              <p style="margin:0 0 8px; color:#475569;">Tunjukkan QR ini saat check-in:</p>
-              <img src="${qrDataUrl}" alt="QR E-Ticket" style="width:200px; height:200px; border:1px solid #e2e8f0; border-radius:12px;" />
-              ${
-                ticketUrl
-                  ? `<p style="margin-top:8px;"><a href="${ticketUrl}" style="color:#2563eb;">Buka tiket</a></p>`
-                  : ""
-              }
-            </div>`
-          : ticketUrl
-          ? `<div style="margin-top:16px; text-align:center;">
-              <p style="margin:0 0 8px; color:#475569;">Jika QR tidak muncul di email, klik tautan berikut:</p>
+              <p style="margin:0 0 8px; color:#475569;">Tiket PDF terlampir. Jika lampiran tidak bisa dibuka, klik tautan berikut:</p>
               <a href="${ticketUrl}" style="color:#2563eb;">Buka tiket</a>
             </div>`
           : ""
@@ -144,34 +121,7 @@ async function sendTicketEmail(order) {
     ? `${base}/ticket.html?ref=${encodeURIComponent(reference)}`
     : "";
 
-  // ==== QR CODE (inline attachment pakai CID) ====
-  const isPaid = (order.status || "").toLowerCase() === "paid";
-  let qrSrcForHtml = ""; // "cid:..." kalau berhasil
-  let qrAttachment = null;
-
-  if (isPaid && ticketUrl) {
-    try {
-      const dataUrl = await QRCode.toDataURL(ticketUrl);
-      const base64 = dataUrl.split(",")[1]; // buang prefix "data:image/png;base64,"
-
-      const contentId = "ticket-qr"; // cukup satu ID sederhana
-      qrSrcForHtml = `cid:${contentId}`;
-
-      qrAttachment = {
-        content: base64,
-        filename: `qr-${reference || eventId}.png`,
-        contentId, // penting untuk inline image
-      };
-
-      console.log("QR inline attachment disiapkan untuk:", ticketUrl);
-    } catch (err) {
-      console.error("QR generate error:", err?.message || err);
-    }
-  }
-  // ===============================================
-
-  // HTML versi dengan QR (kalau ada) dan tanpa QR (fallback)
-  const baseHtmlWithQr = buildTicketHtml({
+  const baseHtml = buildTicketHtml({
     name,
     email,
     phone,
@@ -182,26 +132,10 @@ async function sendTicketEmail(order) {
     amount,
     reference,
     ticketUrl,
-    qrDataUrl: qrSrcForHtml,
-  });
-
-  const baseHtmlNoQr = buildTicketHtml({
-    name,
-    email,
-    phone,
-    eventTitle,
-    eventId,
-    method,
-    payCode,
-    amount,
-    reference,
-    ticketUrl,
-    qrDataUrl: "",
   });
 
   let finalTo = originalEmail;
-  let htmlWithQr = baseHtmlWithQr;
-  let htmlNoQr = baseHtmlNoQr;
+  let html = baseHtml;
 
   if (RESEND_TEST_MODE) {
     finalTo = RESEND_OWNER_EMAIL;
@@ -214,8 +148,7 @@ async function sendTicketEmail(order) {
       </div>
       <hr style="margin:16px 0;" />
     `;
-    htmlWithQr = `${banner}${baseHtmlWithQr}`;
-    htmlNoQr = `${banner}${baseHtmlNoQr}`;
+    html = `${banner}${baseHtml}`;
   }
 
   // Siapkan PDF lampiran (best effort)
@@ -243,42 +176,19 @@ async function sendTicketEmail(order) {
     subject,
   };
 
-  // Coba kirim dengan QR (kalau ada attachment)
   try {
     const attachments = [];
-    if (qrAttachment) attachments.push(qrAttachment);
     if (pdfAttachment) attachments.push(pdfAttachment);
-    const payloadWithQr = {
+    const payload = {
       ...basePayload,
-      html: htmlWithQr,
+      html,
       ...(attachments.length ? { attachments } : {}),
     };
 
-    const result = await resend.emails.send(payloadWithQr);
-    console.log("Resend API result (with QR):", result);
+    const result = await resend.emails.send(payload);
+    console.log("Resend API result:", result);
   } catch (err) {
-    console.error(
-      "Resend API error (with attachments), mencoba fallback tanpa QR:",
-      err?.response?.data || err?.message || err,
-    );
-
-    // Fallback: kirim ulang TANPA attachment & TANPA QR
-    try {
-      const attachments2 = [];
-      if (pdfAttachment) attachments2.push(pdfAttachment);
-      const fallbackPayload = {
-        ...basePayload,
-        html: htmlNoQr,
-        ...(attachments2.length ? { attachments: attachments2 } : {}),
-      };
-      const result2 = await resend.emails.send(fallbackPayload);
-      console.log("Resend API result (fallback no QR):", result2);
-    } catch (err2) {
-      console.error(
-        "Resend API fallback error (no attachments):",
-        err2?.response?.data || err2?.message || err2,
-      );
-    }
+    console.error("Resend API error:", err?.response?.data || err?.message || err);
   }
 }
 
