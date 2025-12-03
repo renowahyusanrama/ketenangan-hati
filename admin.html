@@ -240,6 +240,7 @@
       background: rgba(59,130,246,0.2);
       color: #60a5fa;
     }
+
     .stats-panel {
       padding: 18px 24px;
       background: linear-gradient(160deg, rgba(59,130,246,0.08), rgba(15,23,42,0.85));
@@ -320,6 +321,7 @@
       margin-top: 12px;
       font-size: 0.9rem;
     }
+
     .status-text { 
       font-size: 14px; 
     }
@@ -529,10 +531,10 @@
 </head>
 <body>
   <header>
-      <a href="#" class="brand">
-        <img src="images/logo.png" alt="ketenangan jiwa" />
-        <span>ketenangan jiwa • Admin</span>
-      </a>
+    <a href="#" class="brand">
+      <img src="images/logo.png" alt="ketenangan jiwa" />
+      <span>ketenangan jiwa • Admin</span>
+    </a>
     <div class="flex">
       <span id="userInfo" class="pill muted">Belum login</span>
       <button id="loginBtn"><i class="fa-brands fa-google"></i> Login</button>
@@ -547,6 +549,7 @@
     </div>
 
     <div id="dashboard" class="hidden">
+      <!-- PANEL STATISTIK -->
       <div class="panel stats-panel">
         <div class="flex-between" style="gap: 12px; flex-wrap: wrap; align-items: center;">
           <div>
@@ -582,6 +585,8 @@
         </ul>
         <p class="muted stat-updated" id="statUpdatedAt">Terakhir diperbarui: -</p>
       </div>
+
+      <!-- PANEL KETERANGAN KELOLA EVENT -->
       <div class="panel" id="kelolaEventPanel">
         <div class="flex-between" style="gap: 12px; flex-wrap: wrap; align-items: center;">
           <div>
@@ -592,20 +597,11 @@
             <div class="status-text">
               <span id="adminStatus" class="badge gray">checking</span>
             </div>
-            <button id="toggleQrPanel" class="outline"><i class="fa-solid fa-qrcode"></i> Scan QR</button>
-            <button id="qrStopBtn" class="outline">Stop kamera</button>
-          </div>
-        </div>
-        <div id="qrPanel" class="hidden" style="margin-top: 12px; display: grid; gap: 8px;">
-          <p id="qrStatus" class="muted" style="margin:0;">Scan QR tiket untuk verifikasi check-in.</p>
-          <div id="qrReader" style="width: 100%; max-width: 440px; margin: 0 auto; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;"></div>
-          <div class="flex" style="gap: 8px; flex-wrap: wrap;">
-            <input id="qrInput" type="text" placeholder="Kode ref / merchantRef" style="flex: 1; min-width: 200px;" />
-            <button id="qrSubmitBtn" class="outline">Verifikasi kode</button>
           </div>
         </div>
       </div>
 
+      <!-- PANEL FORM EVENT + PREVIEW -->
       <div class="panel">
         <div class="admin-layout">
           <form id="eventForm">
@@ -615,52 +611,52 @@
                 <input name="title" type="text" placeholder="Judul event" required />
               </div>
               <div>
-              <label>Slug (unik)</label>
-              <input name="slug" type="text" placeholder="kajian-tafsir-al-baqarah" required />
-            </div>
-            <div>
-              <label>Kategori</label>
-              <input name="category" type="text" placeholder="Tafsir / Fiqih / dll" />
-            </div>
-            <div>
-              <label>Status</label>
-              <select name="status">
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-              </select>
-            </div>
-            <div>
-              <label>Tanggal</label>
-              <input name="schedule" type="text" placeholder="Sabtu, 8 Nov 2025" />
-            </div>
-            <div>
-              <label>Waktu</label>
-              <input name="time" type="text" placeholder="19:00 - 21:00 WIB" />
-            </div>
-            <div>
-              <label>Lokasi</label>
-              <input name="location" type="text" placeholder="Masjid / Aula" />
-            </div>
-            <div>
-              <label>Alamat lengkap</label>
-              <input name="address" type="text" placeholder="Jl. ..." />
-            </div>
-            <div>
-              <label>Pemateri</label>
-              <input name="speaker" type="text" placeholder="Nama ustadz/ustadzah" />
-            </div>
-            <div>
-              <label>Harga (0 untuk gratis)</label>
-              <input name="amount" type="number" min="0" step="1000" value="0" />
-            </div>
-            <div>
-              <label>Kapasitas (opsional)</label>
-              <input name="capacity" type="number" min="0" step="1" />
-            </div>
-            <div>
-              <label>Tagline singkat</label>
-              <input name="tagline" type="text" placeholder="Kalimat singkat promosi" />
-            </div>
+                <label>Slug (unik)</label>
+                <input name="slug" type="text" placeholder="kajian-tafsir-al-baqarah" required />
+              </div>
+              <div>
+                <label>Kategori</label>
+                <input name="category" type="text" placeholder="Tafsir / Fiqih / dll" />
+              </div>
+              <div>
+                <label>Status</label>
+                <select name="status">
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </div>
+              <div>
+                <label>Tanggal</label>
+                <input name="schedule" type="text" placeholder="Sabtu, 8 Nov 2025" />
+              </div>
+              <div>
+                <label>Waktu</label>
+                <input name="time" type="text" placeholder="19:00 - 21:00 WIB" />
+              </div>
+              <div>
+                <label>Lokasi</label>
+                <input name="location" type="text" placeholder="Masjid / Aula" />
+              </div>
+              <div>
+                <label>Alamat lengkap</label>
+                <input name="address" type="text" placeholder="Jl. ..." />
+              </div>
+              <div>
+                <label>Pemateri</label>
+                <input name="speaker" type="text" placeholder="Nama ustadz/ustadzah" />
+              </div>
+              <div>
+                <label>Harga (0 untuk gratis)</label>
+                <input name="amount" type="number" min="0" step="1000" value="0" />
+              </div>
+              <div>
+                <label>Kapasitas (opsional)</label>
+                <input name="capacity" type="number" min="0" step="1" />
+              </div>
+              <div>
+                <label>Tagline singkat</label>
+                <input name="tagline" type="text" placeholder="Kalimat singkat promosi" />
+              </div>
             </div>
 
             <div class="grid" style="margin-top:20px;">
@@ -745,6 +741,7 @@
         </div>
       </div>
 
+      <!-- PANEL DAFTAR EVENT -->
       <div class="panel">
         <div class="flex-between">
           <h3>Daftar Event</h3>
@@ -773,11 +770,15 @@
         </div>
       </div>
 
+      <!-- PANEL TRANSAKSI + QR (VERSI 1) -->
       <div class="panel">
         <div class="flex-between">
           <h3>Transaksi</h3>
-          <div class="flex" style="gap: 8px;">
-            <select id="orderStatusFilter">
+
+          <!-- FILTER BAR -->
+          <div class="flex" style="gap: 8px; align-items: center; flex-wrap: wrap;">
+
+            <select id="orderStatusFilter" style="min-width: 180px;">
               <option value="">Semua status</option>
               <option value="paid">Paid</option>
               <option value="pending">Pending/Unpaid</option>
@@ -786,11 +787,45 @@
               <option value="canceled">Canceled</option>
               <option value="refunded">Refunded</option>
             </select>
-            <input id="orderSearch" type="text" placeholder="Cari ref/email" style="width: 180px;" />
-            <button id="refreshOrdersBtn" class="outline"><i class="fa-solid fa-rotate"></i> Refresh</button>
+
+            <input id="orderSearch" type="text"
+                   placeholder="Cari ref/email"
+                   style="width: 220px;" />
+
+            <button id="toggleQrPanel" class="outline">
+              <i class="fa-solid fa-qrcode"></i> Scan QR
+            </button>
+
+            <button id="qrStopBtn" class="outline">
+              Stop kamera
+            </button>
+
+            <button id="refreshOrdersBtn" class="outline">
+              <i class="fa-solid fa-rotate"></i> Refresh
+            </button>
+
           </div>
         </div>
-        <div style="overflow-x:auto;">
+
+        <!-- QR PANEL DI BAWAH FILTER -->
+        <div id="qrPanel" class="hidden" style="margin-top: 12px; display: grid; gap: 8px;">
+          <p id="qrStatus" class="muted" style="margin:0;">Scan QR tiket untuk verifikasi check-in.</p>
+
+          <div id="qrReader"
+               style="width: 100%; max-width: 440px; margin: 0 auto;
+                      border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+          </div>
+
+          <div class="flex" style="gap: 8px; flex-wrap: wrap;">
+            <input id="qrInput" type="text"
+                   placeholder="Kode ref / merchantRef"
+                   style="flex: 1; min-width: 200px;" />
+            <button id="qrSubmitBtn" class="outline">Verifikasi kode</button>
+          </div>
+        </div>
+
+        <!-- TABEL TRANSAKSI -->
+        <div style="overflow-x:auto; margin-top: 16px;">
           <table class="table" id="ordersTable">
             <thead>
               <tr>
@@ -809,6 +844,7 @@
             </tbody>
           </table>
         </div>
+
         <div class="flex-between" style="margin-top:12px; gap: 12px;">
           <div id="ordersStatus" class="muted">-</div>
           <button id="loadMoreOrders" class="outline">Muat lebih</button>
