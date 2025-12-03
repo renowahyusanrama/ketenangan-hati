@@ -187,19 +187,32 @@ function renderPaymentResult(container, data) {
   const referenceText = data.reference || data.orderId || "";
   const statusText = (data.status || data.rawStatus || "").toLowerCase();
   const isPending = ["pending", "unpaid", ""].includes(statusText);
-  const statusHtml = `
-    <div class="payment-info-row" style="align-items:center;">
-      <div>
-        <span>Status</span>
-        <strong>${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
+  const canCancel =
+    (data.provider || "").toLowerCase() === "tripay" && isPending && (data.reference || data.orderId);
+  const cancelHtml = canCancel
+    ? `
+      <div class="payment-info-row" style="align-items:center; gap:12px; flex-wrap:wrap;">
+        <div>
+          <span>Status</span>
+          <strong>${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
+        </div>
+        <button data-cancel-order style="background:#ef4444;color:white;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;">Batalkan pesanan</button>
       </div>
-    </div>
-    ${
-      isPending
-        ? '<p class="form-hint">Tagihan menunggu pembayaran. Hubungi panitia jika perlu mengganti metode.</p>'
-        : ""
-    }
-  `;
+      <p class="form-hint" data-cancel-status>Tagihan menunggu pembayaran. Klik batalkan jika ingin mengganti metode.</p>
+    `
+    : `
+      <div class="payment-info-row" style="align-items:center;">
+        <div>
+          <span>Status</span>
+          <strong>${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
+        </div>
+      </div>
+      ${
+        isPending
+          ? '<p class="form-hint">Tagihan menunggu pembayaran. Hubungi panitia jika perlu mengganti metode.</p>'
+          : ""
+      }
+    `;
 
   if (data.paymentType === "bank_transfer") {
     const bank = (data.bank || data.paymentName || "VA").toString().toUpperCase();
@@ -226,7 +239,7 @@ function renderPaymentResult(container, data) {
       ${checkoutLink}
       ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
       ${buildInstructionsHtml(data.instructions)}
-      ${statusHtml}
+      ${cancelHtml}
     `;
   } else {
     const qrUrl = data.qrUrl || createQrUrl(data.qrString) || "";
@@ -239,7 +252,7 @@ function renderPaymentResult(container, data) {
       ${checkoutLink}
       ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
       ${buildInstructionsHtml(data.instructions)}
-      ${statusHtml}
+      ${cancelHtml}
     `;
   }
 
@@ -256,6 +269,44 @@ function renderPaymentResult(container, data) {
       }
     });
   });
+
+  const cancelBtn = container.querySelector("[data-cancel-order]");
+  const cancelStatus = container.querySelector("[data-cancel-status]");
+  if (cancelBtn && (data.reference || data.orderId)) {
+    cancelBtn.addEventListener("click", async () => {
+      cancelBtn.disabled = true;
+      if (cancelStatus) cancelStatus.textContent = "Membatalkan pesanan...";
+      try {
+        const resp = await fetch(`${API_BASE}/payments/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reference: data.reference || data.orderId,
+            merchantRef: data.orderId || data.merchantRef,
+            orderId: data.orderId || data.merchantRef,
+            requestedBy: "user",
+          }),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || "Gagal membatalkan pesanan.");
+        }
+        const result = await resp.json();
+        const warning = result.tripayWarning
+          ? `<p class="form-hint warning">${result.tripayWarning}</p>`
+          : "";
+        container.innerHTML = `
+          <p class="form-hint success">Pesanan dibatalkan. Status: ${(result.status || "canceled").toUpperCase()}.</p>
+          ${warning}
+          <p class="form-hint">Buat tagihan baru jika ingin mengganti metode pembayaran.</p>
+        `;
+      } catch (err) {
+        console.error(err);
+        if (cancelStatus) cancelStatus.textContent = err.message || "Gagal membatalkan pesanan.";
+        cancelBtn.disabled = false;
+      }
+    });
+  }
 }
 
 function initPaymentForm(event) {

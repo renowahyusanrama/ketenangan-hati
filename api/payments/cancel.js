@@ -121,6 +121,7 @@ module.exports = async (req, res) => {
   const merchantRef = body.merchantRef || order.merchantRef || orderId;
 
   let cancelResult;
+  let cancelError = null;
   try {
     cancelResult = await cancelTripayTransaction({
       reference: tripayReference,
@@ -130,22 +131,25 @@ module.exports = async (req, res) => {
       throw new Error(cancelResult?.message || "Cancel Tripay gagal.");
     }
   } catch (err) {
-    console.error("Tripay cancel error:", err.response?.data || err.message || err);
-    return send(res, 502, {
-      error: "Gagal membatalkan di Tripay.",
-      details: err.response?.data || err.message || "Unknown Tripay error",
-    });
+    cancelError = err;
+    console.error("Tripay cancel error (marking locally):", err.response?.data || err.message || err);
   }
 
   const tripayStatus = cancelResult?.data?.status || cancelResult?.status;
   let newStatus = mapStatus(tripayStatus);
-  if (!newStatus || newStatus === "pending") newStatus = "failed";
+  if (!newStatus || newStatus === "pending") newStatus = cancelError ? "canceled" : "failed";
 
   const docRef = db.collection("orders").doc(orderId);
   const updatePayload = {
     status: newStatus,
     reference: tripayReference,
-    tripayCancel: cancelResult,
+    tripayCancel: cancelResult || null,
+    tripayCancelError: cancelError
+      ? {
+          message: cancelError.message || "Tripay cancel failed",
+          response: cancelError.response?.data || null,
+        }
+      : null,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     canceledAt: admin.firestore.FieldValue.serverTimestamp(),
     canceledBy: body.requestedBy || "user",
@@ -167,5 +171,8 @@ module.exports = async (req, res) => {
     status: newStatus,
     reference: tripayReference,
     orderId,
+    tripayWarning: cancelError
+      ? "Gagal membatalkan di Tripay, pesanan ditandai dibatalkan di sistem."
+      : undefined,
   });
 };

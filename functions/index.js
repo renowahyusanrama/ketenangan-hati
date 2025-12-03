@@ -306,14 +306,21 @@ app.post("/payments/cancel", async (req, res) => {
     const tripayReference = reference || order.reference || order.reference_id || refValue;
     const merchant = merchantRef || order.merchantRef || refValue;
 
-    const cancelResult = await cancelTripayTransaction({ reference: tripayReference, merchantRef: merchant });
-    if (cancelResult?.success === false) {
-      return res.status(502).json({ error: cancelResult?.message || "Gagal membatalkan di Tripay." });
+    let cancelResult;
+    let cancelError = null;
+    try {
+      cancelResult = await cancelTripayTransaction({ reference: tripayReference, merchantRef: merchant });
+      if (cancelResult?.success === false) {
+        throw new Error(cancelResult?.message || "Cancel Tripay gagal.");
+      }
+    } catch (err) {
+      cancelError = err;
+      console.error("Tripay cancel error (marking locally):", err.response?.data || err.message || err);
     }
 
     const tripayStatus = cancelResult?.data?.status || cancelResult?.status;
     let newStatus = mapStatus(tripayStatus);
-    if (!newStatus || newStatus === "pending") newStatus = "failed";
+    if (!newStatus || newStatus === "pending") newStatus = cancelError ? "canceled" : "failed";
 
     await db
       .collection("orders")
@@ -322,14 +329,24 @@ app.post("/payments/cancel", async (req, res) => {
         {
           status: newStatus,
           reference: tripayReference,
-          tripayCancel: cancelResult,
+          tripayCancel: cancelResult || null,
+          tripayCancelError: cancelError
+            ? { message: cancelError.message || "Tripay cancel failed", response: cancelError.response?.data || null }
+            : null,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           canceledAt: admin.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true },
       );
 
-    res.json({ success: true, status: newStatus, reference: tripayReference });
+    res.json({
+      success: true,
+      status: newStatus,
+      reference: tripayReference,
+      tripayWarning: cancelError
+        ? "Gagal membatalkan di Tripay, pesanan ditandai dibatalkan di sistem."
+        : undefined,
+    });
   } catch (error) {
     console.error("Cancel error:", error.response?.data || error.message || error);
     res.status(500).json({ error: "Gagal membatalkan pesanan.", details: error.response?.data || error.message });
