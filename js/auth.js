@@ -10,9 +10,9 @@ import {
 // === Config proyekmu ===
 const firebaseConfig = {
   apiKey: "AIzaSyCoa_Ioa-Gp9TnL5eke6fwTkfQGkbWGJBw",
-  authDomain: "pengajian-online.firebaseapp.com",
-  projectId: "pengajian-online",
-  storageBucket: "pengajian-online.firebasestorage.app",
+  authDomain: "ketenangan-jiwa.firebaseapp.com",
+  projectId: "ketenangan-jiwa",
+  storageBucket: "ketenangan-jiwa.firebasestorage.app",
   messagingSenderId: "965180253441",
   appId: "1:965180253441:web:f03f6cb969e422fd7e2700",
   measurementId: "G-YJ81SDXM5E"
@@ -203,5 +203,4 @@ renderLoginButton();
 showAuthGate();
 modal?.classList.add('open');
 document.body.style.overflow = 'hidden';
-
 
