@@ -54,7 +54,7 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-const projectId = process.env.GCLOUD_PROJECT || "ketenangan-jiwa";
+const projectId = process.env.GCLOUD_PROJECT || "pengajian-online";
 const defaultCallbackUrl = `https://us-central1-${projectId}.cloudfunctions.net/api/payments/webhook`;
 const callbackUrl = functions.config().trippay?.callback_url || defaultCallbackUrl;
 const returnUrl = functions.config().trippay?.return_url || "";

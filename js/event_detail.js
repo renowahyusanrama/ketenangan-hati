@@ -16,9 +16,9 @@ import { EVENT_SEED_DATA } from "./events_seed_data.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCoa_Ioa-Gp9TnL5eke6fwTkfQGkbWGJBw",
-  authDomain: "ketenangan-jiwa.firebaseapp.com",
-  projectId: "ketenangan-jiwa",
-  storageBucket: "ketenangan-jiwa.firebasestorage.app",
+  authDomain: "pengajian-online.firebaseapp.com",
+  projectId: "pengajian-online",
+  storageBucket: "pengajian-online.firebasestorage.app",
   messagingSenderId: "965180253441",
   appId: "1:965180253441:web:f03f6cb969e422fd7e2700",
   measurementId: "G-YJ81SDXM5E",
@@ -30,8 +30,8 @@ const db = getFirestore(app);
 // ==== BASE URL UNTUK API (Vercel / Firebase Functions) ====
 
 const PROD_FUNCTION_BASE = "https://www.ketenanganjiwa.id/api";
-const LOCAL_FUNCTION_BASE = "http://localhost:5001/ketenangan-jiwa/us-central1/api";
-// const DEFAULT_FUNCTION_BASE = "https://us-central1-ketenangan-jiwa.cloudfunctions.net/api"; // fallback lama jika masih diperlukan
+const LOCAL_FUNCTION_BASE = "http://localhost:5001/pengajian-online/us-central1/api";
+// const DEFAULT_FUNCTION_BASE = "https://us-central1-pengajian-online.cloudfunctions.net/api"; // fallback lama jika masih diperlukan
 
 const isBrowser = typeof window !== "undefined";
 
