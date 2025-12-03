@@ -90,6 +90,7 @@ const statPaidCountEl = document.getElementById("statPaidCount");
 const statParticipantCountEl = document.getElementById("statParticipantCount");
 const statStatusListEl = document.getElementById("statStatusList");
 const statUpdatedAtEl = document.getElementById("statUpdatedAt");
+const statEventFilter = document.getElementById("statEventFilter");
 const STATUS_DOT_COLORS = {
   paid: "#4ade80",
   pending: "#facc15",
@@ -99,6 +100,7 @@ const STATUS_DOT_COLORS = {
   refunded: "#60a5fa",
 };
 let statsLoading = false;
+let selectedEventFilter = "";
 
 let currentUser = null;
 let isAdmin = false;
@@ -358,13 +360,21 @@ function formatMethod(order) {
   return order.method || order.paymentType || "-";
 }
 
-function renderOrderStats(rows = []) {
+function getEventLabel(eventId) {
+  if (!eventId) return "Semua event";
+  const eventData = eventsCache.get(eventId);
+  return eventData?.title || eventId;
+}
+
+function renderOrderStats(rows = [], eventFilter = "") {
   if (!statRevenueEl) return;
+  const filteredRows = eventFilter ? rows.filter((order) => (order.eventId || order.event)?.toString() === eventFilter) : rows;
+  const eventLabel = getEventLabel(eventFilter);
   let totalRevenue = 0;
   let paidCount = 0;
   let participants = 0;
   const breakdown = {};
-  rows.forEach((order) => {
+  filteredRows.forEach((order) => {
     const status = (order.status || "pending").toLowerCase();
     breakdown[status] = (breakdown[status] || 0) + 1;
     if (status === "paid") {
@@ -381,25 +391,52 @@ function renderOrderStats(rows = []) {
 
   if (statStatusListEl) {
     const statuses = ["paid", "pending", "expired", "failed", "canceled", "refunded"];
-    const html = statuses
-      .map((status) => {
-        const count = breakdown[status];
-        if (!count) return "";
-        const color = STATUS_DOT_COLORS[status] || "#cbd5e1";
-        return `<li><span class="stat-status-dot" style="background:${color};"></span>${status.toUpperCase()}: ${count}</li>`;
-      })
-      .filter(Boolean)
-      .join("");
-    statStatusListEl.innerHTML = html || `<li class="muted">Belum ada transaksi.</li>`;
+    if (!filteredRows.length) {
+      statStatusListEl.innerHTML = `<li class="muted">Belum ada transaksi untuk ${eventLabel}.</li>`;
+    } else {
+      const html = statuses
+        .map((status) => {
+          const count = breakdown[status];
+          if (!count) return "";
+          const color = STATUS_DOT_COLORS[status] || "#cbd5e1";
+          return `<li><span class="stat-status-dot" style="background:${color};"></span>${status.toUpperCase()}: ${count}</li>`;
+        })
+        .filter(Boolean)
+        .join("");
+      statStatusListEl.innerHTML = html || `<li class="muted">Belum ada transaksi untuk ${eventLabel}.</li>`;
+    }
   }
 
   if (statUpdatedAtEl) {
-    statUpdatedAtEl.textContent = `Terakhir diperbarui: ${new Intl.DateTimeFormat("id-ID", {
+    const suffix = eventFilter ? ` (${eventLabel})` : "";
+    statUpdatedAtEl.textContent = `Terakhir diperbarui${suffix}: ${new Intl.DateTimeFormat("id-ID", {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
     }).format(new Date())}`;
   }
+}
+
+function populateEventFilter(eventList = []) {
+  if (!statEventFilter) return;
+  const previous = selectedEventFilter || statEventFilter.value || "";
+  const sorted = [...eventList].sort((a, b) => {
+    const titleA = (a.title || a.slug || a.id || "").toLowerCase();
+    const titleB = (b.title || b.slug || b.id || "").toLowerCase();
+    if (titleA < titleB) return -1;
+    if (titleA > titleB) return 1;
+    return 0;
+  });
+  const optionHtml = sorted
+    .map((event) => {
+      const label = event.title || event.slug || event.id || "Event";
+      return `<option value="${event.id}">${label}</option>`;
+    })
+    .join("");
+  statEventFilter.innerHTML = `<option value="">Semua event</option>${optionHtml}`;
+  const hasPrevious = previous && sorted.some((event) => event.id === previous);
+  statEventFilter.value = hasPrevious ? previous : "";
+  selectedEventFilter = statEventFilter.value || "";
 }
 
 async function loadOrderStats() {
@@ -410,7 +447,9 @@ async function loadOrderStats() {
     const ref = collection(db, "orders");
     const snap = await getDocs(ref);
     const rows = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    renderOrderStats(rows);
+    const eventFilterValue = statEventFilter?.value || selectedEventFilter || "";
+    selectedEventFilter = eventFilterValue;
+    renderOrderStats(rows, eventFilterValue);
   } catch (err) {
     console.warn("loadOrderStats error:", err?.message || err);
   } finally {
@@ -601,6 +640,7 @@ async function loadEvents() {
         `;
       })
       .join("");
+    populateEventFilter(rows);
   } catch (err) {
     console.error(err);
     tableBody.innerHTML = `<tr><td colspan="8" class="muted">Gagal memuat event: ${err.message}</td></tr>`;
@@ -819,6 +859,10 @@ refreshOrdersBtn?.addEventListener("click", () => loadOrders(true));
 loadMoreOrdersBtn?.addEventListener("click", () => loadOrders(false));
 orderStatusFilter?.addEventListener("change", () => loadOrders(true));
 orderSearch?.addEventListener("input", () => loadOrders(true));
+statEventFilter?.addEventListener("change", () => {
+  selectedEventFilter = statEventFilter.value || "";
+  loadOrderStats();
+});
 toggleQrPanelBtn?.addEventListener("click", () => {
   if (!qrPanel) return;
   const hidden = qrPanel.classList.contains("hidden");

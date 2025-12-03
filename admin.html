@@ -270,6 +270,26 @@
       font-weight: 700;
       color: var(--text);
     }
+    .stats-filter {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .stats-filter label {
+      margin-bottom: 4px;
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+    .stats-filter select {
+      background: rgba(15, 25, 43, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 14px;
+      min-width: 180px;
+    }
     .stat-status-list {
       list-style: none;
       margin: 18px 0 0;
@@ -532,6 +552,12 @@
           <div>
             <h2>Statistik Pesanan</h2>
             <p class="muted">Pantau pendapatan, status order, dan estimasi peserta.</p>
+          </div>
+          <div class="stats-filter">
+            <label for="statEventFilter">Event</label>
+            <select id="statEventFilter">
+              <option value="">Semua event</option>
+            </select>
           </div>
         </div>
         <div class="stats-grid">
