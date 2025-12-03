@@ -187,20 +187,19 @@ function renderPaymentResult(container, data) {
   const referenceText = data.reference || data.orderId || "";
   const statusText = (data.status || data.rawStatus || "").toLowerCase();
   const isPending = ["pending", "unpaid", ""].includes(statusText);
-  const canCancel =
-    (data.provider || "").toLowerCase() === "tripay" && isPending && (data.reference || data.orderId);
-  const cancelHtml = canCancel
-    ? `
-      <div class="payment-info-row" style="align-items:center;">
-        <div>
-          <span>Status</span>
-          <strong>${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
-        </div>
-        <button data-cancel-order style="background:#ef4444;color:white;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;">Batalkan pesanan</button>
+  const statusHtml = `
+    <div class="payment-info-row" style="align-items:center;">
+      <div>
+        <span>Status</span>
+        <strong>${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
       </div>
-      <p class="form-hint" data-cancel-status>Tagihan masih menunggu pembayaran.</p>
-    `
-    : "";
+    </div>
+    ${
+      isPending
+        ? '<p class="form-hint">Tagihan menunggu pembayaran. Hubungi panitia jika perlu mengganti metode.</p>'
+        : ""
+    }
+  `;
 
   if (data.paymentType === "bank_transfer") {
     const bank = (data.bank || data.paymentName || "VA").toString().toUpperCase();
@@ -227,7 +226,7 @@ function renderPaymentResult(container, data) {
       ${checkoutLink}
       ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
       ${buildInstructionsHtml(data.instructions)}
-      ${cancelHtml}
+      ${statusHtml}
     `;
   } else {
     const qrUrl = data.qrUrl || createQrUrl(data.qrString) || "";
@@ -240,7 +239,7 @@ function renderPaymentResult(container, data) {
       ${checkoutLink}
       ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
       ${buildInstructionsHtml(data.instructions)}
-      ${cancelHtml}
+      ${statusHtml}
     `;
   }
 
@@ -257,40 +256,6 @@ function renderPaymentResult(container, data) {
       }
     });
   });
-
-  const cancelBtn = container.querySelector("[data-cancel-order]");
-  const cancelStatus = container.querySelector("[data-cancel-status]");
-  if (cancelBtn && (data.reference || data.orderId)) {
-    cancelBtn.addEventListener("click", async () => {
-      cancelBtn.disabled = true;
-      if (cancelStatus) cancelStatus.textContent = "Membatalkan pesanan...";
-      try {
-        const resp = await fetch(`${API_BASE}/payments/cancel`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reference: data.reference || data.orderId,
-            merchantRef: data.orderId || data.merchantRef,
-            orderId: data.orderId || data.merchantRef,
-            requestedBy: "user",
-          }),
-        });
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          throw new Error(err.error || "Gagal membatalkan pesanan.");
-        }
-        const result = await resp.json();
-        container.innerHTML = `
-          <p class="form-hint success">Pesanan dibatalkan. Status: ${(result.status || "failed").toUpperCase()}.</p>
-          <p class="form-hint">Buat tagihan baru jika ingin mengganti metode pembayaran.</p>
-        `;
-      } catch (err) {
-        console.error(err);
-        if (cancelStatus) cancelStatus.textContent = err.message || "Gagal membatalkan pesanan.";
-        cancelBtn.disabled = false;
-      }
-    });
-  }
 }
 
 function initPaymentForm(event) {
@@ -319,12 +284,6 @@ function initPaymentForm(event) {
     if (payBtn) payBtn.textContent = label;
   }
 
-  function handleCancelSelection() {
-    setPayLabel("Batalkan Pesanan");
-    setHint("Mode batalkan pesanan: tidak ada tagihan dibuat.", "warning");
-    bank = null;
-  }
-
   // Event GRATIS: sembunyikan pilihan metode & ubah CTA
   if (isFree) {
     method = "free";
@@ -341,20 +300,14 @@ function initPaymentForm(event) {
     methodButtons.forEach((btn, index) => {
       btn.addEventListener("click", () => {
         const chosen = btn.dataset.method;
-        method =
-          chosen === "va" ? "bank_transfer" : chosen === "cancel" ? "cancel" : "qris";
+        method = chosen === "va" ? "bank_transfer" : "qris";
         bank = chosen === "va" ? btn.dataset.bank || null : null;
         methodButtons.forEach((b) => b.classList.toggle("active", b === btn));
-        if (method === "cancel") {
-          handleCancelSelection();
-        } else {
-          setPayLabel(defaultPayLabel);
-          setHint(
-            method === "bank_transfer"
-              ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
-              : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
-          );
-        }
+        setHint(
+          method === "bank_transfer"
+            ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
+            : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
+        );
       });
       if (index === 0) btn.click();
     });
@@ -376,17 +329,6 @@ function initPaymentForm(event) {
     const email = formData.get("email")?.toString().trim() || "";
     if (!/@gmail\.com$/i.test(email)) {
       setHint("Email harus menggunakan Gmail (contoh: nama@gmail.com).", "error");
-      payBtn.disabled = false;
-      setPayLabel(defaultPayLabel);
-      return;
-    }
-
-    if (method === "cancel") {
-      if (resultBox) {
-        resultBox.innerHTML = `<p class="form-hint warning">Pesanan dibatalkan. Tidak ada tagihan dibuat.</p>`;
-        resultBox.classList.remove("hidden");
-      }
-      setHint("Pesanan dibatalkan sesuai permintaan.", "success");
       payBtn.disabled = false;
       setPayLabel(defaultPayLabel);
       return;
