@@ -240,6 +240,66 @@
       background: rgba(59,130,246,0.2);
       color: #60a5fa;
     }
+    .stats-panel {
+      padding: 18px 24px;
+      background: linear-gradient(160deg, rgba(59,130,246,0.08), rgba(15,23,42,0.85));
+      box-shadow: var(--shadow-lg);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .stat-label {
+      display: block;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .stat-value {
+      margin: 8px 0;
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .stat-status-list {
+      list-style: none;
+      margin: 18px 0 0;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .stat-status-list li {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--text);
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      padding: 8px 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .stat-status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      background: var(--muted);
+    }
+    .stat-updated {
+      margin-top: 12px;
+      font-size: 0.9rem;
+    }
     .status-text { 
       font-size: 14px; 
     }
@@ -467,6 +527,35 @@
     </div>
 
     <div id="dashboard" class="hidden">
+      <div class="panel stats-panel">
+        <div class="flex-between" style="gap: 12px; flex-wrap: wrap; align-items: center;">
+          <div>
+            <h2>Statistik Pesanan</h2>
+            <p class="muted">Pantau pendapatan, status order, dan estimasi peserta.</p>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <p class="stat-label">Pendapatan (paid)</p>
+            <p class="stat-value" id="statRevenue">Rp 0</p>
+            <p class="muted">Total tagihan yang sudah lunas.</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Pesanan berstatus paid</p>
+            <p class="stat-value" id="statPaidCount">0</p>
+            <p class="muted">Order yang sudah diverifikasi pembayaran.</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Peserta terdaftar</p>
+            <p class="stat-value" id="statParticipantCount">0</p>
+            <p class="muted">Jumlah tiket/kuota yang terisi.</p>
+          </div>
+        </div>
+        <ul class="stat-status-list" id="statStatusList">
+          <li class="muted">Menunggu data transaksi...</li>
+        </ul>
+        <p class="muted stat-updated" id="statUpdatedAt">Terakhir diperbarui: -</p>
+      </div>
       <div class="panel">
         <div class="flex-between" style="gap: 12px; flex-wrap: wrap; align-items: center;">
           <div>

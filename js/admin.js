@@ -85,6 +85,20 @@ const qrReaderEl = document.getElementById("qrReader");
 const qrInput = document.getElementById("qrInput");
 const qrSubmitBtn = document.getElementById("qrSubmitBtn");
 const qrStopBtn = document.getElementById("qrStopBtn");
+const statRevenueEl = document.getElementById("statRevenue");
+const statPaidCountEl = document.getElementById("statPaidCount");
+const statParticipantCountEl = document.getElementById("statParticipantCount");
+const statStatusListEl = document.getElementById("statStatusList");
+const statUpdatedAtEl = document.getElementById("statUpdatedAt");
+const STATUS_DOT_COLORS = {
+  paid: "#4ade80",
+  pending: "#facc15",
+  failed: "#f87171",
+  canceled: "#f87171",
+  expired: "#94a3b8",
+  refunded: "#60a5fa",
+};
+let statsLoading = false;
 
 let currentUser = null;
 let isAdmin = false;
@@ -344,6 +358,66 @@ function formatMethod(order) {
   return order.method || order.paymentType || "-";
 }
 
+function renderOrderStats(rows = []) {
+  if (!statRevenueEl) return;
+  let totalRevenue = 0;
+  let paidCount = 0;
+  let participants = 0;
+  const breakdown = {};
+  rows.forEach((order) => {
+    const status = (order.status || "pending").toLowerCase();
+    breakdown[status] = (breakdown[status] || 0) + 1;
+    if (status === "paid") {
+      paidCount += 1;
+      totalRevenue += Number(order.totalAmount ?? order.amount ?? 0) || 0;
+    }
+    const qty = Number(order.quantity ?? order.qty ?? 1);
+    participants += qty;
+  });
+
+  statRevenueEl.textContent = formatCurrency(totalRevenue);
+  if (statPaidCountEl) statPaidCountEl.textContent = paidCount.toLocaleString("id-ID");
+  if (statParticipantCountEl) statParticipantCountEl.textContent = participants.toLocaleString("id-ID");
+
+  if (statStatusListEl) {
+    const statuses = ["paid", "pending", "expired", "failed", "canceled", "refunded"];
+    const html = statuses
+      .map((status) => {
+        const count = breakdown[status];
+        if (!count) return "";
+        const color = STATUS_DOT_COLORS[status] || "#cbd5e1";
+        return `<li><span class="stat-status-dot" style="background:${color};"></span>${status.toUpperCase()}: ${count}</li>`;
+      })
+      .filter(Boolean)
+      .join("");
+    statStatusListEl.innerHTML = html || `<li class="muted">Belum ada transaksi.</li>`;
+  }
+
+  if (statUpdatedAtEl) {
+    statUpdatedAtEl.textContent = `Terakhir diperbarui: ${new Intl.DateTimeFormat("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(new Date())}`;
+  }
+}
+
+async function loadOrderStats() {
+  if (!isAdmin || statsLoading) return;
+  if (!statRevenueEl && !statStatusListEl) return;
+  statsLoading = true;
+  try {
+    const ref = collection(db, "orders");
+    const snap = await getDocs(ref);
+    const rows = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    renderOrderStats(rows);
+  } catch (err) {
+    console.warn("loadOrderStats error:", err?.message || err);
+  } finally {
+    statsLoading = false;
+  }
+}
+
 async function loadOrders(reset = true) {
   if (!isAdmin) return;
   if (ordersLoading) return;
@@ -437,6 +511,7 @@ async function loadOrders(reset = true) {
     const allowPaging = !searchTerm; // saat pencarian aktif, matikan paging agar tidak membingungkan
     loadMoreOrdersBtn.disabled = !allowPaging || !snap || !snap.docs || snap.docs.length < ORDERS_PAGE_SIZE;
   }
+  loadOrderStats();
   ordersLoading = false;
 }
 

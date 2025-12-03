@@ -147,6 +147,10 @@ module.exports = async (req, res) => {
 
   // 1) EVENT GRATIS
   if (isFree) {
+    const ticketEmailMeta = {
+      status: "pending",
+      recipient: customer?.email || null,
+    };
     const freeOrder = {
       provider: "free",
       eventId,
@@ -173,6 +177,7 @@ module.exports = async (req, res) => {
         phone: customer?.phone || "",
       },
       status: "paid",
+      ticketEmail: { ...ticketEmailMeta },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
@@ -182,17 +187,36 @@ module.exports = async (req, res) => {
       return send(res, 400, { error: err?.message || "Kuota event sudah penuh." });
     }
 
+    const orderRef = db.collection("orders").doc(merchantRef);
+    const responseData = { ...freeOrder, free: true, ticketEmailStatus: ticketEmailMeta.status, ticketEmailRecipient: ticketEmailMeta.recipient };
+
     try {
       await sendTicketEmail({
         ...freeOrder,
         payCode: "GRATIS",
         vaNumber: "GRATIS",
       });
+      const successMeta = {
+        status: "sent",
+        recipient: ticketEmailMeta.recipient,
+        sentAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      await orderRef.set({ ticketEmail: successMeta }, { merge: true });
+      responseData.ticketEmailStatus = successMeta.status;
+      responseData.ticketEmailRecipient = successMeta.recipient;
     } catch (err) {
       console.error("Email send error (free):", err?.message || err);
+      const errorMeta = {
+        status: "error",
+        recipient: ticketEmailMeta.recipient,
+        error: err?.message || "Email gagal dikirim",
+        attemptedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      await orderRef.set({ ticketEmail: errorMeta }, { merge: true });
+      responseData.ticketEmailStatus = errorMeta.status;
     }
 
-    return send(res, 200, { ...freeOrder, free: true });
+    return send(res, 200, responseData);
   }
 
   // 2) EVENT BERBAYAR (Tripay)
@@ -260,6 +284,11 @@ module.exports = async (req, res) => {
       amountForTripay,
     });
 
+    const ticketEmailMeta = {
+      status: "pending",
+      recipient: customer?.email || null,
+    };
+
     const orderDoc = {
       provider: "tripay",
       eventId,
@@ -284,6 +313,7 @@ module.exports = async (req, res) => {
         email: customer?.email || "peserta@example.com",
         phone: customer?.phone || "",
       },
+      ticketEmail: { ...ticketEmailMeta },
       tripay: tripayResponse,
       status: mapStatus(tripayData?.status || tripayResponse?.status),
       reserved: true,
@@ -296,7 +326,12 @@ module.exports = async (req, res) => {
       return send(res, 400, { error: err?.message || "Kuota event sudah penuh." });
     }
 
-    return send(res, 200, normalized);
+    const responsePayload = {
+      ...normalized,
+      ticketEmailStatus: ticketEmailMeta.status,
+      ticketEmailRecipient: ticketEmailMeta.recipient,
+    };
+    return send(res, 200, responsePayload);
   } catch (error) {
     console.error("Tripay charge error:", error.response?.data || error.message || error);
     return send(res, 500, {

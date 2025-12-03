@@ -155,6 +155,24 @@ function buildInstructionsHtml(instructions) {
   return `<div class="payment-instructions">${content}</div>`;
 }
 
+function buildEmailHintHtml(data) {
+  if (!data) return "";
+  const status = (data.ticketEmailStatus || data.ticketEmail?.status || "").toLowerCase();
+  const recipient = data.ticketEmailRecipient || data.customer?.email || "";
+  if (!status) return "";
+
+  if (status === "sent") {
+    return `<p class="form-hint success">E-ticket sudah dikirim ke email ${recipient || "Anda"}.</p>`;
+  }
+  if (status === "pending") {
+    return `<p class="form-hint muted">E-ticket akan otomatis dikirim setelah pembayaran selesai.</p>`;
+  }
+  if (status === "error") {
+    return `<p class="form-hint error">Gagal mengirim e-ticket. Silakan hubungi panitia.</p>`;
+  }
+  return "";
+}
+
 function renderPaymentResult(container, data) {
   if (!container) return;
   if (!data) {
@@ -190,7 +208,7 @@ function renderPaymentResult(container, data) {
   const canCancel =
     (data.provider || "").toLowerCase() === "tripay" && isPending && (data.reference || data.orderId);
   const cancelHtml = canCancel
-    ? `
+      ? `
       <div class="payment-info-row" style="align-items:center; gap:12px; flex-wrap:wrap;">
         <div>
           <span>Status</span>
@@ -213,6 +231,8 @@ function renderPaymentResult(container, data) {
           : ""
       }
     `;
+
+  const emailHintHtml = buildEmailHintHtml(data);
 
   if (data.paymentType === "bank_transfer") {
     const bank = (data.bank || data.paymentName || "VA").toString().toUpperCase();
@@ -240,6 +260,7 @@ function renderPaymentResult(container, data) {
       ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
       ${buildInstructionsHtml(data.instructions)}
       ${cancelHtml}
+      ${emailHintHtml}
     `;
   } else {
     const qrUrl = data.qrUrl || createQrUrl(data.qrString) || "";
@@ -253,6 +274,7 @@ function renderPaymentResult(container, data) {
       ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
       ${buildInstructionsHtml(data.instructions)}
       ${cancelHtml}
+      ${emailHintHtml}
     `;
   }
 

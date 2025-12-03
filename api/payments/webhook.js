@@ -139,10 +139,39 @@ module.exports = async (req, res) => {
         vaNumber: payCode,
       };
 
-      // kirim email async, kalau error cukup di-log
-      sendTicketEmail(orderForEmail).catch((err) => {
-        console.error("Email send error (webhook):", err?.message || err);
-      });
+      (async () => {
+        const emailMeta = {
+          status: "pending",
+          recipient: orderForEmail.customer?.email || previous.customer?.email || null,
+          reference: orderForEmail.reference,
+        };
+        try {
+          await sendTicketEmail(orderForEmail);
+          await docRef.set(
+            {
+              ticketEmail: {
+                ...emailMeta,
+                status: "sent",
+                sentAt: admin.firestore.FieldValue.serverTimestamp(),
+              },
+            },
+            { merge: true },
+          );
+        } catch (err) {
+          console.error("Email send error (webhook):", err?.message || err);
+          await docRef.set(
+            {
+              ticketEmail: {
+                ...emailMeta,
+                status: "error",
+                error: err?.message || "Email gagal dikirim",
+                attemptedAt: admin.firestore.FieldValue.serverTimestamp(),
+              },
+            },
+            { merge: true },
+          );
+        }
+      })();
     }
 
     // 5. BALAS KE TRIPAY DENGAN FORMAT YANG DIMINTA

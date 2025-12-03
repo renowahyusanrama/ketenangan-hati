@@ -6,6 +6,15 @@ import {
   getRedirectResult, onAuthStateChanged, signOut, getIdTokenResult,
   setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // === Config proyekmu ===
 const firebaseConfig = {
@@ -22,6 +31,7 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 auth.languageCode = 'id';
+const db = getFirestore(app);
 await setPersistence(auth, browserLocalPersistence).catch(console.error);
 const authGate = document.getElementById('auth-gate');
 const bodyEl = document.body;
@@ -37,6 +47,18 @@ const footRegister = document.querySelector('.auth-footnote-register');
 const footLogin = document.querySelector('.auth-footnote-login');
 const submitBtn = form?.querySelector('.btn-login-submit');
 let isAdmin = false;
+const userOrdersStatus = document.getElementById('userOrdersStatus');
+const userOrdersList = document.getElementById('userOrdersList');
+const USER_ORDER_LIMIT = 10;
+let userOrdersLoading = false;
+const ORDER_STATUS_CLASSES = {
+  paid: "green",
+  pending: "yellow",
+  expired: "gray",
+  failed: "red",
+  canceled: "red",
+  refunded: "blue",
+};
 
 // ——— Modal helpers
 function closeModal(){
@@ -115,6 +137,128 @@ function injectChipStyles(){
   document.head.appendChild(style);
 }
 
+function formatCurrency(amount) {
+  const n = Number(amount) || 0;
+  if (!n) return "Gratis";
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  try {
+    const date = value?.toDate ? value.toDate() : new Date(value);
+    return new Intl.DateTimeFormat("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  } catch (err) {
+    return "-";
+  }
+}
+
+function getStatusClass(status) {
+  const key = (status || "").toLowerCase();
+  return ORDER_STATUS_CLASSES[key] || "gray";
+}
+
+function setOrdersPlaceholder(message) {
+  if (!userOrdersList) return;
+  userOrdersList.innerHTML = `<p class="muted text-center">${message}</p>`;
+}
+
+function setOrdersStatus(message) {
+  if (!userOrdersStatus) return;
+  userOrdersStatus.textContent = message || "";
+}
+
+function buildOrderCardHtml(order) {
+  const status = (order.status || "pending").toLowerCase();
+  const statusClass = getStatusClass(status);
+  const totalAmount = order.totalAmount ?? order.amount ?? 0;
+  const amountText = formatCurrency(totalAmount);
+  const method = order.paymentType === "bank_transfer"
+    ? `VA ${order.bank?.toUpperCase() || "BANK"}`
+    : (order.paymentType || order.method || "-").toString().toUpperCase();
+  const reference = order.reference || order.merchantRef || order.orderId || "-";
+  const ticketUrl = reference && reference !== "-" ? `${window.location.origin}/ticket.html?ref=${encodeURIComponent(reference)}` : "#";
+  const emailStatus = (order.ticketEmail?.status || "").toLowerCase();
+  const recipient = order.ticketEmail?.recipient || order.customer?.email || "";
+  let emailHint = "";
+  if (emailStatus === "sent") {
+    emailHint = `<p class="order-note success">E-ticket sudah dikirim ke ${recipient || "email Anda"}.</p>`;
+  } else if (emailStatus === "pending") {
+    emailHint = `<p class="order-note muted">E-ticket akan dikirim otomatis setelah pembayaran selesai.</p>`;
+  } else if (emailStatus === "error") {
+    emailHint = `<p class="order-note error">Gagal mengirim e-ticket. Silakan hubungi panitia.</p>`;
+  }
+  return `
+    <article class="order-card">
+      <div class="order-card-header">
+        <h3 class="order-card-heading">${order.eventTitle || order.eventId || "Event"}</h3>
+        <span class="badge ${statusClass}">${status.toUpperCase()}</span>
+      </div>
+      <div class="order-row">
+        <div>
+          <span class="order-label">Total Bayar</span>
+          <span class="order-value">${amountText}</span>
+        </div>
+        <div>
+          <span class="order-label">Metode</span>
+          <span class="order-value">${method}</span>
+        </div>
+      </div>
+      <div class="order-card-meta">
+        <span><i class="fa-regular fa-clock"></i> ${formatDateTime(order.createdAt || order.created_at)}</span>
+        <span><i class="fa-solid fa-hashtag"></i> ${reference}</span>
+      </div>
+      <div class="order-row" style="margin-top:12px;">
+        <a href="${ticketUrl}" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Unduh E-ticket</a>
+        ${
+          recipient
+            ? `<span style="font-size:12px; color:#475569;">Dikirim ke ${recipient}</span>`
+            : ""
+        }
+      </div>
+      ${emailHint}
+    </article>
+  `;
+}
+
+async function loadUserOrders(email) {
+  if (!userOrdersList) return;
+  if (!email) {
+    setOrdersPlaceholder("Silakan login terlebih dahulu untuk melihat pesanan Anda.");
+    setOrdersStatus("Login untuk melihat riwayat pesanan.");
+    return;
+  }
+  if (userOrdersLoading) return;
+  userOrdersLoading = true;
+  setOrdersStatus("Memuat pesanan...");
+  setOrdersPlaceholder("Memuat pesanan...");
+  try {
+    const ref = collection(db, "orders");
+    const q = query(ref, where("customer.email", "==", email), orderBy("createdAt", "desc"), limit(USER_ORDER_LIMIT));
+    const snap = await getDocs(q);
+    if (!snap || !snap.docs.length) {
+      setOrdersPlaceholder("Belum ada pesanan tersimpan.");
+      setOrdersStatus("Belum ada pesanan aktif.");
+      return;
+    }
+    const orders = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    userOrdersList.innerHTML = orders.map(buildOrderCardHtml).join("");
+    setOrdersStatus(`Menampilkan ${orders.length} pesanan terbaru.`);
+  } catch (err) {
+    console.error("loadUserOrders error:", err?.message || err);
+    setOrdersPlaceholder("Gagal memuat pesanan.");
+    setOrdersStatus("Terjadi kesalahan saat memuat pesanan.");
+  } finally {
+    userOrdersLoading = false;
+  }
+}
+
 function showAuthGate(){
   authGate?.classList.remove('hidden');
   bodyEl.classList.add('auth-locked');
@@ -174,6 +318,7 @@ getRedirectResult(auth)
 
 // ——— Observer state
 onAuthStateChanged(auth, (user)=>{
+  loadUserOrders(user ? user.email : null);
   if(user) {
     renderAfterAuth(user);
     // pastikan gate & modal tertutup jika sudah login (termasuk saat reload)

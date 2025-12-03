@@ -176,19 +176,21 @@ async function sendTicketEmail(order) {
     subject,
   };
 
-  try {
-    const attachments = [];
-    if (pdfAttachment) attachments.push(pdfAttachment);
-    const payload = {
-      ...basePayload,
-      html,
-      ...(attachments.length ? { attachments } : {}),
-    };
+  const attachments = [];
+  if (pdfAttachment) attachments.push(pdfAttachment);
+  const payload = {
+    ...basePayload,
+    html,
+    ...(attachments.length ? { attachments } : {}),
+  };
 
+  try {
     const result = await resend.emails.send(payload);
     console.log("Resend API result:", result);
+    return result;
   } catch (err) {
     console.error("Resend API error:", err?.response?.data || err?.message || err);
+    throw err;
   }
 }
 
