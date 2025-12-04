@@ -47,8 +47,8 @@ const footRegister = document.querySelector('.auth-footnote-register');
 const footLogin = document.querySelector('.auth-footnote-login');
 const submitBtn = form?.querySelector('.btn-login-submit');
 let isAdmin = false;
-const userOrdersStatus = document.getElementById('userOrdersStatus');
-const userOrdersList = document.getElementById('userOrdersList');
+const userOrdersStatus = document.getElementById('userOrdersStatus') || document.getElementById('cartOrdersStatus');
+const userOrdersList = document.getElementById('userOrdersList') || document.getElementById('cartOrdersList');
 const USER_ORDER_LIMIT = 10;
 let userOrdersLoading = false;
 const ORDER_STATUS_CLASSES = {
@@ -121,8 +121,7 @@ function renderUserChip(user){
       </div>
     </div>
     <ul class="menu">
-      ${isAdmin ? '<li><a href="admin.html">Admin <i class="fa-solid fa-up-right-from-square"></i></a></li>' : ''}
-      <li><a href="#pesananSaya">Pesanan Saya</a></li>
+      ${isAdmin ? '<li><a href="admin.html">Admin</a></li>' : ''}
     </ul>
     <button class="logout-btn" type="button">Keluar</button>
   `;

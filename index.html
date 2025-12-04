@@ -49,10 +49,10 @@
 
       <div class="nav-right">
         <button class="icon-btn cart-btn" id="cartToggle" aria-label="Buka keranjang">
-          <i class="fa-solid fa-bag-shopping"></i>
+          <img src="images/Cart.png" alt="Keranjang">
         </button>
         <button class="icon-btn profile-btn" id="profileBtn" aria-label="Profil">
-          <i class="fa-regular fa-user"></i>
+          <img src="images/Profile.png" alt="Profil">
         </button>
         <div id="profileDropdown" class="profile-dropdown hidden"></div>
       </div>
@@ -63,7 +63,7 @@
   <div id="menuOverlay" class="menu-overlay">
     <div class="menu-panel">
       <button class="overlay-close" id="menuClose" aria-label="Tutup menu">
-        <i class="fa-solid fa-xmark"></i>
+        <span aria-hidden="true">×</span>
       </button>
       <ul class="menu-list">
         <li><a href="#beranda">Home</a></li>
@@ -79,7 +79,7 @@
       <div class="drawer-header">
         <h3>Pesanan Saya</h3>
         <button class="overlay-close" id="cartClose" aria-label="Tutup keranjang">
-          <i class="fa-solid fa-xmark"></i>
+          <span aria-hidden="true">×</span>
         </button>
       </div>
       <div class="drawer-body">
@@ -89,7 +89,6 @@
             <p class="muted">Lihat ringkasan pesanan Anda di sini.</p>
           </div>
         </div>
-        <a class="drawer-link" href="#pesananSaya">Buka bagian Pesanan Saya</a>
       </div>
     </div>
   </div>
@@ -295,23 +294,6 @@
             </div>
           </div>
         </article>
-      </div>
-    </div>
-  </section>
-
-  <section id="pesananSaya" class="section section-muted">
-    <div class="container">
-      <div class="text-center" style="max-width: 640px; margin: 0 auto 32px;">
-        <h2 class="section-title">Pesanan Saya</h2>
-        <p class="lead">
-          Pantau status pembayaran, cek apakah e-ticket sudah dikirim, dan langsung unduh tiket Anda.
-        </p>
-      </div>
-      <div class="orders-panel mx-auto">
-        <div id="userOrdersStatus" class="orders-status muted">Silakan login untuk melihat pesanan.</div>
-        <div id="userOrdersList" class="orders-list">
-          <p class="muted text-center">Masuk dulu untuk melihat riwayat pesanan dan e-ticket Anda.</p>
-        </div>
       </div>
     </div>
   </section>

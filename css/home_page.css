@@ -173,7 +173,7 @@ body.no-scroll{
     box-shadow:0 10px 24px rgba(55,117,181,0.16);
 }
 .icon-btn{
-    width:44px; height:44px;
+    width:50px; height:50px;
     border-radius:14px;
     border:1px solid #d6e3f2;
     background:#fff;
@@ -184,6 +184,10 @@ body.no-scroll{
     cursor:pointer;
     transition:all 0.25s ease;
     box-shadow:0 6px 16px rgba(55,117,181,0.1);
+}
+.icon-btn img{
+    width:34px; height:34px;
+    object-fit:contain;
 }
 .icon-btn:hover{
     transform:translateY(-1px);
@@ -211,14 +215,22 @@ body.no-scroll{
 }
 .profile-dropdown .profile-name{
     margin:0;
-    font-size:16px;
+    font-size:15px;
     font-weight:700;
     color:#0f172a;
+    max-width:170px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
 }
 .profile-dropdown .profile-email{
     margin:2px 0 0;
     color:#475569;
-    font-size:13px;
+    font-size:12px;
+    max-width:170px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
 }
 .profile-dropdown .avatar{
     width:46px; height:46px;
@@ -290,22 +302,30 @@ body.no-scroll{
 }
 .menu-panel{
     position:absolute;
-    inset:0;
+    top:0; left:0; bottom:0;
+    width:min(520px, 60vw); min-width:280px; max-width:520px;
     background:#fff;
     padding:32px 30px 40px;
     display:flex;
     flex-direction:column;
+    border-radius:0 22px 22px 0;
+    box-shadow:12px 0 32px rgba(0,0,0,0.12);
+    overflow-y:auto;
 }
 .overlay-close{
     background:#f3f4f6;
     border:0;
-    width:40px; height:40px;
+    width:48px; height:48px;
     border-radius:50%;
     display:grid;
     place-items:center;
     cursor:pointer;
     align-self:flex-end;
     transition:all 0.2s ease;
+    color:#0f172a;
+    font-size:28px;
+    font-weight:800;
+    line-height:1;
 }
 .overlay-close:hover{
     background:#e5e7eb;
@@ -362,6 +382,9 @@ body.no-scroll{
     margin:0;
     font-size:20px;
     color:#0f172a;
+}
+.drawer-header .overlay-close{
+    width:38px; height:38px;
 }
 .drawer-body{
     display:grid;
@@ -702,6 +725,7 @@ body.no-scroll{
     .section{ padding:60px 0; }
     .footer-inner{ flex-direction:column; text-align:center; }
     .footer-brand .brand-logo{ width:60px; height:60px; } /* Ukuran logo di mobile */
+    .menu-panel{ width:80vw; min-width:auto; border-radius:0 16px 16px 0; }
 }
 
 /* ======= LOGIN MODAL ======= */
