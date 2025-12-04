@@ -45,6 +45,8 @@ const API_BASE = !isBrowser
   ? LOCAL_FUNCTION_BASE
   : "/api";
 
+let activeOrderStatusPoll = null;
+
 // =========================================================
 
 function formatCurrency(amount) {
@@ -173,10 +175,82 @@ function buildEmailHintHtml(data) {
   return "";
 }
 
+function renderPaymentSuccess(container, data) {
+  if (!container) return;
+  const normalizedStatus = (data?.status || data?.rawStatus || "paid").toString().toLowerCase();
+  const statusText = normalizedStatus ? normalizedStatus.toUpperCase() : "PAID";
+  const amount = data.amount ?? data.totalAmount ?? 0;
+  const reference = data.reference || data.orderId || data.merchantRef || "";
+  const emailHintHtml = buildEmailHintHtml(data);
+  container.innerHTML = `
+    <div class="payment-info-row" style="align-items:center;">
+      <div>
+        <span>Status</span>
+        <strong>${statusText}</strong>
+      </div>
+      <div>
+        <span>Total</span>
+        <strong>${formatCurrency(amount)}</strong>
+      </div>
+    </div>
+    <p class="form-hint success">Pembayaran berhasil, e-ticket Anda sudah terkirim.</p>
+    ${reference ? `<p class="form-hint">Ref: ${reference}</p>` : ""}
+    ${emailHintHtml}
+  `;
+  container.classList.remove("hidden");
+}
+
+function startOrderStatusPolling(refValue, onStatus) {
+  if (!refValue || typeof onStatus !== "function") return null;
+  let cancelled = false;
+  let timer = null;
+
+  async function poll() {
+    if (cancelled) return;
+    try {
+      const params = new URLSearchParams();
+      params.set("value", refValue);
+      const url = `${API_BASE}/payments/status?${params.toString()}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload) {
+          onStatus(payload);
+          const normalized = (payload.status || "").toLowerCase();
+          if (["paid", "failed", "expired", "canceled", "refunded"].includes(normalized)) {
+            cancelled = true;
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Order status poll error:", err);
+    }
+    if (!cancelled) {
+      timer = setTimeout(poll, 5000);
+    }
+  }
+
+  poll();
+
+  return {
+    stop() {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    },
+  };
+}
+
 function renderPaymentResult(container, data) {
   if (!container) return;
   if (!data) {
     container.classList.add("hidden");
+    return;
+  }
+
+  const statusText = (data.status || data.rawStatus || "").toLowerCase();
+  if (statusText === "paid") {
+    renderPaymentSuccess(container, data);
     return;
   }
 
@@ -203,7 +277,6 @@ function renderPaymentResult(container, data) {
     ? `<a class="btn btn-outline" href="${data.checkoutUrl}" target="_blank" rel="noopener">Buka halaman pembayaran</a>`
     : "";
   const referenceText = data.reference || data.orderId || "";
-  const statusText = (data.status || data.rawStatus || "").toLowerCase();
   const isPending = ["pending", "unpaid", ""].includes(statusText);
   const canCancel =
     (data.provider || "").toLowerCase() === "tripay" && isPending && (data.reference || data.orderId);
@@ -438,6 +511,45 @@ function initPaymentForm(event) {
           : "Tagihan berhasil dibuat. Segera selesaikan pembayaran.",
         "success",
       );
+      const normalizedInitialStatus = (data.status || data.rawStatus || "").toLowerCase();
+      if (!isFree && normalizedInitialStatus !== "paid") {
+        const orderKey = data.orderId || data.merchantRef || data.reference;
+        if (orderKey) {
+          activeOrderStatusPoll?.stop();
+          const handleStatusUpdate = (statusPayload) => {
+            if (!statusPayload) return;
+            const statusValue = (statusPayload.status || "").toLowerCase();
+            if (!statusValue) return;
+            const mergedData = {
+              ...data,
+              ...statusPayload,
+              ticketEmailStatus:
+                statusPayload.ticketEmailStatus ||
+                statusPayload.ticketEmail?.status ||
+                data.ticketEmailStatus,
+              ticketEmailRecipient:
+                statusPayload.ticketEmailRecipient ||
+                statusPayload.ticketEmail?.recipient ||
+                data.ticketEmailRecipient,
+            };
+            if (statusValue === "paid") {
+              renderPaymentSuccess(resultBox, mergedData);
+              setHint("Pembayaran berhasil, e-ticket Anda sudah terkirim.", "success");
+              activeOrderStatusPoll?.stop();
+              activeOrderStatusPoll = null;
+              return;
+            }
+            if (["failed", "expired", "canceled", "refunded"].includes(statusValue)) {
+              renderPaymentResult(resultBox, mergedData);
+              setHint(`Status pembayaran: ${statusValue.toUpperCase()}.`, "warning");
+              activeOrderStatusPoll?.stop();
+              activeOrderStatusPoll = null;
+            }
+          };
+          const poller = startOrderStatusPolling(orderKey, handleStatusUpdate);
+          if (poller) activeOrderStatusPoll = poller;
+        }
+      }
     } catch (error) {
       console.error(error);
       setHint(error.message || "Gagal membuat pembayaran.", "error");
