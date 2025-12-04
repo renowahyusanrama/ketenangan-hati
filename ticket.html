@@ -57,15 +57,20 @@
       margin-bottom: 12px;
     }
     #qrWrap {
-      margin: 22px 0 12px;
+      margin: 18px auto 12px;
       text-align: center;
+      padding: 16px;
+      border-radius: 20px;
+      background: linear-gradient(145deg, rgba(59,130,246,0.08), rgba(30,41,59,0.4));
+      width: min(100%, 360px);
     }
     #qrBox {
       display: inline-flex;
-      padding: 18px;
+      padding: 14px;
       border-radius: 16px;
       border: 1px solid var(--border);
-      background: rgba(59,130,246,0.08);
+      background: #fff;
+      box-shadow: 0 20px 35px rgba(15, 23, 42, 0.35);
     }
     #note {
       margin-top: 8px;
@@ -108,13 +113,16 @@
         refBox.textContent = ref;
         if (window.QRCode && qrWrap && qrBox) {
           const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-          const safeWidth = Math.min(Math.max(viewportWidth - 72, 260), 360);
-          const qrSize = Number.isFinite(safeWidth) ? Math.floor(safeWidth) : 280;
+          const targetSize = Math.min(Math.max(viewportWidth - 96, 220), 300);
+          const qrSize = Number.isFinite(targetSize) ? Math.floor(targetSize) : 260;
+          qrBox.innerHTML = "";
           new QRCode(qrBox, {
             text: ref,
             width: qrSize,
             height: qrSize,
-            correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.M : 1,
+            colorDark: "#0f172a",
+            colorLight: "#ffffff",
+            correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.H : 1,
           });
           qrWrap.classList.remove("hidden");
         } else if (qrWrap && qrBox) {
