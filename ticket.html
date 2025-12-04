@@ -56,6 +56,21 @@
       background: rgba(34,197,94,0.16);
       margin-bottom: 12px;
     }
+    #qrWrap {
+      margin: 22px 0 12px;
+      text-align: center;
+    }
+    #qrBox {
+      display: inline-flex;
+      padding: 18px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(59,130,246,0.08);
+    }
+    #note {
+      margin-top: 8px;
+      color: #cad4eb;
+    }
     .home {
       margin-top: 16px;
       display: inline-block;
@@ -71,11 +86,11 @@
     <h1 id="title">E-Ticket</h1>
     <p id="desc">Tunjukkan kode tiket ini saat registrasi.</p>
     <div id="refBox" class="ref">-</div>
-    <div id="qrWrap" class="hidden" style="margin:16px 0;">
-      <p style="color: var(--muted); margin-bottom: 8px;">Tunjukkan QR ini ke panitia untuk dipindai.</p>
-      <div id="qrBox" style="display:inline-block; padding:12px; background: rgba(59,130,246,0.08); border-radius: 12px; border:1px solid var(--border);"></div>
+    <div id="qrWrap" class="hidden">
+      <p style="color: var(--muted); margin-bottom: 8px;">Tunjukkan QR ini ke panitia agar bisa dipindai saat check-in.</p>
+      <div id="qrBox"></div>
     </div>
-    <p id="note">Jika QR di email tidak terbuka, gunakan kode di atas.</p>
+    <p id="note">Jika QR di email tidak terbuka, gunakan QR cadangan ini agar panitia bisa memindai atau ketik ulang kode referensi.</p>
     <a class="home" href="index.html#event">Kembali ke event</a>
   </div>
   <script src="js/vendor/qrcode.min.js"></script>
@@ -92,12 +107,13 @@
       if (ref) {
         refBox.textContent = ref;
         if (window.QRCode && qrWrap && qrBox) {
-          // QR berisi kode ref agar bisa dipindai di dashboard admin
-          const qrValue = ref;
+          const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+          const safeWidth = Math.min(Math.max(viewportWidth - 72, 260), 360);
+          const qrSize = Number.isFinite(safeWidth) ? Math.floor(safeWidth) : 280;
           new QRCode(qrBox, {
-            text: qrValue,
-            width: 180,
-            height: 180,
+            text: ref,
+            width: qrSize,
+            height: qrSize,
             correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.M : 1,
           });
           qrWrap.classList.remove("hidden");

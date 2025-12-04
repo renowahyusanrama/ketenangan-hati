@@ -194,6 +194,11 @@ function buildOrderCardHtml(order) {
   } else if (emailStatus === "error") {
     emailHint = `<p class="order-note error">Gagal mengirim e-ticket. Silakan hubungi panitia.</p>`;
   }
+  const paidStatuses = ["paid"];
+  const canDownload = paidStatuses.includes(status) && reference && reference !== "-";
+  const downloadAction = canDownload
+    ? `<a href="${ticketUrl}" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Unduh E-ticket</a>`
+    : `<span class="order-note muted">E-ticket hanya bisa diunduh setelah pembayaran berstatus PAID.</span>`;
   return `
     <article class="order-card">
       <div class="order-card-header">
@@ -214,8 +219,8 @@ function buildOrderCardHtml(order) {
         <span><i class="fa-regular fa-clock"></i> ${formatDateTime(order.createdAt || order.created_at)}</span>
         <span><i class="fa-solid fa-hashtag"></i> ${reference}</span>
       </div>
-      <div class="order-row" style="margin-top:12px;">
-        <a href="${ticketUrl}" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Unduh E-ticket</a>
+      <div class="order-row" style="margin-top:12px; gap:8px; align-items:center; flex-wrap:wrap;">
+        ${downloadAction}
         ${
           recipient
             ? `<span style="font-size:12px; color:#475569;">Dikirim ke ${recipient}</span>`
