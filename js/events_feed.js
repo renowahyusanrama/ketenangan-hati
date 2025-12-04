@@ -68,6 +68,9 @@ async function loadEvents() {
 function renderList(data) {
   if (!data || !data.length) {
     cardsEl.innerHTML = '<p class="muted">Belum ada event yang dipublikasikan.</p>';
+    if (typeof window.refreshEventSlider === "function") {
+      window.refreshEventSlider();
+    }
     return;
   }
   cardsEl.innerHTML = data
@@ -96,4 +99,7 @@ function renderList(data) {
       `;
     })
     .join("");
+  if (typeof window.refreshEventSlider === "function") {
+    window.refreshEventSlider();
+  }
 }

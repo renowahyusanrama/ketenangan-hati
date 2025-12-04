@@ -156,145 +156,159 @@
     <div class="container">
       <h2 class="section-title" data-animate="fade-up">Event & Kajian Mendatang</h2>
 
-      <div id="eventCards" class="cards" data-animate="fade-up">
-        <!-- Card 1 -->
-        <article class="card">
-          <div class="card-media">
-            <img src="./assets/img/event-1.jpg" alt="Kajian Tafsir Al-Qur'an" />
-            <span class="chip chip-blue"><i class="fa-solid fa-book-open"></i> Tafsir</span>
+      <div class="event-slider" data-animate="fade-up">
+        <button class="event-nav prev" type="button" aria-label="Event sebelumnya">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+
+        <div class="event-slider-window">
+          <div id="eventCards" class="cards event-track">
+            <!-- Card 1 -->
+            <article class="card">
+              <div class="card-media">
+                <img src="./assets/img/event-1.jpg" alt="Kajian Tafsir Al-Qur'an" />
+                <span class="chip chip-blue"><i class="fa-solid fa-book-open"></i> Tafsir</span>
+              </div>
+              <div class="card-body">
+                <h3>Kajian Tafsir Al-Quran Surat Al-Baqarah</h3>
+                <p>Memahami makna dan hikmah dari Surat Al-Baqarah dengan penjelasan yang mendalam dan mudah...</p>
+
+                <ul class="meta">
+                  <li><i class="fa-regular fa-calendar-days"></i> Rabu, 5 November 2025 - 19:00-21:00 WIB</li>
+                  <li><i class="fa-solid fa-location-dot"></i> Masjid Agung Kota</li>
+                  <li><i class="fa-regular fa-user"></i> Ustadz Ahmad Wijaya</li>
+                </ul>
+
+                <div class="card-footer">
+                  <span class="price price-free">Gratis</span>
+                  <a href="event-detail.html?event=kajian-tafsir-al-baqarah" class="btn btn-primary">Daftar</a>
+                </div>
+              </div>
+            </article>
+
+            <!-- Card 2 -->
+            <article class="card">
+              <div class="card-media">
+                <img src="./assets/img/event-2.jpg" alt="Fiqih Muamalat" />
+                <span class="chip chip-blue"><i class="fa-solid fa-scale-balanced"></i> Fiqih</span>
+              </div>
+              <div class="card-body">
+                <h3>Seminar Fiqih Muamalat dalam Kehidupan Modern</h3>
+                <p>Membahas hukum-hukum dalam transaksi dan muamalah di era digital dan modern.</p>
+
+                <ul class="meta">
+                  <li><i class="fa-regular fa-calendar-days"></i> Sabtu, 8 November 2025 - 14:00-17:00 WIB</li>
+                  <li><i class="fa-solid fa-location-dot"></i> Gedung Islamic Center</li>
+                  <li><i class="fa-regular fa-user"></i> Ustadz Dr. Muhammad Hasan</li>
+                </ul>
+
+                <div class="card-footer">
+                  <span class="price">Rp 50.000</span>
+                  <a href="event-detail.html?event=fiqih-muamalat-modern" class="btn btn-primary">Daftar</a>
+                </div>
+              </div>
+            </article>
+
+            <!-- Card 3 -->
+            <article class="card">
+              <div class="card-media">
+                <img src="./assets/img/event-3.jpg" alt="Hadits Arba'in" />
+                <span class="chip chip-blue"><i class="fa-solid fa-hands-praying"></i> Hadits</span>
+              </div>
+              <div class="card-body">
+                <h3>Kajian Hadits Arba'in An-Nawawi</h3>
+                <p>40 hadits pilihan yang mencakup dasar-dasar ajaran Islam dengan penjelasan komprehensif.</p>
+
+                <ul class="meta">
+                  <li><i class="fa-regular fa-calendar-days"></i> Rabu, 12 November 2025 - 08:00-10:00 WIB</li>
+                  <li><i class="fa-solid fa-location-dot"></i> Pesantren Dar Al-Hikam</li>
+                  <li><i class="fa-regular fa-user"></i> Ustadzah Fatimah Zahra</li>
+                </ul>
+
+                <div class="card-footer">
+                  <span class="price">Rp 70.000</span>
+                  <a href="event-detail.html?event=hadits-arbain" class="btn btn-primary">Daftar</a>
+                </div>
+              </div>
+            </article>
+
+            <!-- Card 4 -->
+            <article class="card">
+              <div class="card-media">
+                <img src="./assets/img/event-4.jpg" alt="Tahsin Tajwid" />
+                <span class="chip chip-blue"><i class="fa-solid fa-book-open-reader"></i> Tahsin</span>
+              </div>
+              <div class="card-body">
+                <h3>Workshop Tahsin dan Tajwid Al-Quran</h3>
+                <p>Belajar membaca Al-Quran dengan tajwid yang benar dan memperbaiki bacaan.</p>
+
+                <ul class="meta">
+                  <li><i class="fa-regular fa-calendar-days"></i> Sabtu, 15 November 2025 - 09:00-12:00 WIB</li>
+                  <li><i class="fa-solid fa-location-dot"></i> Aula Masjid Baiturrohman</li>
+                  <li><i class="fa-regular fa-user"></i> Qori Abdurrahman Al-Hafidz</li>
+                </ul>
+
+                <div class="card-footer">
+                  <span class="price">Rp 100.000</span>
+                  <a href="event-detail.html?event=workshop-tahsin-tajwid" class="btn btn-primary">Daftar</a>
+                </div>
+              </div>
+            </article>
+
+            <!-- Card 5 -->
+            <article class="card">
+              <div class="card-media">
+                <img src="./assets/img/event-5.jpg" alt="Sirah Nabawiyah" />
+                <span class="chip chip-blue"><i class="fa-solid fa-route"></i> Sirah</span>
+              </div>
+              <div class="card-body">
+                <h3>Kajian Sirah Nabawiyah: Periode Mekkah</h3>
+                <p>Menelusuri perjalanan Rasulullah SAW di masa awal dakwah di Mekkah.</p>
+
+                <ul class="meta">
+                  <li><i class="fa-regular fa-calendar-days"></i> Selasa, 18 November 2025 - 19:30-21:30 WIB</li>
+                  <li><i class="fa-solid fa-location-dot"></i> Masjid Al-Ikhlas</li>
+                  <li><i class="fa-regular fa-user"></i> Ustadz Yusuf Abdullah</li>
+                </ul>
+
+                <div class="card-footer">
+                  <span class="price">Rp 120.000</span>
+                  <a href="event-detail.html?event=sirah-nabawiyah-mekkah" class="btn btn-primary">Daftar</a>
+                </div>
+              </div>
+            </article>
+
+            <!-- Card 6 -->
+            <article class="card">
+              <div class="card-media">
+                <img src="./assets/img/event-6.jpg" alt="Parenting Islami" />
+                <span class="chip chip-blue"><i class="fa-solid fa-children"></i> Parenting</span>
+              </div>
+              <div class="card-body">
+                <h3>Seminar Parenting Islami</h3>
+                <p>Mendidik anak dengan nilai-nilai Islam di tengah tantangan zaman modern.</p>
+
+                <ul class="meta">
+                  <li><i class="fa-regular fa-calendar-days"></i> Kamis, 20 November 2025 - 13:00-16:00 WIB</li>
+                  <li><i class="fa-solid fa-location-dot"></i> Hotel Syariah Grand</li>
+                  <li><i class="fa-regular fa-user"></i> Ustadz & Ustadzah Family Center</li>
+                </ul>
+
+                <div class="card-footer">
+                  <span class="price">Rp 150.000</span>
+                  <a href="event-detail.html?event=seminar-parenting-islami" class="btn btn-primary">Daftar</a>
+                </div>
+              </div>
+            </article>
           </div>
-          <div class="card-body">
-            <h3>Kajian Tafsir Al-Quran Surat Al-Baqarah</h3>
-            <p>Memahami makna dan hikmah dari Surat Al-Baqarah dengan penjelasan yang mendalam dan mudah...</p>
+        </div>
 
-            <ul class="meta">
-              <li><i class="fa-regular fa-calendar-days"></i> Rabu, 5 November 2025 — 19:00–21:00 WIB</li>
-              <li><i class="fa-solid fa-location-dot"></i> Masjid Agung Kota</li>
-              <li><i class="fa-regular fa-user"></i> Ustadz Ahmad Wijaya</li>
-            </ul>
-
-            <div class="card-footer">
-              <span class="price price-free">Gratis</span>
-              <a href="event-detail.html?event=kajian-tafsir-al-baqarah" class="btn btn-primary">Daftar</a>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 2 -->
-        <article class="card">
-          <div class="card-media">
-            <img src="./assets/img/event-2.jpg" alt="Fiqih Muamalat" />
-            <span class="chip chip-blue"><i class="fa-solid fa-scale-balanced"></i> Fiqih</span>
-          </div>
-          <div class="card-body">
-            <h3>Seminar Fiqih Muamalat dalam Kehidupan Modern</h3>
-            <p>Membahas hukum-hukum dalam transaksi dan muamalah di era digital dan modern.</p>
-
-            <ul class="meta">
-              <li><i class="fa-regular fa-calendar-days"></i> Sabtu, 8 November 2025 — 14:00–17:00 WIB</li>
-              <li><i class="fa-solid fa-location-dot"></i> Gedung Islamic Center</li>
-              <li><i class="fa-regular fa-user"></i> Ustadz Dr. Muhammad Hasan</li>
-            </ul>
-
-            <div class="card-footer">
-              <span class="price">Rp 50.000</span>
-              <a href="event-detail.html?event=fiqih-muamalat-modern" class="btn btn-primary">Daftar</a>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 3 -->
-        <article class="card">
-          <div class="card-media">
-            <img src="./assets/img/event-3.jpg" alt="Hadits Arba'in" />
-            <span class="chip chip-blue"><i class="fa-solid fa-hands-praying"></i> Hadits</span>
-          </div>
-          <div class="card-body">
-            <h3>Kajian Hadits Arba'in An-Nawawi</h3>
-            <p>40 hadits pilihan yang mencakup dasar-dasar ajaran Islam dengan penjelasan komprehensif.</p>
-
-            <ul class="meta">
-              <li><i class="fa-regular fa-calendar-days"></i> Rabu, 12 November 2025 — 08:00–10:00 WIB</li>
-              <li><i class="fa-solid fa-location-dot"></i> Pesantren Dar Al-Hikam</li>
-              <li><i class="fa-regular fa-user"></i> Ustadzah Fatimah Zahra</li>
-            </ul>
-
-            <div class="card-footer">
-              <span class="price">Rp 70.000</span>
-              <a href="event-detail.html?event=hadits-arbain" class="btn btn-primary">Daftar</a>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 4 -->
-        <article class="card">
-          <div class="card-media">
-            <img src="./assets/img/event-4.jpg" alt="Tahsin Tajwid" />
-            <span class="chip chip-blue"><i class="fa-solid fa-book-open-reader"></i> Tahsin</span>
-          </div>
-          <div class="card-body">
-            <h3>Workshop Tahsin dan Tajwid Al-Quran</h3>
-            <p>Belajar membaca Al-Quran dengan tajwid yang benar dan memperbaiki bacaan.</p>
-
-            <ul class="meta">
-              <li><i class="fa-regular fa-calendar-days"></i> Sabtu, 15 November 2025 — 09:00–12:00 WIB</li>
-              <li><i class="fa-solid fa-location-dot"></i> Aula Masjid Baiturrohman</li>
-              <li><i class="fa-regular fa-user"></i> Qori Abdurrahman Al-Hafidz</li>
-            </ul>
-
-            <div class="card-footer">
-              <span class="price">Rp 100.000</span>
-              <a href="event-detail.html?event=workshop-tahsin-tajwid" class="btn btn-primary">Daftar</a>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 5 -->
-        <article class="card">
-          <div class="card-media">
-            <img src="./assets/img/event-5.jpg" alt="Sirah Nabawiyah" />
-            <span class="chip chip-blue"><i class="fa-solid fa-route"></i> Sirah</span>
-          </div>
-          <div class="card-body">
-            <h3>Kajian Sirah Nabawiyah: Periode Mekkah</h3>
-            <p>Menelusuri perjalanan Rasulullah SAW di masa awal dakwah di Mekkah.</p>
-
-            <ul class="meta">
-              <li><i class="fa-regular fa-calendar-days"></i> Selasa, 18 November 2025 — 19:30–21:30 WIB</li>
-              <li><i class="fa-solid fa-location-dot"></i> Masjid Al-Ikhlas</li>
-              <li><i class="fa-regular fa-user"></i> Ustadz Yusuf Abdullah</li>
-            </ul>
-
-            <div class="card-footer">
-              <span class="price">Rp 120.000</span>
-              <a href="event-detail.html?event=sirah-nabawiyah-mekkah" class="btn btn-primary">Daftar</a>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 6 -->
-        <article class="card">
-          <div class="card-media">
-            <img src="./assets/img/event-6.jpg" alt="Parenting Islami" />
-            <span class="chip chip-blue"><i class="fa-solid fa-children"></i> Parenting</span>
-          </div>
-          <div class="card-body">
-            <h3>Seminar Parenting Islami</h3>
-            <p>Mendidik anak dengan nilai-nilai Islam di tengah tantangan zaman modern.</p>
-
-            <ul class="meta">
-              <li><i class="fa-regular fa-calendar-days"></i> Kamis, 20 November 2025 — 13:00–16:00 WIB</li>
-              <li><i class="fa-solid fa-location-dot"></i> Hotel Syariah Grand</li>
-              <li><i class="fa-regular fa-user"></i> Ustadz & Ustadzah Family Center</li>
-            </ul>
-
-            <div class="card-footer">
-              <span class="price">Rp 150.000</span>
-              <a href="event-detail.html?event=seminar-parenting-islami" class="btn btn-primary">Daftar</a>
-            </div>
-          </div>
-        </article>
+        <button class="event-nav next" type="button" aria-label="Event berikutnya">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
       </div>
+
+      <div id="eventDots" class="event-dots" aria-label="Indikator slide event"></div>
     </div>
   </section>
 
@@ -426,6 +440,110 @@
       updateHeroSlider();
     });
   });
+</script>
+
+<!-- Slider Event dengan panah & loop -->
+<script>
+  (function () {
+    const slider = document.querySelector(".event-slider");
+    const track = document.getElementById("eventCards");
+    const dotsWrap = document.getElementById("eventDots");
+    const prevBtn = slider?.querySelector(".event-nav.prev");
+    const nextBtn = slider?.querySelector(".event-nav.next");
+    let slides = [];
+    let currentIndex = 0;
+    let slidesPerView = 1;
+    let maxIndex = 0;
+    let resizeTimer;
+
+    if (!slider || !track) return;
+
+    function slidesVisible() {
+      const w = window.innerWidth;
+      if (w >= 1100) return 3;
+      if (w >= 760) return 2;
+      return 1;
+    }
+
+    function syncSlides() {
+      slides = Array.from(track.children);
+      slidesPerView = slidesVisible();
+      maxIndex = Math.max(slides.length - slidesPerView, 0);
+      if (currentIndex > maxIndex) currentIndex = maxIndex;
+      buildDots();
+      updateNavState();
+      applyTransform();
+    }
+
+    function applyTransform() {
+      if (!slides.length) return;
+      const styles = getComputedStyle(track);
+      const gap = parseFloat(styles.columnGap || styles.gap || 0) || 0;
+      const slideWidth = slides[0].getBoundingClientRect().width;
+      const offset = currentIndex * (slideWidth + gap);
+      track.style.transform = `translateX(-${offset}px)`;
+      highlightDots();
+    }
+
+    function move(step) {
+      if (maxIndex <= 0) return;
+      currentIndex = (currentIndex + step + (maxIndex + 1)) % (maxIndex + 1);
+      applyTransform();
+    }
+
+    function buildDots() {
+      if (!dotsWrap) return;
+      dotsWrap.innerHTML = "";
+      const dotCount = maxIndex + 1;
+      if (dotCount <= 1) {
+        dotsWrap.classList.add("hidden-dots");
+        return;
+      }
+      dotsWrap.classList.remove("hidden-dots");
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < dotCount; i++) {
+        const dot = document.createElement("button");
+        dot.type = "button";
+        dot.className = "event-dot" + (i === currentIndex ? " active" : "");
+        dot.addEventListener("click", () => {
+          currentIndex = i;
+          applyTransform();
+        });
+        frag.appendChild(dot);
+      }
+      dotsWrap.appendChild(frag);
+    }
+
+    function highlightDots() {
+      if (!dotsWrap) return;
+      Array.from(dotsWrap.children).forEach((d, idx) => {
+        d.classList.toggle("active", idx === currentIndex);
+      });
+    }
+
+    function updateNavState() {
+      const disabled = slides.length <= slidesPerView;
+      [prevBtn, nextBtn].forEach((btn) => {
+        if (!btn) return;
+        btn.classList.toggle("is-disabled", disabled);
+      });
+    }
+
+    prevBtn?.addEventListener("click", () => move(-1));
+    nextBtn?.addEventListener("click", () => move(1));
+
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(syncSlides, 140);
+    });
+
+    window.refreshEventSlider = function () {
+      currentIndex = 0;
+      syncSlides();
+    };
+
+    syncSlides();
+  })();
 </script>
 
   <script type="module" src="js/events_feed.js"></script>
