@@ -9,10 +9,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM = process.env.RESEND_FROM || "onboarding@resend.dev";
 
 // email akun kamu di Resend (yang boleh terima email di mode testing)
-const RESEND_OWNER_EMAIL = "onmeren@gmail.com";
-
-// SELAGI BELUM VERIFY DOMAIN → biarkan true
-const RESEND_TEST_MODE = true;
+const RESEND_OWNER_EMAIL = process.env.RESEND_OWNER_EMAIL || "onmeren@gmail.com";
 
 // Base URL halaman tiket. Urutan prioritas:
 // 1) TICKET_BASE_URL (manual/custom domain)
@@ -134,22 +131,8 @@ async function sendTicketEmail(order) {
     ticketUrl,
   });
 
-  let finalTo = originalEmail;
-  let html = baseHtml;
-
-  if (RESEND_TEST_MODE) {
-    finalTo = RESEND_OWNER_EMAIL;
-    const banner = `
-      <div style="font-family:Arial, sans-serif; max-width:560px; margin:auto; color:#0f172a">
-        <p style="padding:8px; background:#fef3c7; border-radius:6px; border:1px solid #facc15; font-size:13px;">
-          <strong>TEST MODE:</strong> Aslinya email ini untuk <strong>${originalEmail}</strong>.<br/>
-          Semua email dialihkan ke <strong>${RESEND_OWNER_EMAIL}</strong>.
-        </p>
-      </div>
-      <hr style="margin:16px 0;" />
-    `;
-    html = `${banner}${baseHtml}`;
-  }
+  const finalTo = originalEmail;
+  const html = baseHtml;
 
   // Siapkan PDF lampiran (best effort)
   let pdfAttachment = null;
