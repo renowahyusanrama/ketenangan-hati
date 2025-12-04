@@ -35,34 +35,67 @@
 
   <!-- ================= NAVBAR ================= -->
   <header class="site-header pb-3">
-    <div class="container nav">
-      <a class="brand" href="#">
-        <!-- HANYA LOGO YANG TERSISA -->
-        <span class="brand-logo">
-          <img src="images/logokj.png" alt="ketenangan jiwa" />
-        </span>
-      </a>
+    <div class="container nav nav-shell">
+      <div class="nav-left">
+        <button class="nav-burger" id="menuOpen" aria-label="Buka menu">
+          <span></span><span></span><span></span>
+        </button>
+        <a class="brand brand-compact" href="#beranda">
+          <span class="brand-logo brand-logo-small">
+            <img src="images/logo.png" alt="ketenangan jiwa" />
+          </span>
+        </a>
+      </div>
 
-      <button class="nav-toggle" aria-label="Buka menu">
-        <span class="bar"></span><span class="bar"></span><span class="bar"></span>
-      </button>
-
-      <nav class="nav-links">
-        <a href="#beranda" class="active">Beranda</a>
-        <a href="#event">Event</a>
-        <a href="#tentang">Tentang</a>
-        <a href="#kontak">Kontak</a>
-
-        <!-- PERBAIKAN: slot auth agar bisa swap Login <-> User chip -->
-        <div id="auth-slot">
-          <a href="#" class="btn btn-login"><i class="fa-regular fa-user"></i> Login</a>
-        </div>
-      </nav>
+      <div class="nav-right">
+        <button class="icon-btn cart-btn" id="cartToggle" aria-label="Buka keranjang">
+          <i class="fa-solid fa-bag-shopping"></i>
+        </button>
+        <button class="icon-btn profile-btn" id="profileBtn" aria-label="Profil">
+          <i class="fa-regular fa-user"></i>
+        </button>
+        <div id="profileDropdown" class="profile-dropdown hidden"></div>
+      </div>
     </div>
   </header>
 
+  <!-- Overlay menu (dari tombol garis tiga) -->
+  <div id="menuOverlay" class="menu-overlay">
+    <div class="menu-panel">
+      <button class="overlay-close" id="menuClose" aria-label="Tutup menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <ul class="menu-list">
+        <li><a href="#beranda">Home</a></li>
+        <li><a href="#event">Event</a></li>
+        <li><a href="#kontak">Kontak</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Drawer keranjang -->
+  <div id="cartOverlay" class="cart-overlay">
+    <div class="cart-drawer">
+      <div class="drawer-header">
+        <h3>Pesanan Saya</h3>
+        <button class="overlay-close" id="cartClose" aria-label="Tutup keranjang">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="drawer-body">
+        <div class="drawer-orders">
+          <div id="cartOrdersStatus" class="orders-status muted">Memuat pesanan...</div>
+          <div id="cartOrdersList" class="orders-list">
+            <p class="muted">Lihat ringkasan pesanan Anda di sini.</p>
+          </div>
+        </div>
+        <a class="drawer-link" href="#pesananSaya">Buka bagian Pesanan Saya</a>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= HERO (DENGAN SLIDER) ================= -->
-<section class="relative w-full overflow-hidden">
+<section id="beranda" class="relative w-full overflow-hidden">
 
   <!-- Wrapper -->
   <div class="w-full overflow-hidden relative">
@@ -284,7 +317,7 @@
   </section>
 
   <!-- =============== FOOTER MIRIP DIZZY STORE (FINAL) =============== -->
-<footer class="text-gray-300 py-16">
+<footer id="kontak" class="text-gray-300 py-16">
   <div class="mx-auto bg-[#3775B5] rounded-[32px] p-12 md:p-14 shadow-xl max-w-[88%] md:max-w-[1080px]">
 
     <div class="flex flex-col md:flex-row md:justify-between gap-16 items-start">

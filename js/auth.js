@@ -74,13 +74,14 @@ function closeModal(){
 
 // ——— Pastikan ada #auth-slot untuk swap UI
 function ensureAuthSlot(){
-  let slot = document.getElementById('auth-slot');
+  let slot = document.getElementById('profileDropdown');
   if (slot) return slot;
-  const nav = document.querySelector('.nav-links');
-  if (!nav) return null;
-  slot = document.createElement('div'); slot.id = 'auth-slot';
-  const oldLogin = nav.querySelector('.btn-login');
-  if (oldLogin) oldLogin.replaceWith(slot); else nav.appendChild(slot);
+  const navRight = document.querySelector('.nav-right');
+  if (!navRight) return null;
+  slot = document.createElement('div');
+  slot.id = 'profileDropdown';
+  slot.className = 'profile-dropdown hidden';
+  navRight.appendChild(slot);
   return slot;
 }
 function getAuthSlot(){ return ensureAuthSlot(); }
@@ -89,33 +90,45 @@ function getAuthSlot(){ return ensureAuthSlot(); }
 function renderLoginButton(){
   const slot = getAuthSlot();
   if(!slot) return;
+  slot.dataset.state = 'logged-out';
+  slot.classList.remove('open');
+  slot.classList.remove('hidden');
   slot.innerHTML = `
-    <a href="#" class="btn btn-login"><i class="fa-regular fa-user"></i> Login</a>
+    <div class="login-inline">
+      <button type="button" class="btn-inline-login">Login</button>
+    </div>
   `;
-  slot.querySelector('.btn-login')?.addEventListener('click', (e)=>{
+  slot.querySelector('.btn-inline-login')?.addEventListener('click', (e)=>{
     e.preventDefault();
-    modal?.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    setTimeout(()=> modal.querySelector('input[name="email"]')?.focus(), 60);
+    openModal();
   });
 }
 
 function renderUserChip(user){
   const slot = getAuthSlot();
   if(!slot) return;
+  slot.dataset.state = 'logged-in';
+  slot.classList.remove('hidden');
   const photo = user.photoURL
     ? `<img class="avatar" src="${user.photoURL}" alt="">`
     : `<span class="avatar avatar-fallback">${(user.displayName||user.email||'U').charAt(0)}</span>`;
   slot.innerHTML = `
-    <div class="user-chip">
+    <div class="profile-head">
       ${photo}
-      <span class="user-name">${user.displayName || user.email}</span>
-      ${isAdmin ? '<a class="user-admin" href="admin.html" title="Admin dashboard">Admin</a>' : ''}
-      <button class="user-logout" title="Logout">Keluar</button>
+      <div>
+        <p class="profile-name">${user.displayName || user.email}</p>
+        <p class="profile-email">${user.email || ''}</p>
+      </div>
     </div>
+    <ul class="menu">
+      ${isAdmin ? '<li><a href="admin.html">Admin <i class="fa-solid fa-up-right-from-square"></i></a></li>' : ''}
+      <li><a href="#pesananSaya">Pesanan Saya</a></li>
+    </ul>
+    <button class="logout-btn" type="button">Keluar</button>
   `;
-  slot.querySelector('.user-logout')?.addEventListener('click', async ()=>{
+  slot.querySelector('.logout-btn')?.addEventListener('click', async ()=>{
     try{ await signOut(auth); }catch(e){ console.error(e); }
+    slot.classList.remove('open');
   });
   injectChipStyles();
 }
@@ -123,15 +136,7 @@ function renderUserChip(user){
 function injectChipStyles(){
   if(document.getElementById('userChipStyle')) return;
   const css = `
-    .user-chip{ display:inline-flex; align-items:center; gap:10px; padding:8px 10px;
-      border:1px solid var(--border); border-radius:999px; background:#fff }
-    .user-chip .avatar{ width:28px; height:28px; border-radius:999px; object-fit:cover }
-    .avatar-fallback{ display:grid; place-items:center; background:#E2E8F0; color:#111; font-weight:700 }
-    .user-name{ font-weight:600; color:#111827; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-    .user-admin{ color:#2563eb; font-weight:700; text-decoration:none; padding:4px 10px; border:1px solid #2563eb; border-radius:999px; }
-    .user-admin:hover{ background:#2563eb; color:#fff; }
-    .user-logout{ background:transparent; border:0; color:#ef4444; font-weight:700; cursor:pointer }
-    .user-logout:hover{ text-decoration:underline }
+    /* dropdown styles are defined in css/home_page.css */
   `;
   const style = Object.assign(document.createElement('style'), { id:'userChipStyle', textContent:css });
   document.head.appendChild(style);
