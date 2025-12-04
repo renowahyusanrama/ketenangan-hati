@@ -91,6 +91,7 @@ const statParticipantCountEl = document.getElementById("statParticipantCount");
 const statStatusListEl = document.getElementById("statStatusList");
 const statUpdatedAtEl = document.getElementById("statUpdatedAt");
 const statEventFilter = document.getElementById("statEventFilter");
+const orderEventFilter = document.getElementById("orderEventFilter");
 const STATUS_DOT_COLORS = {
   paid: "#4ade80",
   pending: "#facc15",
@@ -101,6 +102,7 @@ const STATUS_DOT_COLORS = {
 };
 let statsLoading = false;
 let selectedEventFilter = "";
+let selectedOrderEventFilter = "";
 
 let currentUser = null;
 let isAdmin = false;
@@ -360,6 +362,22 @@ function formatMethod(order) {
   return order.method || order.paymentType || "-";
 }
 
+function getOrderEventIdentifier(order) {
+  if (!order) return "";
+  if (order.eventId) return String(order.eventId);
+  if (typeof order.event === "string") return order.event;
+  if (order.event?.id) return String(order.event.id);
+  if (order.event?.slug) return String(order.event.slug);
+  if (order.eventSlug) return String(order.eventSlug);
+  return "";
+}
+
+function matchesOrderEvent(order, filterValue) {
+  if (!filterValue) return true;
+  const candidate = getOrderEventIdentifier(order);
+  return candidate === filterValue;
+}
+
 function getEventLabel(eventId) {
   if (!eventId) return "Semua event";
   const eventData = eventsCache.get(eventId);
@@ -418,8 +436,8 @@ function renderOrderStats(rows = [], eventFilter = "") {
 }
 
 function populateEventFilter(eventList = []) {
-  if (!statEventFilter) return;
-  const previous = selectedEventFilter || statEventFilter.value || "";
+  const previousEventValue = selectedEventFilter || statEventFilter?.value || "";
+  const previousOrderValue = selectedOrderEventFilter || orderEventFilter?.value || "";
   const sorted = [...eventList].sort((a, b) => {
     const titleA = (a.title || a.slug || a.id || "").toLowerCase();
     const titleB = (b.title || b.slug || b.id || "").toLowerCase();
@@ -433,10 +451,25 @@ function populateEventFilter(eventList = []) {
       return `<option value="${event.id}">${label}</option>`;
     })
     .join("");
-  statEventFilter.innerHTML = `<option value="">Semua event</option>${optionHtml}`;
-  const hasPrevious = previous && sorted.some((event) => event.id === previous);
-  statEventFilter.value = hasPrevious ? previous : "";
-  selectedEventFilter = statEventFilter.value || "";
+  const baseOptions = `<option value="">Semua event</option>${optionHtml}`;
+
+  if (statEventFilter) {
+    statEventFilter.innerHTML = baseOptions;
+    const hasPrevious = previousEventValue && sorted.some((event) => event.id === previousEventValue);
+    statEventFilter.value = hasPrevious ? previousEventValue : "";
+    selectedEventFilter = statEventFilter.value || "";
+  } else {
+    selectedEventFilter = previousEventValue;
+  }
+
+  if (orderEventFilter) {
+    orderEventFilter.innerHTML = baseOptions;
+    const hasPreviousOrder = previousOrderValue && sorted.some((event) => event.id === previousOrderValue);
+    orderEventFilter.value = hasPreviousOrder ? previousOrderValue : "";
+    selectedOrderEventFilter = orderEventFilter.value || "";
+  } else {
+    selectedOrderEventFilter = previousOrderValue;
+  }
 }
 
 async function loadOrderStats() {
@@ -474,6 +507,7 @@ async function loadOrders(reset = true) {
 
   const statusFilter = (orderStatusFilter?.value || "").toLowerCase();
   const searchTerm = (orderSearch?.value || "").trim().toLowerCase();
+  const eventFilterValue = selectedOrderEventFilter || "";
 
   const ref = collection(db, "orders");
   let q = query(ref, orderBy("createdAt", "desc"), limit(ORDERS_PAGE_SIZE));
@@ -496,6 +530,7 @@ async function loadOrders(reset = true) {
   });
 
   const filtered = rows.filter((o) => {
+    if (eventFilterValue && !matchesOrderEvent(o, eventFilterValue)) return false;
     const status = (o.status || "").toLowerCase();
     if (statusFilter && status !== statusFilter) return false;
     if (searchTerm) {
@@ -544,7 +579,8 @@ async function loadOrders(reset = true) {
     lastOrderDoc = snap.docs[snap.docs.length - 1];
   }
   if (ordersStatusText) {
-    ordersStatusText.textContent = `Memuat ${filtered.length} transaksi (batch ${snap?.size || 0}).`;
+    const eventSuffix = eventFilterValue ? ` untuk ${getEventLabel(eventFilterValue)}` : "";
+    ordersStatusText.textContent = `Memuat ${filtered.length} transaksi${eventSuffix} (batch ${snap?.size || 0}).`;
   }
   if (loadMoreOrdersBtn) {
     const allowPaging = !searchTerm; // saat pencarian aktif, matikan paging agar tidak membingungkan
@@ -859,6 +895,10 @@ refreshOrdersBtn?.addEventListener("click", () => loadOrders(true));
 loadMoreOrdersBtn?.addEventListener("click", () => loadOrders(false));
 orderStatusFilter?.addEventListener("change", () => loadOrders(true));
 orderSearch?.addEventListener("input", () => loadOrders(true));
+orderEventFilter?.addEventListener("change", () => {
+  selectedOrderEventFilter = orderEventFilter.value || "";
+  loadOrders(true);
+});
 statEventFilter?.addEventListener("change", () => {
   selectedEventFilter = statEventFilter.value || "";
   loadOrderStats();
