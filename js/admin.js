@@ -64,6 +64,7 @@ const resetBtn = document.getElementById("resetBtn");
 const newEventBtn = document.getElementById("newEventBtn");
 const tableBody = document.querySelector("#eventsTable tbody");
 const saveBtn = document.getElementById("saveBtn");
+const createEventBtn = document.getElementById("createEventBtn");
 const previewImage = document.getElementById("previewImage");
 const previewCategory = document.getElementById("previewCategory");
 const previewTitle = document.getElementById("previewTitle");
@@ -118,6 +119,11 @@ const SCAN_DELAY_MS = 300;
 const SCAN_COOLDOWN_MS = 1200;
 let scanBusy = false;
 let lastUsedWarningRef = null;
+const goToManagePage = () => {
+  if (typeof window !== "undefined" && typeof window.switchAdminPage === "function") {
+    window.switchAdminPage("page-kelola");
+  }
+};
 
 async function updateCheckin(orderId, verified) {
   if (!isAdmin || !orderId) return false;
@@ -731,8 +737,8 @@ function resetForm() {
   updatePreviewFromForm();
 }
 
-async function saveEvent(e) {
-  e.preventDefault();
+async function saveEvent(e, { forceNew = false, redirectToPublic = false } = {}) {
+  if (e?.preventDefault) e.preventDefault();
   if (!isAdmin || !currentUser) {
     alert("Tidak ada akses admin.");
     return;
@@ -790,7 +796,10 @@ async function saveEvent(e) {
   };
 
   const ref = firestoreDoc(db, "events", slug);
-  const isNew = editingSlug !== slug;
+  const isNew = forceNew || editingSlug !== slug;
+  if (forceNew) {
+    editingSlug = null;
+  }
   if (isNew) {
     data.createdAt = serverTimestamp();
   }
@@ -811,6 +820,10 @@ async function saveEvent(e) {
     formStatus.textContent = "Tersimpan.";
     editingSlug = slug;
     await loadEvents();
+    if (redirectToPublic) {
+      const target = `event-detail.html?event=${encodeURIComponent(slug)}`;
+      window.location.href = target;
+    }
   } catch (err) {
     console.error(err);
     formStatus.textContent = `Gagal: ${err.message}`;
@@ -887,10 +900,16 @@ loginBtn?.addEventListener("click", async () => {
 logoutBtn?.addEventListener("click", () => signOut(auth).catch(console.error));
 refreshBtn?.addEventListener("click", loadEvents);
 resetBtn?.addEventListener("click", resetForm);
-newEventBtn?.addEventListener("click", resetForm);
-eventForm?.addEventListener("submit", saveEvent);
+newEventBtn?.addEventListener("click", () => {
+  goToManagePage();
+  resetForm();
+});
+eventForm?.addEventListener("submit", (ev) => saveEvent(ev));
 eventForm?.addEventListener("input", updatePreviewFromForm);
 uploadPosterBtn?.addEventListener("click", openUpload);
+createEventBtn?.addEventListener("click", () => {
+  saveEvent(null, { forceNew: true, redirectToPublic: true });
+});
 refreshOrdersBtn?.addEventListener("click", () => loadOrders(true));
 loadMoreOrdersBtn?.addEventListener("click", () => loadOrders(false));
 orderStatusFilter?.addEventListener("change", () => loadOrders(true));
@@ -937,6 +956,7 @@ tableBody?.addEventListener("click", (e) => {
     if (data) {
       editingSlug = slug;
       fillForm(data);
+      goToManagePage();
     } else {
       alert("Data event tidak ditemukan di cache.");
     }
@@ -955,6 +975,7 @@ tableBody?.addEventListener("click", (e) => {
       clone.slug = "";
       editingSlug = null;
       fillForm(clone);
+      goToManagePage();
     }
   }
 });
