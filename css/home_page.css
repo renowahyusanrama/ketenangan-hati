@@ -178,7 +178,7 @@ body.no-scroll{
     left:50%;
     top:50%;
     transform:translate(-50%,-50%);
-    width:220px;
+    width:200px;
     height:auto;
 }
 .brand-center img{
@@ -973,7 +973,7 @@ body.no-scroll{
     .brand-center{
         position:static;
         transform:none;
-        width:200px;
+        width:180px;
         margin-left:6px;
     }
     .nav-right{
@@ -1011,7 +1011,7 @@ body.no-scroll{
     .footer-inner{ flex-direction:column; text-align:center; }
     .footer-brand .brand-logo{ width:60px; height:60px; } /* Ukuran logo di mobile */
     .menu-panel{ width:80vw; min-width:auto; border-radius:0 16px 16px 0; }
-    .brand-center{ width:160px; margin-left:4px; }
+    .brand-center{ width:140px; margin-left:4px; }
     .icon-btn, .nav-burger{ width:44px; height:44px; }
     .icon-btn img{ width:28px; height:28px; }
     .event-slider{ padding:0 16px; }
