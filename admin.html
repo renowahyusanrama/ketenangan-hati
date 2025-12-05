@@ -168,6 +168,7 @@
       justify-content:center;
       box-shadow:var(--shadow);
       padding:0;
+      flex-shrink:0;
     }
     .mobile-menu-btn:hover{
       background:#0a57ad;
@@ -476,6 +477,10 @@
       background: var(--highlight);
       border: 1px solid var(--border);
       font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      line-height: 1.4;
     }
     .preview {
       width: 100%;
@@ -690,9 +695,28 @@
         flex-direction: column; 
         align-items: flex-start; 
         gap: 12px; 
+        padding: 16px 18px;
       }
       .container { 
         padding: 16px; 
+      }
+      .topbar-actions{
+        width:100%;
+        display:grid;
+        grid-template-columns:auto 1fr auto;
+        align-items:center;
+        gap:10px;
+      }
+      .topbar-actions > *{
+        min-width:0;
+      }
+      .pill{
+        width:100%;
+        justify-content:flex-start;
+      }
+      #loginBtn,
+      #logoutBtn{
+        justify-self:end;
       }
       .form .grid {
         grid-template-columns: 1fr;
@@ -706,6 +730,31 @@
       .btn-icon {
         width: 28px;
         height: 28px;
+      }
+      .mobile-nav-panel{
+        left:0;
+        right:auto;
+        top:calc(100% + 6px);
+        width:72vw;
+        max-width:260px;
+        min-width:210px;
+      }
+      .main-scroll{
+        padding:16px;
+      }
+      .panel {
+        padding:18px;
+      }
+      .flex-between{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:12px;
+      }
+      .stats-grid{
+        grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+      }
+      .stat-value{
+        font-size:1.6rem;
       }
     }
 </style>
