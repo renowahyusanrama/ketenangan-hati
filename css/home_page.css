@@ -565,6 +565,16 @@ body.no-scroll{
     will-change:transform;
     align-items:stretch;
 }
+.event-slider.single .event-track{
+    justify-content:center;
+}
+.event-slider.single .event-track .card{
+    flex:0 0 clamp(280px, 60vw, 480px);
+}
+.event-slider.single .event-nav,
+.event-slider.single .event-dots{
+    display:none;
+}
 .event-track .card{
     flex:0 0 calc((100% - 48px)/3);
     height:100%;

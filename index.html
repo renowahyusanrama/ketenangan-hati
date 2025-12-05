@@ -505,6 +505,11 @@
       slidesPerView = slidesVisible();
       maxIndex = Math.max(slides.length - slidesPerView, 0);
       if (currentIndex > maxIndex) currentIndex = maxIndex;
+      if (slides.length <= slidesPerView) {
+        slider?.classList.add("single");
+      } else {
+        slider?.classList.remove("single");
+      }
       buildDots();
       updateNavState();
       applyTransform();
