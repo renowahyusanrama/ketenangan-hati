@@ -572,15 +572,15 @@ async function loadOrders(reset = true) {
               : `<span class="muted">-</span>`;
           return `
             <tr>
-              <td>${o.merchantRef || o.reference || "-"}</td>
-              <td>${o.eventTitle || o.eventId || "-"}</td>
-              <td>${(o.ticketType || "regular").toUpperCase()}</td>
-              <td>${o.customer?.name || "-"}<br><span class="muted">${o.customer?.email || ""}</span></td>
-              <td>${formatMethod(o)}</td>
-              <td>${formatStatusBadge(o.status)}</td>
-              <td>${o.verified ? `<span class="badge green">Terverifikasi</span>` : `<span class="badge gray">Belum</span>`}<br>${verifyBtn}</td>
-              <td>${formatCurrency(total)}</td>
-              <td>${createdAt}</td>
+              <td data-label="Ref">${o.merchantRef || o.reference || "-"}</td>
+              <td data-label="Event">${o.eventTitle || o.eventId || "-"}</td>
+              <td data-label="Tipe">${(o.ticketType || "regular").toUpperCase()}</td>
+              <td data-label="Customer">${o.customer?.name || "-"}<br><span class="muted">${o.customer?.email || ""}</span></td>
+              <td data-label="Metode">${formatMethod(o)}</td>
+              <td data-label="Status">${formatStatusBadge(o.status)}</td>
+              <td data-label="Check-in">${o.verified ? `<span class="badge green">Terverifikasi</span>` : `<span class="badge gray">Belum</span>`}<br>${verifyBtn}</td>
+              <td data-label="Total">${formatCurrency(total)}</td>
+              <td data-label="Dibuat">${createdAt}</td>
             </tr>
           `;
         })

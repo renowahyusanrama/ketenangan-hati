@@ -248,6 +248,11 @@
       align-items: center;
       flex-wrap: wrap;
     }
+    .filter-bar{
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
     .flex-between {
       display: flex;
       justify-content: space-between;
@@ -349,6 +354,7 @@
       border-bottom: 1px solid var(--border);
       text-align: left;
       vertical-align: middle;
+      word-break: break-word;
     }
     .table th {
       background: #f8fafc;
@@ -756,6 +762,85 @@
       .stat-value{
         font-size:1.6rem;
       }
+      .topbar-actions{
+        grid-template-columns:auto minmax(0,1fr) auto;
+      }
+      .filter-bar{
+        display:grid;
+        grid-template-columns:1fr;
+        width:100%;
+        gap:10px;
+      }
+      .filter-bar select,
+      .filter-bar input,
+      .filter-bar button{
+        width:100%;
+        min-width:0;
+      }
+      #orderSearch{
+        width:100% !important;
+      }
+      #orderStatusFilter,
+      #orderEventFilter{
+        min-width:0 !important;
+      }
+      #toggleQrPanel,
+      #qrStopBtn,
+      #refreshOrdersBtn{
+        justify-content:center;
+      }
+      #qrPanel .flex{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      #qrInput{
+        min-width:0 !important;
+        width:100% !important;
+      }
+      #ordersTable thead{
+        display:none;
+      }
+      #ordersTable, 
+      #ordersTable tbody,
+      #ordersTable tr,
+      #ordersTable td{
+        display:block;
+        width:100%;
+      }
+      #ordersTable tbody tr{
+        margin-bottom:12px;
+        padding:12px;
+        border:1px solid var(--border);
+        border-radius:12px;
+        background:var(--panel);
+        box-shadow:var(--shadow);
+      }
+      #ordersTable tbody tr td{
+        padding:6px 0;
+        border-bottom:1px solid var(--border);
+        display:flex;
+        gap:8px;
+        align-items:flex-start;
+      }
+      #ordersTable tbody tr td:last-child{
+        border-bottom:none;
+      }
+      #ordersTable tbody tr td::before{
+        content: attr(data-label);
+        font-weight:600;
+        color: var(--muted);
+        min-width:110px;
+        text-transform: capitalize;
+      }
+      #ordersTable tbody tr td[colspan]{
+        display:block;
+        border-bottom:none;
+        padding:8px 0;
+      }
+      #ordersTable tbody tr td[colspan]::before{
+        content:"";
+        display:none;
+      }
     }
 </style>
 </head>
@@ -1038,7 +1123,7 @@
                   <h3>Transaksi</h3>
 
                   <!-- FILTER BAR -->
-                  <div class="flex" style="gap: 8px; align-items: center; flex-wrap: wrap;">
+                  <div class="flex filter-bar">
 
                     <select id="orderStatusFilter" style="min-width: 180px;">
                       <option value="">Semua status</option>
