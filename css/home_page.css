@@ -570,6 +570,7 @@ body.no-scroll{
 }
 .event-slider.single .event-track .card{
     flex:0 0 clamp(280px, 60vw, 480px);
+    max-width:96vw;
 }
 .event-slider.single .event-nav,
 .event-slider.single .event-dots{
@@ -985,9 +986,12 @@ body.no-scroll{
     .footer-inner{ flex-direction:column; text-align:center; }
     .footer-brand .brand-logo{ width:60px; height:60px; } /* Ukuran logo di mobile */
     .menu-panel{ width:80vw; min-width:auto; border-radius:0 16px 16px 0; }
-    .event-slider{ padding:0 24px; }
-    .event-track{ gap:16px; }
-    .event-track .card{ flex:0 0 100%; min-height:520px; }
+    .brand-center{ width:220px; }
+    .icon-btn, .nav-burger{ width:44px; height:44px; }
+    .icon-btn img{ width:28px; height:28px; }
+    .event-slider{ padding:0 16px; }
+    .event-track{ gap:14px; }
+    .event-track .card{ flex:0 0 92vw; max-width:92vw; min-height:480px; margin:0 auto; }
     .event-nav{
         top:50%;
         transform:translateY(-50%);
