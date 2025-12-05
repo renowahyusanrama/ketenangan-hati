@@ -398,6 +398,7 @@ function renderOrderStats(rows = [], eventFilter = "") {
   let paidCount = 0;
   let participants = 0;
   const breakdown = {};
+   const typeBreakdown = {};
   filteredRows.forEach((order) => {
     const status = (order.status || "pending").toLowerCase();
     breakdown[status] = (breakdown[status] || 0) + 1;
@@ -407,6 +408,8 @@ function renderOrderStats(rows = [], eventFilter = "") {
     }
     const qty = Number(order.quantity ?? order.qty ?? 1);
     participants += qty;
+    const type = (order.ticketType || "regular").toLowerCase();
+    typeBreakdown[type] = (typeBreakdown[type] || 0) + qty;
   });
 
   statRevenueEl.textContent = formatCurrency(totalRevenue);
@@ -427,7 +430,13 @@ function renderOrderStats(rows = [], eventFilter = "") {
         })
         .filter(Boolean)
         .join("");
-      statStatusListEl.innerHTML = html || `<li class="muted">Belum ada transaksi untuk ${eventLabel}.</li>`;
+      const typeHtml = Object.keys(typeBreakdown)
+        .map((type) => `<li>${type.toUpperCase()}: ${typeBreakdown[type]}</li>`)
+        .join("");
+      const hasSummary = Boolean(html || typeHtml);
+      statStatusListEl.innerHTML = hasSummary
+        ? `${html}${typeHtml}`
+        : `<li class="muted">Belum ada transaksi untuk ${eventLabel}.</li>`;
     }
   }
 
@@ -506,7 +515,7 @@ async function loadOrders(reset = true) {
     existingHtml = ordersTableBody.innerHTML;
     if (reset) {
       existingHtml = "";
-      ordersTableBody.innerHTML = `<tr><td colspan="8" class="muted">Memuat data...</td></tr>`;
+      ordersTableBody.innerHTML = `<tr><td colspan="9" class="muted">Memuat data...</td></tr>`;
     }
   }
   if (reset) lastOrderDoc = null;
@@ -548,7 +557,7 @@ async function loadOrders(reset = true) {
 
   if (ordersTableBody) {
     if (!filtered.length && reset) {
-      ordersTableBody.innerHTML = `<tr><td colspan="8" class="muted">Tidak ada transaksi pada filter ini.</td></tr>`;
+      ordersTableBody.innerHTML = `<tr><td colspan="9" class="muted">Tidak ada transaksi pada filter ini.</td></tr>`;
     } else if (filtered.length) {
       const html = filtered
         .map((o) => {
@@ -565,6 +574,7 @@ async function loadOrders(reset = true) {
             <tr>
               <td>${o.merchantRef || o.reference || "-"}</td>
               <td>${o.eventTitle || o.eventId || "-"}</td>
+              <td>${(o.ticketType || "regular").toUpperCase()}</td>
               <td>${o.customer?.name || "-"}<br><span class="muted">${o.customer?.email || ""}</span></td>
               <td>${formatMethod(o)}</td>
               <td>${formatStatusBadge(o.status)}</td>
@@ -577,7 +587,7 @@ async function loadOrders(reset = true) {
         .join("");
       ordersTableBody.innerHTML = reset ? html : existingHtml + html;
     } else if (!reset) {
-      ordersTableBody.innerHTML = existingHtml || `<tr><td colspan="8" class="muted">Tidak ada transaksi.</td></tr>`;
+      ordersTableBody.innerHTML = existingHtml || `<tr><td colspan="9" class="muted">Tidak ada transaksi.</td></tr>`;
     }
   }
 
@@ -604,8 +614,10 @@ function updatePreviewFromForm() {
   const time = eventForm.time?.value?.trim();
   const location = eventForm.location?.value?.trim() || "Lokasi";
   const speaker = eventForm.speaker?.value?.trim() || "Pemateri";
-  const amount = Number(eventForm.amount?.value) || 0;
+  const priceRegular = Number(eventForm.priceRegular?.value) || 0;
+  const priceVip = Number(eventForm.priceVip?.value) || 0;
   const image = eventForm.imageUrl?.value?.trim() || "./images/placeholder.jpg";
+  const displayPrice = priceVip ? `${formatCurrency(priceRegular || priceVip)} / VIP ${formatCurrency(priceVip)}` : formatCurrency(priceRegular);
 
   if (previewTitle) previewTitle.textContent = title;
   if (previewTagline) previewTagline.textContent = tagline;
@@ -613,7 +625,7 @@ function updatePreviewFromForm() {
   if (previewSchedule) previewSchedule.textContent = time ? `${schedule} ${time}` : schedule;
   if (previewLocation) previewLocation.textContent = location;
   if (previewSpeaker) previewSpeaker.textContent = speaker;
-  if (previewPrice) previewPrice.textContent = formatCurrency(amount);
+  if (previewPrice) previewPrice.textContent = displayPrice;
   if (previewImage && previewImage.src !== image) previewImage.src = image;
 }
 
@@ -639,7 +651,7 @@ async function requireAdmin(user) {
 
 async function loadEvents() {
   if (!isAdmin) return;
-  tableBody.innerHTML = `<tr><td colspan="8" class="muted">Memuat data...</td></tr>`;
+  tableBody.innerHTML = `<tr><td colspan="9" class="muted">Memuat data...</td></tr>`;
   try {
     eventsCache.clear();
     const ref = collection(db, "events");
@@ -653,7 +665,7 @@ async function loadEvents() {
       rows.push(item);
     });
     if (!rows.length) {
-      tableBody.innerHTML = `<tr><td colspan="8" class="muted">Belum ada event.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="9" class="muted">Belum ada event.</td></tr>`;
       return;
     }
     tableBody.innerHTML = rows
@@ -663,6 +675,11 @@ async function loadEvents() {
         const capacity = Number(e.capacity) || 0;
         const used = Number(e.seatsUsed) || 0;
         const quotaText = capacity ? `${used}/${capacity}` : "∞";
+        const priceRegular = Number(e.priceRegular ?? e.amount ?? 0);
+        const priceVip = Number(e.priceVip ?? 0);
+        const priceText = priceVip
+          ? `Reg ${formatCurrency(priceRegular)} / VIP ${formatCurrency(priceVip)}`
+          : formatCurrency(priceRegular);
         return `
           <tr>
             <td>${e.title || "-"}</td>
@@ -670,7 +687,7 @@ async function loadEvents() {
             <td><span class="badge ${statusClass}">${e.status || "draft"}</span></td>
             <td>${e.schedule || "-"}</td>
             <td>${e.location || "-"}</td>
-            <td>${formatCurrency(e.amount)}</td>
+            <td>${priceText}</td>
             <td>${quotaText}</td>
             <td>${img}</td>
             <td>
@@ -685,7 +702,7 @@ async function loadEvents() {
     populateEventFilter(rows);
   } catch (err) {
     console.error(err);
-    tableBody.innerHTML = `<tr><td colspan="8" class="muted">Gagal memuat event: ${err.message}</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="9" class="muted">Gagal memuat event: ${err.message}</td></tr>`;
   }
 }
 
@@ -700,7 +717,8 @@ function fillForm(data) {
   eventForm.location.value = data.location || "";
   eventForm.address.value = data.address || "";
   eventForm.speaker.value = data.speaker || "";
-  eventForm.amount.value = data.amount ?? 0;
+  eventForm.priceRegular.value = data.priceRegular ?? data.amount ?? 0;
+  eventForm.priceVip.value = data.priceVip ?? 0;
   eventForm.capacity.value = data.capacity ?? "";
   eventForm.tagline.value = data.tagline || "";
   eventForm.description.value = data.description || "";
@@ -731,7 +749,8 @@ function resetForm() {
   editingSlug = null;
   eventForm.reset();
   eventForm.status.value = "draft";
-  eventForm.amount.value = 0;
+  eventForm.priceRegular.value = 0;
+  eventForm.priceVip.value = 0;
   renderPosterPreview("");
   formStatus.textContent = "";
   updatePreviewFromForm();
@@ -748,6 +767,8 @@ async function saveEvent(e, { forceNew = false, redirectToPublic = false } = {})
     alert("Slug wajib diisi.");
     return;
   }
+  const priceRegular = Number(eventForm.priceRegular.value) || 0;
+  const priceVip = eventForm.priceVip.value ? Number(eventForm.priceVip.value) : null;
   const data = {
     slug,
     title: (eventForm.title.value || "").trim(),
@@ -758,7 +779,9 @@ async function saveEvent(e, { forceNew = false, redirectToPublic = false } = {})
     location: (eventForm.location.value || "").trim(),
     address: (eventForm.address.value || "").trim(),
     speaker: (eventForm.speaker.value || "").trim(),
-    amount: Number(eventForm.amount.value) || 0,
+    amount: priceRegular || 0,
+    priceRegular,
+    priceVip,
     capacity: eventForm.capacity.value ? Number(eventForm.capacity.value) : null,
     tagline: (eventForm.tagline.value || "").trim(),
     description: (eventForm.description.value || "").trim(),

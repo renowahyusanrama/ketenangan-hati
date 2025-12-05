@@ -73,6 +73,7 @@ function normalizeTripayResponse(
     tripayFee,
     totalAmount,
     amountForTripay,
+    ticketType,
   },
 ) {
   const payCode = trx?.pay_code || trx?.va_number || trx?.payment_code || null;
@@ -91,6 +92,7 @@ function normalizeTripayResponse(
     tripayFee: tripayFee ?? null,
     totalAmount: total,
     amountForTripay: chargeAmount,
+    ticketType: ticketType || "regular",
     paymentType,
     bank: bank || null,
     method,

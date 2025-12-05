@@ -91,7 +91,6 @@ function renderList(data) {
               ${e.speaker ? `<li><i class="fa-regular fa-user"></i> ${e.speaker}</li>` : ""}
             </ul>
             <div class="card-footer">
-              <span class="price">${formatCurrency(e.amount)}</span>
               <a href="event-detail.html?event=${slug}" class="btn btn-primary">Daftar</a>
             </div>
           </div>

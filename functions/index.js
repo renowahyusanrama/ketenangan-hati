@@ -26,27 +26,30 @@ if (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) {
 const eventsMap = {
   "kajian-tafsir-al-baqarah": {
     title: "Kajian Tafsir Al-Quran Surat Al-Baqarah",
-    amount: 0,
+    priceRegular: 0,
   },
   "fiqih-muamalat-modern": {
     title: "Seminar Fiqih Muamalat dalam Kehidupan Modern",
-    amount: 50000,
+    priceRegular: 50000,
+    priceVip: 100000,
   },
   "hadits-arbain": {
     title: "Kajian Hadits Arbain An-Nawawi",
-    amount: 70000,
+    priceRegular: 70000,
+    priceVip: 120000,
   },
   "workshop-tahsin-tajwid": {
     title: "Workshop Tahsin dan Tajwid Al-Quran",
-    amount: 100000,
+    priceRegular: 100000,
+    priceVip: 150000,
   },
   "sirah-nabawiyah-mekkah": {
     title: "Kajian Sirah Nabawiyah: Periode Mekkah",
-    amount: 120000,
+    priceRegular: 120000,
   },
   "seminar-parenting-islami": {
     title: "Seminar Parenting Islami",
-    amount: 150000,
+    priceRegular: 150000,
   },
 };
 
@@ -164,6 +167,20 @@ function mapStatus(status = "") {
   return statusMap[normalized] || normalized.toLowerCase() || "pending";
 }
 
+async function getEventData(eventId) {
+  if (!eventId) return null;
+  try {
+    const snap = await db.collection("events").doc(eventId).get();
+    if (snap.exists) {
+      return { id: snap.id, ...snap.data() };
+    }
+  } catch (err) {
+    console.warn("Firestore event lookup failed:", err?.message || err);
+  }
+  const fallback = eventsMap[eventId];
+  return fallback ? { id: eventId, ...fallback } : null;
+}
+
 app.get("/ping", (_req, res) => {
   res.json({
     status: "ok",
@@ -175,45 +192,81 @@ app.get("/ping", (_req, res) => {
 
 app.post("/payments/create", async (req, res) => {
   try {
-    if (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) {
-      return res.status(500).json({ error: "Tripay belum dikonfigurasi." });
-    }
-
-    const { eventId, paymentType, bank, customer } = req.body || {};
-    const event = eventsMap[eventId];
+    const { eventId, paymentType, bank, customer, ticketType } = req.body || {};
+    const event = await getEventData(eventId);
 
     if (!event) {
       return res.status(400).json({ error: "Event tidak dikenal." });
     }
-    if (!event.amount || Number(event.amount) <= 0) {
+    const type = (ticketType || "regular").toLowerCase() === "vip" ? "vip" : "regular";
+    const priceRegular = Number(event.priceRegular ?? event.amount ?? 0) || 0;
+    const priceVip = event.priceVip != null ? Number(event.priceVip) : null;
+    let selectedAmount = type === "vip" ? priceVip || priceRegular : priceRegular;
+    if (selectedAmount < 0) selectedAmount = 0;
+
+    if (selectedAmount <= 0 && paymentType !== "free") {
       return res.status(400).json({ error: "Event ini gratis, tidak perlu pembayaran." });
     }
-    if (!["bank_transfer", "qris"].includes(paymentType)) {
+    if (selectedAmount > 0 && !["bank_transfer", "qris"].includes(paymentType)) {
       return res
         .status(400)
         .json({ error: "paymentType harus bank_transfer atau qris." });
     }
+    if (selectedAmount > 0 && (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE)) {
+      return res.status(500).json({ error: "Tripay belum dikonfigurasi." });
+    }
+
+    // free ticket -> langsung tandai paid
+    if (selectedAmount <= 0) {
+      const reference = `FREE-${eventId}-${type}-${Date.now()}`;
+      await db.collection("orders").doc(reference).set({
+        provider: "free",
+        eventId,
+        eventTitle: event.title || eventId,
+        amount: 0,
+        totalAmount: 0,
+        paymentType: "free",
+        ticketType: type,
+        customer: {
+          name: customer?.name || "Peserta",
+          email: customer?.email || "peserta@example.com",
+          phone: customer?.phone || "",
+        },
+        status: "paid",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        paidAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return res.json({
+        status: "paid",
+        paymentType: "free",
+        amount: 0,
+        totalAmount: 0,
+        reference,
+        orderId: reference,
+        ticketType: type,
+      });
+    }
 
     const method = resolveTripayMethod(paymentType, bank);
-    const merchantRef = `${eventId}-${Date.now()}`;
+    const merchantRef = `${eventId}-${type}-${Date.now()}`;
 
     const payload = {
       method,
       merchant_ref: merchantRef,
-      amount: Number(event.amount),
+      amount: Number(selectedAmount),
       customer_name: customer?.name || "Peserta",
       customer_email: customer?.email || "peserta@example.com",
       customer_phone: customer?.phone || "",
       order_items: [
         {
           sku: eventId,
-          name: event.title,
-          price: Number(event.amount),
+          name: `${event.title || eventId} - ${type.toUpperCase()}`,
+          price: Number(selectedAmount),
           quantity: 1,
-          subtotal: Number(event.amount),
+          subtotal: Number(selectedAmount),
         },
       ],
-      signature: createTripaySignature(merchantRef, event.amount),
+      signature: createTripaySignature(merchantRef, selectedAmount),
       expired_time: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
     };
 
@@ -236,14 +289,16 @@ app.post("/payments/create", async (req, res) => {
       bank,
       method,
       merchantRef,
-      amount: Number(event.amount),
+      amount: Number(selectedAmount),
     });
+    normalized.ticketType = type;
 
     await db.collection("orders").doc(merchantRef).set({
       provider: "tripay",
       eventId,
       eventTitle: event.title,
-      amount: Number(event.amount),
+      amount: Number(selectedAmount),
+      totalAmount: Number(selectedAmount),
       paymentType,
       bank: bank || null,
       method,
@@ -256,6 +311,7 @@ app.post("/payments/create", async (req, res) => {
       },
       tripay: tripayResponse,
       status: mapStatus(tripayData?.status || tripayResponse?.status),
+      ticketType: type,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 

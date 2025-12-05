@@ -119,10 +119,18 @@
                 <div><i class="fa-regular fa-clock"></i><span id="eventTime">Waktu</span></div>
                 <div><i class="fa-solid fa-location-dot"></i><span id="eventAddress">Alamat lengkap</span></div>
               </div>
+              <div class="ticket-choice" id="ticketChoice">
+                <p class="label">Pilih Tiket</p>
+                <div class="ticket-buttons">
+                  <button type="button" class="ticket-btn active" data-ticket="regular" id="ticketRegularBtn">Reguler <span id="priceRegularLabel"></span></button>
+                  <button type="button" class="ticket-btn" data-ticket="vip" id="ticketVipBtn">VIP <span id="priceVipLabel"></span></button>
+                </div>
+              </div>
 
             <div class="payment-form" id="paymentSection">
               <h4>Pendaftaran Online</h4>
               <form id="paymentForm">
+                <input type="hidden" name="ticketType" value="regular">
                 <label class="label">Nama Lengkap</label>
                 <input type="text" class="input" name="name" placeholder="Nama peserta" required>
 

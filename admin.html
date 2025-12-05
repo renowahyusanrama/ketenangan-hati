@@ -153,6 +153,59 @@
       display:flex;
       gap:10px;
       align-items:center;
+      flex-wrap:wrap;
+      position:relative;
+    }
+    .mobile-menu-btn{
+      display:none;
+      width:42px;
+      height:42px;
+      border-radius:12px;
+      border:1px solid rgba(15,23,42,0.12);
+      background:#0b63c5;
+      color:#f8fafc;
+      align-items:center;
+      justify-content:center;
+      box-shadow:var(--shadow);
+      padding:0;
+    }
+    .mobile-menu-btn:hover{
+      background:#0a57ad;
+    }
+    .mobile-menu-btn.open{
+      background:#094fa5;
+      border-color:rgba(255,255,255,0.2);
+    }
+    .mobile-nav-panel{
+      position:absolute;
+      top:calc(100% + 10px);
+      right:0;
+      background:#0b63c5;
+      border:1px solid rgba(255,255,255,0.14);
+      border-radius:14px;
+      padding:12px;
+      box-shadow:var(--shadow-lg);
+      display:none;
+      flex-direction:column;
+      gap:8px;
+      min-width:220px;
+      z-index:15;
+    }
+    .mobile-nav-panel.open{
+      display:flex;
+    }
+    .mobile-nav-panel .nav-link{
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.16);
+      color:#f8fafc;
+      width:100%;
+      box-shadow:none;
+    }
+    .mobile-nav-panel .nav-link.active{
+      background:#fff;
+      color:#0f172a;
+      border-color:#dbeafe;
+      box-shadow:var(--shadow);
     }
     .main-scroll{
       padding:24px;
@@ -615,6 +668,22 @@
         margin-top: 24px;
       }
     }
+
+    @media (max-width: 960px) {
+      .sidebar{
+        display:none;
+      }
+      .admin-shell{
+        grid-template-columns:1fr;
+      }
+      .mobile-menu-btn{
+        display:inline-flex;
+      }
+      .topbar-actions{
+        width:100%;
+        justify-content:flex-start;
+      }
+    }
     
     @media (max-width: 720px) {
       .topbar { 
@@ -663,9 +732,18 @@
       <div class="topbar">
         <div class="topbar-title" id="pageTitle">Statistik Pesanan</div>
         <div class="topbar-actions">
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Buka menu dashboard" aria-expanded="false">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+          </button>
           <span id="userInfo" class="pill muted">Belum login</span>
           <button id="loginBtn"><i class="fa-brands fa-google"></i> Login</button>
           <button id="logoutBtn" class="outline hidden">Logout</button>
+          <div class="mobile-nav-panel" id="mobileNavPanel">
+            <button class="nav-link active" data-target="page-stats"><i class="fa-solid fa-chart-line"></i> Statistik</button>
+            <button class="nav-link" data-target="page-kelola"><i class="fa-regular fa-pen-to-square"></i> Kelola Event</button>
+            <button class="nav-link" data-target="page-daftar"><i class="fa-regular fa-calendar"></i> Daftar Event</button>
+            <button class="nav-link" data-target="page-transaksi"><i class="fa-solid fa-receipt"></i> Transaksi</button>
+          </div>
         </div>
       </div>
 
@@ -773,10 +851,14 @@
                         <label>Pemateri</label>
                         <input name="speaker" type="text" placeholder="Nama ustadz/ustadzah" />
                       </div>
-                      <div>
-                        <label>Harga (0 untuk gratis)</label>
-                        <input name="amount" type="number" min="0" step="1000" value="0" />
-                      </div>
+              <div>
+                <label>Harga Reguler (0 untuk gratis)</label>
+                <input name="priceRegular" type="number" min="0" step="1000" value="0" />
+              </div>
+              <div>
+                <label>Harga VIP (opsional)</label>
+                <input name="priceVip" type="number" min="0" step="1000" value="0" />
+              </div>
                       <div>
                         <label>Kapasitas (opsional)</label>
                         <input name="capacity" type="number" min="0" step="1" />
@@ -964,13 +1046,14 @@
                   <table class="table" id="ordersTable">
                     <thead>
                       <tr>
-                        <th>Ref</th>
-                        <th>Event</th>
-                        <th>Customer</th>
-                        <th>Metode</th>
-                        <th>Status</th>
-                        <th>Check-in</th>
-                        <th>Total</th>
+                <th>Ref</th>
+                <th>Event</th>
+                <th>Tipe</th>
+                <th>Customer</th>
+                <th>Metode</th>
+                <th>Status</th>
+                <th>Check-in</th>
+                <th>Total</th>
                         <th>Dibuat</th>
                       </tr>
                     </thead>
@@ -994,6 +1077,8 @@
 
   <script>
     const navButtons = document.querySelectorAll('.nav-link');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileNavPanel = document.getElementById('mobileNavPanel');
     const pageTitleEl = document.getElementById('pageTitle');
     const pageTitles = {
       'page-stats': 'Statistik Pesanan',
@@ -1001,6 +1086,15 @@
       'page-daftar': 'Daftar Event',
       'page-transaksi': 'Transaksi',
     };
+    function closeMobileNav() {
+      if (mobileNavPanel) {
+        mobileNavPanel.classList.remove('open');
+      }
+      if (mobileMenuBtn) {
+        mobileMenuBtn.classList.remove('open');
+        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+      }
+    }
     function switchAdminPage(targetId) {
       const pages = document.querySelectorAll('.page');
       pages.forEach((page) => {
@@ -1012,9 +1106,26 @@
       if (pageTitleEl) {
         pageTitleEl.textContent = pageTitles[targetId] || 'Dashboard Admin';
       }
+      closeMobileNav();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     window.switchAdminPage = switchAdminPage;
+    if (mobileMenuBtn && mobileNavPanel) {
+      mobileMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        mobileMenuBtn.classList.toggle('open');
+        mobileNavPanel.classList.toggle('open');
+        mobileMenuBtn.setAttribute(
+          'aria-expanded',
+          mobileMenuBtn.classList.contains('open') ? 'true' : 'false'
+        );
+      });
+      document.addEventListener('click', (e) => {
+        if (!mobileNavPanel.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+          closeMobileNav();
+        }
+      });
+    }
     navButtons.forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();

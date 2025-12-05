@@ -404,6 +404,7 @@ function renderPaymentResult(container, data) {
   }
 }
 
+
 function initPaymentForm(event) {
   const form = document.getElementById("paymentForm");
   const methodButtons = document.querySelectorAll(".method-btn");
@@ -411,13 +412,21 @@ function initPaymentForm(event) {
   const hint = document.getElementById("paymentHint");
   const payBtn = document.getElementById("payNowBtn");
   const methodGrid = document.querySelector(".method-grid");
+  const ticketTypeInput = form?.querySelector('input[name="ticketType"]');
+  const ticketRegularBtn = document.getElementById("ticketRegularBtn");
+  const ticketVipBtn = document.getElementById("ticketVipBtn");
+  const priceRegularLabel = document.getElementById("priceRegularLabel");
+  const priceVipLabel = document.getElementById("priceVipLabel");
 
   if (!form) return;
 
+  const priceRegular = Number(event.priceRegular || 0);
+  const priceVip = event.priceVip != null ? Number(event.priceVip) : null;
+  let selectedTicket = priceRegular ? "regular" : priceVip ? "vip" : "regular";
+  let selectedPrice = selectedTicket === "vip" ? priceVip || 0 : priceRegular || 0;
   let method = "qris";
   let bank = null;
-  const isFree = event && !event.amount; // amount 0 => gratis
-  const defaultPayLabel = isFree ? "Kirim E-Ticket" : "Buat Tagihan";
+  const defaultPayLabel = selectedPrice > 0 ? "Buat Tagihan" : "Kirim E-Ticket";
 
   function setHint(message, variant = "info") {
     if (!hint) return;
@@ -430,34 +439,72 @@ function initPaymentForm(event) {
     if (payBtn) payBtn.textContent = label;
   }
 
-  // Event GRATIS: sembunyikan pilihan metode & ubah CTA
-  if (isFree) {
-    method = "free";
-    bank = null;
-    methodGrid?.classList.add("hidden");
-    methodButtons.forEach((btn) => {
-      btn.setAttribute("disabled", "true");
-      btn.classList.remove("active");
-    });
-    setPayLabel("Kirim E-Ticket");
-    setHint("Event gratis, e-ticket akan dikirim otomatis tanpa pembayaran.", "success");
-  } else {
-    // Event BERBAYAR: pilihan QRIS / VA tetap seperti biasa
-    methodButtons.forEach((btn, index) => {
-      btn.addEventListener("click", () => {
-        const chosen = btn.dataset.method;
-        method = chosen === "va" ? "bank_transfer" : "qris";
-        bank = chosen === "va" ? btn.dataset.bank || null : null;
-        methodButtons.forEach((b) => b.classList.toggle("active", b === btn));
-        setHint(
-          method === "bank_transfer"
-            ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
-            : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
-        );
+  function updateTicketSelection(type) {
+    selectedTicket = type === "vip" ? "vip" : "regular";
+    selectedPrice = selectedTicket === "vip" ? priceVip || priceRegular || 0 : priceRegular || 0;
+    if (ticketTypeInput) ticketTypeInput.value = selectedTicket;
+    ticketRegularBtn?.classList.toggle("active", selectedTicket === "regular");
+    ticketVipBtn?.classList.toggle("active", selectedTicket === "vip");
+
+    const isFree = selectedPrice <= 0;
+    if (isFree) {
+      method = "free";
+      bank = null;
+      methodGrid?.classList.add("hidden");
+      methodButtons.forEach((btn) => {
+        btn.setAttribute("disabled", "true");
+        btn.classList.remove("active");
       });
-      if (index === 0) btn.click();
-    });
+      setPayLabel("Kirim E-Ticket");
+      setHint("Event gratis, e-ticket akan dikirim otomatis tanpa pembayaran.", "success");
+    } else {
+      methodGrid?.classList.remove("hidden");
+      methodButtons.forEach((btn) => btn.removeAttribute("disabled"));
+      if (!method || method === "free") method = "qris";
+      setPayLabel(defaultPayLabel);
+      setHint("Silakan isi data peserta dengan email Gmail lalu pilih metode pembayaran.");
+    }
+
+    const priceDisplay = document.getElementById("eventPrice");
+    if (priceDisplay) {
+      if (priceVip) {
+        priceDisplay.textContent = selectedTicket === "vip" ? formatCurrency(priceVip) : formatCurrency(priceRegular);
+      } else {
+        priceDisplay.textContent = selectedPrice ? formatCurrency(selectedPrice) : "Gratis";
+      }
+    }
   }
+
+  if (priceRegularLabel) priceRegularLabel.textContent = priceRegular ? formatCurrency(priceRegular) : "Gratis";
+  if (priceVipLabel) {
+    if (priceVip) {
+      priceVipLabel.textContent = formatCurrency(priceVip);
+      ticketVipBtn?.classList.remove("hidden");
+      ticketVipBtn?.removeAttribute("disabled");
+    } else {
+      priceVipLabel.textContent = "N/A";
+      ticketVipBtn?.setAttribute("disabled", "true");
+      ticketVipBtn?.classList.add("hidden");
+    }
+  }
+  ticketRegularBtn?.addEventListener("click", () => updateTicketSelection("regular"));
+  ticketVipBtn?.addEventListener("click", () => updateTicketSelection("vip"));
+  updateTicketSelection(selectedTicket);
+
+  methodButtons.forEach((btn, index) => {
+    btn.addEventListener("click", () => {
+      const chosen = btn.dataset.method;
+      method = chosen === "va" ? "bank_transfer" : "qris";
+      bank = chosen === "va" ? btn.dataset.bank || null : null;
+      methodButtons.forEach((b) => b.classList.toggle("active", b === btn));
+      setHint(
+        method === "bank_transfer"
+          ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
+          : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
+      );
+    });
+    if (index === 0) btn.click();
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -467,6 +514,7 @@ function initPaymentForm(event) {
     }
 
     resultBox?.classList.add("hidden");
+    const isFree = selectedPrice <= 0;
     setHint(isFree ? "Memproses e-ticket gratis..." : "Membuat tagihan pembayaran...", "info");
     payBtn.disabled = true;
     setPayLabel("Memproses...");
@@ -484,6 +532,7 @@ function initPaymentForm(event) {
       eventId: event.id,
       paymentType: isFree ? "free" : method,
       bank: isFree ? null : method === "bank_transfer" ? bank || "bca" : null,
+      ticketType: selectedTicket,
       customer: {
         name: formData.get("name")?.toString() || "",
         email,
@@ -532,33 +581,31 @@ function initPaymentForm(event) {
                 statusPayload.ticketEmail?.recipient ||
                 data.ticketEmailRecipient,
             };
-            if (statusValue === "paid") {
-              renderPaymentSuccess(resultBox, mergedData);
-              setHint("Pembayaran berhasil, e-ticket Anda sudah terkirim.", "success");
+            renderPaymentResult(resultBox, mergedData);
+            if (["paid", "failed", "expired", "canceled", "refunded"].includes(statusValue)) {
               activeOrderStatusPoll?.stop();
-              activeOrderStatusPoll = null;
-              return;
-            }
-            if (["failed", "expired", "canceled", "refunded"].includes(statusValue)) {
-              renderPaymentResult(resultBox, mergedData);
-              setHint(`Status pembayaran: ${statusValue.toUpperCase()}.`, "warning");
-              activeOrderStatusPoll?.stop();
-              activeOrderStatusPoll = null;
+              setHint(
+                statusValue === "paid"
+                  ? "Pembayaran berhasil, e-ticket Anda sudah terkirim."
+                  : `Status pembayaran: ${statusValue.toUpperCase()}`,
+                statusValue === "paid" ? "success" : "warning",
+              );
             }
           };
-          const poller = startOrderStatusPolling(orderKey, handleStatusUpdate);
-          if (poller) activeOrderStatusPoll = poller;
+          activeOrderStatusPoll = startOrderStatusPolling(orderKey, handleStatusUpdate);
         }
       }
-    } catch (error) {
-      console.error(error);
-      setHint(error.message || "Gagal membuat pembayaran.", "error");
+    } catch (err) {
+      console.error(err);
+      setHint(err.message || "Gagal memproses pembayaran.", "error");
+      renderPaymentResult(resultBox, null);
     } finally {
       payBtn.disabled = false;
       setPayLabel(defaultPayLabel);
     }
   });
 }
+
 
 async function fetchEventBySlug(slug) {
   if (!slug) return null;
@@ -641,8 +688,9 @@ function normalizeEvent(raw, slug) {
     location: raw.location || "",
     address: raw.address || "",
     speaker: raw.speaker || "",
-    amount: Number(raw.amount) || 0,
-    priceLabel: raw.priceLabel || (Number(raw.amount) ? null : "Gratis"),
+    priceRegular: Number(raw.priceRegular ?? raw.amount ?? 0) || 0,
+    priceVip: raw.priceVip != null ? Number(raw.priceVip) : null,
+    priceLabel: raw.priceLabel || (Number(raw.priceRegular ?? raw.amount) ? null : "Gratis"),
     description: raw.description || "",
     highlights: raw.highlights || [],
     agenda: raw.agenda || [],
@@ -674,7 +722,13 @@ function renderEvent(event) {
   setText("eventLocation", event.location);
   setText("eventSpeaker", event.speaker);
   setText("eventDescription", event.description);
-  setText("eventPrice", event.amount ? formatCurrency(event.amount) : event.priceLabel || "Gratis");
+  const priceRegular = Number(event.priceRegular || 0);
+  const priceVip = event.priceVip != null ? Number(event.priceVip) : null;
+  let priceText = priceRegular ? formatCurrency(priceRegular) : event.priceLabel || "Gratis";
+  if (priceVip) {
+    priceText = `Reg: ${formatCurrency(priceRegular)} / VIP: ${formatCurrency(priceVip)}`;
+  }
+  setText("eventPrice", priceText);
   setText("eventTime", event.time);
   setText("eventAddress", event.address);
 

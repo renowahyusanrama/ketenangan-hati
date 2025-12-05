@@ -24,27 +24,30 @@ const CORS_HEADERS = {
 const eventsMap = {
   "kajian-tafsir-al-baqarah": {
     title: "Kajian Tafsir Al-Quran Surat Al-Baqarah",
-    amount: 0,
+    priceRegular: 0,
   },
   "fiqih-muamalat-modern": {
     title: "Seminar Fiqih Muamalat dalam Kehidupan Modern",
-    amount: 50000,
+    priceRegular: 50000,
+    priceVip: 100000,
   },
   "hadits-arbain": {
     title: "Kajian Hadits Arbain An-Nawawi",
-    amount: 70000,
+    priceRegular: 70000,
+    priceVip: 120000,
   },
   "workshop-tahsin-tajwid": {
     title: "Workshop Tahsin dan Tajwid Al-Quran",
-    amount: 100000,
+    priceRegular: 100000,
+    priceVip: 150000,
   },
   "sirah-nabawiyah-mekkah": {
     title: "Kajian Sirah Nabawiyah: Periode Mekkah",
-    amount: 120000,
+    priceRegular: 120000,
   },
   "seminar-parenting-islami": {
     title: "Seminar Parenting Islami",
-    amount: 150000,
+    priceRegular: 150000,
   },
 };
 
@@ -132,7 +135,7 @@ module.exports = async (req, res) => {
   }
 
   const body = parseBody(req);
-  const { eventId, paymentType, bank, customer } = body || {};
+  const { eventId, paymentType, bank, customer, ticketType } = body || {};
 
   const db = getDb();
   const event = await fetchEvent(db, eventId);
@@ -141,9 +144,13 @@ module.exports = async (req, res) => {
     return send(res, 400, { error: "Event tidak dikenal." });
   }
 
-  const eventAmount = Number(event.amount) || 0;
-  const isFree = eventAmount <= 0;
-  const merchantRef = `${eventId}-${Date.now()}`;
+  const type = (ticketType || "regular").toLowerCase() === "vip" ? "vip" : "regular";
+  const priceRegular = Number(event.priceRegular ?? event.amount ?? 0) || 0;
+  const priceVip = event.priceVip != null ? Number(event.priceVip) : null;
+  let selectedAmount = type === "vip" ? priceVip || priceRegular : priceRegular;
+  if (selectedAmount < 0) selectedAmount = 0;
+  const isFree = selectedAmount <= 0;
+  const merchantRef = `${eventId}-${type}-${Date.now()}`;
 
   // 1) EVENT GRATIS
   if (isFree) {
@@ -166,6 +173,7 @@ module.exports = async (req, res) => {
       totalAmount: 0,
       amountForTripay: 0,
       paymentType: "free",
+      ticketType: type,
       bank: null,
       method: "free",
       merchantRef,
@@ -232,7 +240,7 @@ module.exports = async (req, res) => {
   const { platformTax, tripayFee, amountForTripay, totalCustomer, baseAmount } = computeFees(
     paymentType,
     bank,
-    eventAmount,
+    selectedAmount,
   );
 
   const callbackUrl =
@@ -249,7 +257,7 @@ module.exports = async (req, res) => {
     order_items: [
       {
         sku: eventId,
-        name: event.title,
+        name: `${event.title || eventId} - ${type.toUpperCase()}`,
         price: amountForTripay,
         quantity: 1,
         subtotal: amountForTripay,
@@ -282,6 +290,7 @@ module.exports = async (req, res) => {
       tripayFee,
       totalAmount: totalCustomer,
       amountForTripay,
+      ticketType: type,
     });
 
     const ticketEmailMeta = {
@@ -304,6 +313,7 @@ module.exports = async (req, res) => {
       totalAmount: totalCustomer,
       amountForTripay,
       paymentType,
+      ticketType: type,
       bank: bank || null,
       method,
       merchantRef,
