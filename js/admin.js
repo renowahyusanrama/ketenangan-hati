@@ -682,18 +682,20 @@ async function loadEvents() {
           : formatCurrency(priceRegular);
         return `
           <tr>
-            <td>${e.title || "-"}</td>
-            <td>${e.slug || e.id}</td>
-            <td><span class="badge ${statusClass}">${e.status || "draft"}</span></td>
-            <td>${e.schedule || "-"}</td>
-            <td>${e.location || "-"}</td>
-            <td>${priceText}</td>
-            <td>${quotaText}</td>
-            <td>${img}</td>
-            <td>
-              <button class="outline" data-edit="${e.id}">Edit</button>
-              <button class="outline" data-duplicate="${e.id}">Duplikat</button>
-              <button class="danger" data-delete="${e.id}">Hapus</button>
+            <td data-label="Judul">${e.title || "-"}</td>
+            <td data-label="Slug">${e.slug || e.id}</td>
+            <td data-label="Status"><span class="badge ${statusClass}">${e.status || "draft"}</span></td>
+            <td data-label="Tanggal">${e.schedule || "-"}</td>
+            <td data-label="Lokasi">${e.location || "-"}</td>
+            <td data-label="Harga">${priceText}</td>
+            <td data-label="Kuota">${quotaText}</td>
+            <td data-label="Poster">${img}</td>
+            <td data-label="Aksi">
+              <div class="table-actions">
+                <button class="outline" data-edit="${e.id}">Edit</button>
+                <button class="outline" data-duplicate="${e.id}">Duplikat</button>
+                <button class="danger" data-delete="${e.id}">Hapus</button>
+              </div>
             </td>
           </tr>
         `;

@@ -797,17 +797,23 @@
         min-width:0 !important;
         width:100% !important;
       }
-      #ordersTable thead{
+      #ordersTable thead,
+      #eventsTable thead{
         display:none;
       }
       #ordersTable, 
       #ordersTable tbody,
       #ordersTable tr,
-      #ordersTable td{
+      #ordersTable td,
+      #eventsTable,
+      #eventsTable tbody,
+      #eventsTable tr,
+      #eventsTable td{
         display:block;
         width:100%;
       }
-      #ordersTable tbody tr{
+      #ordersTable tbody tr,
+      #eventsTable tbody tr{
         margin-bottom:12px;
         padding:12px;
         border:1px solid var(--border);
@@ -815,31 +821,48 @@
         background:var(--panel);
         box-shadow:var(--shadow);
       }
-      #ordersTable tbody tr td{
+      #ordersTable tbody tr td,
+      #eventsTable tbody tr td{
         padding:6px 0;
         border-bottom:1px solid var(--border);
         display:flex;
         gap:8px;
         align-items:flex-start;
+        word-break: normal;
+        overflow-wrap: anywhere;
       }
-      #ordersTable tbody tr td:last-child{
+      #ordersTable tbody tr td:last-child,
+      #eventsTable tbody tr td:last-child{
         border-bottom:none;
       }
-      #ordersTable tbody tr td::before{
+      #ordersTable tbody tr td::before,
+      #eventsTable tbody tr td::before{
         content: attr(data-label);
         font-weight:600;
         color: var(--muted);
         min-width:110px;
         text-transform: capitalize;
       }
-      #ordersTable tbody tr td[colspan]{
+      #ordersTable tbody tr td[colspan],
+      #eventsTable tbody tr td[colspan]{
         display:block;
         border-bottom:none;
         padding:8px 0;
       }
-      #ordersTable tbody tr td[colspan]::before{
+      #ordersTable tbody tr td[colspan]::before,
+      #eventsTable tbody tr td[colspan]::before{
         content:"";
         display:none;
+      }
+      #eventsTable tbody tr td .table-actions{
+        width:100%;
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+      }
+      #eventsTable tbody tr td .table-actions button{
+        flex:1 1 45%;
+        min-width:120px;
       }
     }
 </style>
