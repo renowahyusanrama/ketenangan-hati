@@ -178,7 +178,7 @@ body.no-scroll{
     left:50%;
     top:50%;
     transform:translate(-50%,-50%);
-    width:300px;
+    width:220px;
     height:auto;
 }
 .brand-center img{
@@ -954,7 +954,20 @@ body.no-scroll{
 /* ===== Responsive ===== */
 @media (max-width: 1024px){
     .cards{ grid-template-columns: repeat(2, 1fr) }
-    .nav{ min-height:80px; }
+    .nav{ 
+        min-height:80px;
+        justify-content:flex-start;
+        gap:12px;
+    }
+    .brand-center{
+        position:static;
+        transform:none;
+        width:200px;
+        margin-left:6px;
+    }
+    .nav-right{
+        margin-left:auto;
+    }
     .brand-logo{ width:68px; height:68px; } /* Sesuaikan ukuran logo di tablet */
     .brand-logo-small{ width:60px; height:60px; }
     .nav-links a{ font-size:0.9rem; }
@@ -966,6 +979,7 @@ body.no-scroll{
 
 @media (max-width: 720px){
     .nav-toggle{ display:flex }
+    .nav{ gap:10px; }
     .nav-links{
         position:fixed; top:80px; left:0; right:0; /* Sesuaikan top dengan navbar height */
         background:#fff; border-bottom:1px solid var(--border);
@@ -986,7 +1000,7 @@ body.no-scroll{
     .footer-inner{ flex-direction:column; text-align:center; }
     .footer-brand .brand-logo{ width:60px; height:60px; } /* Ukuran logo di mobile */
     .menu-panel{ width:80vw; min-width:auto; border-radius:0 16px 16px 0; }
-    .brand-center{ width:220px; }
+    .brand-center{ width:160px; margin-left:4px; }
     .icon-btn, .nav-burger{ width:44px; height:44px; }
     .icon-btn img{ width:28px; height:28px; }
     .event-slider{ padding:0 16px; }
