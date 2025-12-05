@@ -1022,6 +1022,25 @@ body.no-scroll{
     .dzikir-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px; padding-inline:8px; }
     .dzikir-card{ min-height:130px; max-width:130px; }
     .dzikir-text{ font-size:14px; line-height:1.2; padding:8px; }
+
+    /* Rapikan footer kartu di layar kecil */
+    .card-footer{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:12px;
+        padding:16px;
+    }
+    .card-footer .price{
+        margin-bottom:2px;
+    }
+    .card .btn-primary{
+        width:100%;
+        min-width:0;
+        height:44px;
+        padding:0 18px;
+        font-size:15px;
+        justify-content:center;
+    }
 }
 
 /* ======= LOGIN MODAL ======= */
