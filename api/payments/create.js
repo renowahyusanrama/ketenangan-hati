@@ -124,6 +124,14 @@ async function fetchEvent(db, eventId) {
   const fallback = eventsMap[eventId];
   return fallback ? { id: eventId, ...fallback } : null;
 }
+function makeMerchantRef(eventId, ticketType) {
+  const ts = Date.now();
+  const rand = Math.random().toString(36).slice(2, 8);
+  const type = ticketType || 'reg';
+  return `${eventId}-${type}-${ts}-${rand}`;
+}
+
+
 
 module.exports = async (req, res) => {
   if (req.method === "OPTIONS") {
@@ -144,13 +152,13 @@ module.exports = async (req, res) => {
     return send(res, 400, { error: "Event tidak dikenal." });
   }
 
-  const type = (ticketType || "regular").toLowerCase() === "vip" ? "vip" : "regular";
+  const type = (ticketType || 'regular').toLowerCase() === 'vip' ? 'vip' : 'regular';
   const priceRegular = Number(event.priceRegular ?? event.amount ?? 0) || 0;
   const priceVip = event.priceVip != null ? Number(event.priceVip) : null;
   let selectedAmount = type === "vip" ? priceVip || priceRegular : priceRegular;
   if (selectedAmount < 0) selectedAmount = 0;
   const isFree = selectedAmount <= 0;
-  const merchantRef = `${eventId}-${type}-${Date.now()}`;
+  const merchantRef = makeMerchantRef(eventId, type);
 
   // 1) EVENT GRATIS
   if (isFree) {

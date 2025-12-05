@@ -248,7 +248,7 @@ app.post("/payments/create", async (req, res) => {
     }
 
     const method = resolveTripayMethod(paymentType, bank);
-    const merchantRef = `${eventId}-${type}-${Date.now()}`;
+    const merchantRef = `${eventId}-${type}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
     const payload = {
       method,
