@@ -210,6 +210,13 @@ body.no-scroll{
     transform:translateY(-1px);
     box-shadow:0 10px 24px rgba(55,117,181,0.16);
 }
+.back-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+    color:#0f172a;
+}
 .auth-slot-inline{ display:none !important; }
 
 .profile-dropdown{

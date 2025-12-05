@@ -18,6 +18,7 @@
   inset: 0;
   background: linear-gradient(180deg, rgba(22,74,132,0.78), rgba(55,117,181,0.72));
 }
+.event-hero .chip{ display:none !important; }
 
 .event-hero .hero-content {
   position: relative;
@@ -217,6 +218,25 @@
   width: 100%;
   margin-bottom: 16px;
 }
+.booking-card .btn-primary{
+  height:52px;
+  border-radius:999px;
+  border:0;
+  background:linear-gradient(135deg, #3775B5, #2f64a0);
+  color:#fff;
+  font-weight:700;
+  letter-spacing:0.2px;
+  box-shadow:0 12px 30px rgba(55,117,181,0.28);
+  transition:all 0.25s ease;
+}
+.booking-card .btn-primary:hover{
+  transform:translateY(-2px);
+  box-shadow:0 16px 36px rgba(55,117,181,0.32);
+}
+.booking-card .btn-primary:active{
+  transform:translateY(0);
+  box-shadow:0 10px 24px rgba(55,117,181,0.28);
+}
 
 .contact-hint {
   font-size: 0.9rem;
@@ -247,6 +267,16 @@
   border-radius: 18px;
   padding: 20px 22px;
 }
+.preparation-block{
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  margin-top: 10px;
+}
+.preparation-block h4{
+  margin-bottom: 12px;
+}
 
 .info-box h4 {
   margin-bottom: 12px;
@@ -257,6 +287,36 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 20px;
+}
+.recommended .chip{ display:none !important; }
+
+.floating-back{
+  position:fixed;
+  right:22px;
+  bottom:22px;
+  min-width:120px;
+  height:50px;
+  padding:0 18px;
+  border-radius:999px;
+  background:linear-gradient(135deg, #3775B5, #2f64a0);
+  color:#fff;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+  letter-spacing:0.2px;
+  box-shadow:0 18px 38px rgba(55,117,181,0.3);
+  z-index:160;
+  text-decoration:none;
+  transition:all 0.2s ease;
+}
+.floating-back:hover{
+  transform:translateY(-2px);
+  box-shadow:0 22px 46px rgba(55,117,181,0.32);
+}
+.floating-back:active{
+  transform:translateY(0);
+  box-shadow:0 16px 32px rgba(55,117,181,0.28);
 }
 
 .empty-state {
@@ -306,9 +366,8 @@
   .event-layout {
     grid-template-columns: 1fr;
   }
-  .event-sidebar {
-    order: -1;
-  }
+  .event-main { order: 1; }
+  .event-sidebar { order: 2; }
 }
 
 @media (max-width: 768px) {
