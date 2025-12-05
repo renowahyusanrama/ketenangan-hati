@@ -118,6 +118,20 @@ let qrScanning = false;
 const SCAN_DELAY_MS = 300;
 const SCAN_COOLDOWN_MS = 1200;
 let scanBusy = false;
+
+function showLoggedOutUI() {
+  userInfo.textContent = "";
+  userInfo?.classList.add("hidden");
+  loginBtn?.classList.remove("hidden");
+  logoutBtn?.classList.add("hidden");
+}
+
+function showLoggedInUI(email) {
+  userInfo.textContent = email || "";
+  userInfo?.classList.remove("hidden");
+  loginBtn?.classList.add("hidden");
+  logoutBtn?.classList.remove("hidden");
+}
 let lastUsedWarningRef = null;
 const goToManagePage = () => {
   if (typeof window !== "undefined" && typeof window.switchAdminPage === "function") {
@@ -1023,15 +1037,10 @@ onAuthStateChanged(auth, async (user) => {
     qrPanel?.classList.add("hidden");
     setDashboardVisible(false);
     setGuard("Silakan login dengan akun admin.");
-    userInfo.textContent = "Belum login";
-    loginBtn?.classList.remove("hidden");
-    logoutBtn?.classList.add("hidden");
+    showLoggedOutUI();
     return;
   }
 
-  loginBtn?.classList.add("hidden");
-  logoutBtn?.classList.remove("hidden");
-  userInfo.textContent = user.email || user.uid;
   setGuard("Memeriksa hak akses admin...");
 
   try {
@@ -1048,10 +1057,12 @@ onAuthStateChanged(auth, async (user) => {
     stopQrScan();
     qrPanel?.classList.add("hidden");
     setDashboardVisible(false);
+    showLoggedOutUI();
     setGuard("Akun ini tidak memiliki akses admin. Minta panitia menambahkan custom claim admin.", false);
     return;
   }
 
+  showLoggedInUI(user.email || user.uid);
   setGuard("Akses admin diberikan.", true);
   setDashboardVisible(true);
   resetForm();
