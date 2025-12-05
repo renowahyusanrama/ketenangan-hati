@@ -25,6 +25,26 @@ async function releaseSeatIfNeeded(db, eventId) {
     tx.set(eventRef, { seatsUsed: next }, { merge: true });
   });
 }
+async function findOrderDoc(db, merchantRef, reference) {
+  if (merchantRef) {
+    const direct = await db.collection('orders').doc(merchantRef).get();
+    if (direct.exists) return { id: direct.id, data: direct.data() };
+  }
+  if (reference) {
+    try {
+      const byRef = await db.collection('orders').where('reference', '==', reference).limit(1).get();
+      if (!byRef.empty) {
+        const doc = byRef.docs[0];
+        return { id: doc.id, data: doc.data() };
+      }
+    } catch (err) {
+      console.warn('findOrderDoc by reference error:', err?.message || err);
+    }
+  }
+  return null;
+}
+
+
 
 // Baca raw body persis seperti yang dikirim Tripay
 function getRawBody(req) {
@@ -72,8 +92,8 @@ module.exports = async (req, res) => {
     return send(res, 400, { error: "Invalid JSON body" });
   }
 
-  const merchantRef =
-    payload.merchant_ref || payload.merchantRef || payload.reference;
+  const merchantRef = payload.merchant_ref || payload.merchantRef || payload.reference;
+  const referenceFromPayload = payload.reference || payload.reference_id;
 
   if (!merchantRef) {
     console.error("merchant_ref tidak ditemukan di payload:", payload);
@@ -90,9 +110,9 @@ module.exports = async (req, res) => {
   // 4. Update Firestore & kirim email (kalau perlu)
   try {
     const db = getDb();
-    const docRef = db.collection("orders").doc(merchantRef);
-    const snap = await docRef.get();
-    const previous = snap.exists ? snap.data() : null;
+    const found = await findOrderDoc(db, merchantRef, referenceFromPayload);
+    const docRef = found ? db.collection('orders').doc(found.id) : db.collection('orders').doc(merchantRef);
+    const previous = found?.data || null;
 
     const newStatus = mapStatus(payload.status);
 
@@ -121,8 +141,9 @@ module.exports = async (req, res) => {
 
     const wasPaid = previous && previous.status === "paid";
     const nowPaid = newStatus === "paid";
+    const emailAlreadySent = previous?.ticketEmail?.status === "sent";
 
-    if (!wasPaid && nowPaid && previous) {
+    if (nowPaid && !emailAlreadySent && previous) {
       const payCode =
         payload.pay_code ||
         payload.payment_code ||
@@ -139,39 +160,37 @@ module.exports = async (req, res) => {
         vaNumber: payCode,
       };
 
-      (async () => {
-        const emailMeta = {
-          status: "pending",
-          recipient: orderForEmail.customer?.email || previous.customer?.email || null,
-          reference: orderForEmail.reference,
-        };
-        try {
-          await sendTicketEmail(orderForEmail);
-          await docRef.set(
-            {
-              ticketEmail: {
-                ...emailMeta,
-                status: "sent",
-                sentAt: admin.firestore.FieldValue.serverTimestamp(),
-              },
+      const emailMeta = {
+        status: "pending",
+        recipient: orderForEmail.customer?.email || previous.customer?.email || null,
+        reference: orderForEmail.reference,
+      };
+      try {
+        await sendTicketEmail(orderForEmail);
+        await docRef.set(
+          {
+            ticketEmail: {
+              ...emailMeta,
+              status: "sent",
+              sentAt: admin.firestore.FieldValue.serverTimestamp(),
             },
-            { merge: true },
-          );
-        } catch (err) {
-          console.error("Email send error (webhook):", err?.message || err);
-          await docRef.set(
-            {
-              ticketEmail: {
-                ...emailMeta,
-                status: "error",
-                error: err?.message || "Email gagal dikirim",
-                attemptedAt: admin.firestore.FieldValue.serverTimestamp(),
-              },
+          },
+          { merge: true },
+        );
+      } catch (err) {
+        console.error("Email send error (webhook):", err?.message || err);
+        await docRef.set(
+          {
+            ticketEmail: {
+              ...emailMeta,
+              status: "error",
+              error: err?.message || "Email gagal dikirim",
+              attemptedAt: admin.firestore.FieldValue.serverTimestamp(),
             },
-            { merge: true },
-          );
-        }
-      })();
+          },
+          { merge: true },
+        );
+      }
     }
 
     // 5. BALAS KE TRIPAY DENGAN FORMAT YANG DIMINTA
