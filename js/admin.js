@@ -360,6 +360,18 @@ function formatDateTime(value) {
   }
 }
 
+function detectCsvDelimiter() {
+  try {
+    const locale = typeof navigator !== "undefined" ? navigator.language : undefined;
+    const sample = (1.1).toLocaleString(locale);
+    return sample.includes(",") ? ";" : ",";
+  } catch (err) {
+    return ";";
+  }
+}
+
+const CSV_DELIMITER = detectCsvDelimiter();
+
 function formatStatusBadge(status) {
   const map = {
     paid: "green",
@@ -738,7 +750,7 @@ function formatDateForCsv(value) {
   }
 }
 
-function escapeCsvCell(value) {
+function escapeCsvCell(value, delimiter = CSV_DELIMITER) {
   const raw =
     value === null || value === undefined
       ? ""
@@ -747,10 +759,15 @@ function escapeCsvCell(value) {
         : Number.isFinite(value)
           ? String(value)
           : String(value || "");
-  if (raw.includes('"') || raw.includes(",") || raw.includes("\n") || raw.includes("\r")) {
+  if (raw.includes('"') || raw.includes(delimiter) || raw.includes("\n") || raw.includes("\r")) {
     return `"${raw.replace(/"/g, '""')}"`;
   }
   return raw;
+}
+
+function csvRowsToString(rows, delimiter = CSV_DELIMITER, withSepHeader = true) {
+  const body = rows.map((row) => row.map((cell) => escapeCsvCell(cell, delimiter)).join(delimiter)).join("\r\n");
+  return withSepHeader ? `sep=${delimiter}\r\n${body}` : body;
 }
 
 function serializeList(value) {
@@ -813,7 +830,7 @@ function summarizeOrdersByEvent(orders = []) {
   return map;
 }
 
-function buildEventsCsv(eventList = [], revenueMap = new Map(), exportedAt) {
+function buildEventsCsv(eventList = [], revenueMap = new Map(), exportedAt, delimiter = CSV_DELIMITER) {
   const exportedAtText = formatDateForCsv(exportedAt || new Date());
   const header = [
     "Event ID/Slug",
@@ -886,9 +903,7 @@ function buildEventsCsv(eventList = [], revenueMap = new Map(), exportedAt) {
     ];
   });
 
-  return [header, ...rows]
-    .map((row) => row.map((cell) => escapeCsvCell(cell)).join(","))
-    .join("\r\n");
+  return csvRowsToString([header, ...rows], delimiter, true);
 }
 
 function downloadCsv(content, exportedAt = new Date(), filenamePrefix = "events") {
@@ -977,7 +992,7 @@ function computeOrderTotals(orders = []) {
   );
 }
 
-function buildOrdersCsv(orders = [], exportedAt, eventLabel = "") {
+function buildOrdersTableData(orders = [], exportedAt, eventLabel = "") {
   const exportedAtText = formatDateForCsv(exportedAt || new Date());
   const header = [
     "Ref/MerchantRef",
@@ -1001,7 +1016,7 @@ function buildOrdersCsv(orders = [], exportedAt, eventLabel = "") {
     "Total Semua (summary)",
   ];
 
-  const rows = orders.map((order) => [
+  const dataRows = orders.map((order) => [
     order.merchantRef || order.reference || order.id || "",
     order.eventTitle || getEventLabel(getOrderEventIdentifier(order)) || order.eventId || "",
     (order.ticketType || "regular").toUpperCase(),
@@ -1046,13 +1061,86 @@ function buildOrdersCsv(orders = [], exportedAt, eventLabel = "") {
     totals.totalAll || 0,
   ];
 
-  return [header, ...rows, summaryRow]
-    .map((row) => row.map((cell) => escapeCsvCell(cell)).join(","))
-    .join("\r\n");
+  return { header, dataRows, summaryRow, exportedAtText };
+}
+
+function buildOrdersCsv(orders = [], exportedAt, eventLabel = "", delimiter = CSV_DELIMITER) {
+  const { header, dataRows, summaryRow } = buildOrdersTableData(orders, exportedAt, eventLabel);
+  return csvRowsToString([header, ...dataRows, summaryRow], delimiter, true);
+}
+
+function styleOrdersWorksheet(ws, dataRowCount = 0) {
+  if (!ws || !ws["!ref"] || typeof XLSX === "undefined") return;
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+
+  // Header bold
+  for (let c = range.s.c; c <= range.e.c; c += 1) {
+    const ref = XLSX.utils.encode_cell({ c, r: range.s.r });
+    const cell = ws[ref];
+    if (cell) {
+      cell.s = { ...(cell.s || {}), font: { ...(cell.s?.font || {}), bold: true } };
+    }
+  }
+
+  // Treat phone as text to avoid scientific notation
+  const phoneCol = 5;
+  for (let r = 1; r <= dataRowCount; r += 1) {
+    const ref = XLSX.utils.encode_cell({ c: phoneCol, r });
+    const cell = ws[ref];
+    if (cell) {
+      cell.t = "s";
+      cell.v = cell.v == null ? "" : String(cell.v);
+      cell.z = undefined;
+    }
+  }
+
+  // Number formatting for totals/quantity (include summary row)
+  const numericCols = [9, 14, 16, 17, 18];
+  const lastRow = dataRowCount + 1; // includes summary row
+  numericCols.forEach((c) => {
+    for (let r = 1; r <= lastRow; r += 1) {
+      const ref = XLSX.utils.encode_cell({ c, r });
+      const cell = ws[ref];
+      if (cell && cell.v !== "" && cell.v !== null && cell.v !== undefined) {
+        const num = Number(cell.v);
+        if (!Number.isNaN(num)) {
+          cell.v = num;
+          cell.t = "n";
+          cell.z = "#,##0";
+        }
+      }
+    }
+  });
+
+  // Column widths for readability
+  ws["!cols"] = [
+    { wch: 18 }, // Ref
+    { wch: 28 }, // Event
+    { wch: 12 }, // Ticket Type
+    { wch: 24 }, // Customer Name
+    { wch: 26 }, // Customer Email
+    { wch: 16 }, // Customer Phone
+    { wch: 16 }, // Payment Method
+    { wch: 12 }, // Status
+    { wch: 12 }, // Check-in
+    { wch: 14 }, // Total (paid)
+    { wch: 20 }, // Created At
+    { wch: 20 }, // Updated At
+    { wch: 16 }, // Payment Type
+    { wch: 12 }, // Bank
+    { wch: 10 }, // Quantity
+    { wch: 20 }, // Exported At
+    { wch: 16 }, // Total Reguler
+    { wch: 16 }, // Total VIP
+    { wch: 16 }, // Total Semua
+  ];
+
+  const filterEndRow = Math.max(1, dataRowCount + 1);
+  ws["!autofilter"] = { ref: `A1:S${filterEndRow}` };
 }
 
 let exportOrdersInProgress = false;
-async function exportOrdersToCsv() {
+async function exportOrdersToExcel() {
   if (!isAdmin || exportOrdersInProgress) return;
   exportOrdersInProgress = true;
   const originalText = exportOrdersBtn ? exportOrdersBtn.textContent : "";
@@ -1062,6 +1150,10 @@ async function exportOrdersToCsv() {
   }
 
   try {
+    if (typeof XLSX === "undefined") {
+      alert("Library Excel belum dimuat. Muat ulang halaman lalu coba lagi.");
+      return;
+    }
     const eventFilterValue = selectedOrderEventFilter || orderEventFilter?.value || "";
     if (eventFilterValue) selectedOrderEventFilter = eventFilterValue;
     const ordersSnap = await getDocs(collection(db, "orders"));
@@ -1076,18 +1168,39 @@ async function exportOrdersToCsv() {
 
     const eventLabel = eventFilterValue ? getEventLabel(eventFilterValue) : "Semua event";
     const exportedAt = new Date();
-    const csv = buildOrdersCsv(filteredOrders, exportedAt, eventLabel);
+    const { header, dataRows, summaryRow } = buildOrdersTableData(filteredOrders, exportedAt, eventLabel);
+    const rows = [header, ...dataRows, summaryRow];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    styleOrdersWorksheet(ws, dataRows.length);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Transaksi Paid");
+    const pad = (n) => String(n).padStart(2, "0");
+    const ts = `${exportedAt.getFullYear()}${pad(exportedAt.getMonth() + 1)}${pad(exportedAt.getDate())}-${pad(
+      exportedAt.getHours(),
+    )}${pad(exportedAt.getMinutes())}`;
     const prefix = eventFilterValue
       ? `${slugify(eventLabel || eventFilterValue, "event")}-paid`
       : "all-events-paid";
-    downloadCsv(csv, exportedAt, prefix);
+    const filename = `${prefix}-${ts}.xlsx`;
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   } catch (err) {
     console.error("Ekspor transaksi gagal:", err);
     alert("Gagal menyiapkan ekspor transaksi: " + (err?.message || err));
   } finally {
     exportOrdersInProgress = false;
     if (exportOrdersBtn) {
-      exportOrdersBtn.textContent = originalText || "Download CSV (Paid)";
+      exportOrdersBtn.textContent = originalText || "Download Excel (Paid)";
       exportOrdersBtn.disabled = false;
     }
   }
@@ -1315,7 +1428,7 @@ newEventBtn?.addEventListener("click", () => {
   resetForm();
 });
 exportEventsBtn?.addEventListener("click", exportEventsToCsv);
-exportOrdersBtn?.addEventListener("click", exportOrdersToCsv);
+exportOrdersBtn?.addEventListener("click", exportOrdersToExcel);
 eventForm?.addEventListener("submit", (ev) => saveEvent(ev));
 eventForm?.addEventListener("input", updatePreviewFromForm);
 uploadPosterBtn?.addEventListener("click", openUpload);
