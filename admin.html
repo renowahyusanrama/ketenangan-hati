@@ -1189,6 +1189,7 @@
                   <h3>Daftar Event</h3>
                   <div class="flex">
                     <button id="newEventBtn" class="outline"><i class="fa-solid fa-plus"></i> Event Baru</button>
+                    <button id="exportEventsBtn" class="outline"><i class="fa-solid fa-file-csv"></i> Download CSV</button>
                     <button id="refreshBtn" class="outline"><i class="fa-solid fa-rotate"></i> Refresh</button>
                   </div>
                 </div>
@@ -1249,6 +1250,10 @@
 
                     <button id="refreshOrdersBtn" class="outline">
                       <i class="fa-solid fa-rotate"></i> Refresh
+                    </button>
+
+                    <button id="exportOrdersBtn" class="outline">
+                      <i class="fa-solid fa-file-excel"></i> Download Excel (Paid)
                     </button>
 
                   </div>
@@ -1365,6 +1370,7 @@
   </script>
 
   <script src="https://widget.cloudinary.com/v2.0/global/all.js" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="js/vendor/html5-qrcode.min.js"></script>
   <script type="module" src="js/admin.js"></script>
 </body>

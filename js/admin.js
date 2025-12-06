@@ -62,6 +62,8 @@ const uploadPosterBtn = document.getElementById("uploadPosterBtn");
 const refreshBtn = document.getElementById("refreshBtn");
 const resetBtn = document.getElementById("resetBtn");
 const newEventBtn = document.getElementById("newEventBtn");
+const exportEventsBtn = document.getElementById("exportEventsBtn");
+const exportOrdersBtn = document.getElementById("exportOrdersBtn");
 const tableBody = document.querySelector("#eventsTable tbody");
 const saveBtn = document.getElementById("saveBtn");
 const createEventBtn = document.getElementById("createEventBtn");
@@ -358,6 +360,18 @@ function formatDateTime(value) {
   }
 }
 
+function detectCsvDelimiter() {
+  try {
+    const locale = typeof navigator !== "undefined" ? navigator.language : undefined;
+    const sample = (1.1).toLocaleString(locale);
+    return sample.includes(",") ? ";" : ",";
+  } catch (err) {
+    return ";";
+  }
+}
+
+const CSV_DELIMITER = detectCsvDelimiter();
+
 function formatStatusBadge(status) {
   const map = {
     paid: "green",
@@ -412,18 +426,18 @@ function renderOrderStats(rows = [], eventFilter = "") {
   let paidCount = 0;
   let participants = 0;
   const breakdown = {};
-   const typeBreakdown = {};
+  const typeBreakdown = {};
   filteredRows.forEach((order) => {
     const status = (order.status || "pending").toLowerCase();
     breakdown[status] = (breakdown[status] || 0) + 1;
     if (status === "paid") {
       paidCount += 1;
       totalRevenue += Number(order.totalAmount ?? order.amount ?? 0) || 0;
+      const qty = Number(order.quantity ?? order.qty ?? 1);
+      participants += qty;
+      const type = (order.ticketType || "regular").toLowerCase();
+      typeBreakdown[type] = (typeBreakdown[type] || 0) + qty;
     }
-    const qty = Number(order.quantity ?? order.qty ?? 1);
-    participants += qty;
-    const type = (order.ticketType || "regular").toLowerCase();
-    typeBreakdown[type] = (typeBreakdown[type] || 0) + qty;
   });
 
   statRevenueEl.textContent = formatCurrency(totalRevenue);
@@ -722,6 +736,476 @@ async function loadEvents() {
   }
 }
 
+function formatDateForCsv(value) {
+  if (!value) return "";
+  try {
+    const d = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(
+      d.getMinutes(),
+    )}:${pad(d.getSeconds())}`;
+  } catch (err) {
+    return "";
+  }
+}
+
+function escapeCsvCell(value, delimiter = CSV_DELIMITER) {
+  const raw =
+    value === null || value === undefined
+      ? ""
+      : typeof value === "string"
+        ? value
+        : Number.isFinite(value)
+          ? String(value)
+          : String(value || "");
+  if (raw.includes('"') || raw.includes(delimiter) || raw.includes("\n") || raw.includes("\r")) {
+    return `"${raw.replace(/"/g, '""')}"`;
+  }
+  return raw;
+}
+
+function csvRowsToString(rows, delimiter = CSV_DELIMITER, withSepHeader = true) {
+  const body = rows.map((row) => row.map((cell) => escapeCsvCell(cell, delimiter)).join(delimiter)).join("\r\n");
+  return withSepHeader ? `sep=${delimiter}\r\n${body}` : body;
+}
+
+function serializeList(value) {
+  if (!value) return "";
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (item === null || item === undefined ? "" : String(item).trim()))
+      .filter(Boolean)
+      .join("; ");
+  }
+  return String(value || "");
+}
+
+function serializeAgenda(list) {
+  if (!Array.isArray(list)) return "";
+  return list
+    .map((item) => {
+      const time = (item?.time || "").trim();
+      const activity = (item?.activity || "").trim();
+      if (!time && !activity) return "";
+      return time && activity ? `${time} - ${activity}` : time || activity;
+    })
+    .filter(Boolean)
+    .join("; ");
+}
+
+function summarizeOrdersByEvent(orders = []) {
+  const map = new Map();
+  orders.forEach((order) => {
+    const status = (order.status || "").toLowerCase();
+    if (status !== "paid") return;
+    const key =
+      getOrderEventIdentifier(order) ||
+      order.eventId ||
+      order.eventSlug ||
+      order.event?.slug ||
+      order.event?.id ||
+      "";
+    if (!key) return;
+    const type = (order.ticketType || "regular").toLowerCase() === "vip" ? "vip" : "regular";
+    const revenue = Number(order.totalAmount ?? order.amount ?? 0) || 0;
+    const entry =
+      map.get(key) || {
+        regular: 0,
+        vip: 0,
+        total: 0,
+        participants: new Set(),
+      };
+    if (type === "vip") entry.vip += revenue;
+    else entry.regular += revenue;
+    entry.total += revenue;
+    const customer = order.customer || {};
+    const parts = [];
+    if (customer.name) parts.push(customer.name);
+    const contacts = [customer.email, customer.phone].filter(Boolean).join(" / ");
+    if (contacts) parts.push(contacts);
+    if (parts.length) entry.participants.add(parts.join(" - "));
+    map.set(key, entry);
+  });
+  return map;
+}
+
+function buildEventsCsv(eventList = [], revenueMap = new Map(), exportedAt, delimiter = CSV_DELIMITER) {
+  const exportedAtText = formatDateForCsv(exportedAt || new Date());
+  const header = [
+    "Event ID/Slug",
+    "Judul",
+    "Kategori",
+    "Status",
+    "Tanggal",
+    "Waktu",
+    "Lokasi",
+    "Alamat",
+    "Pembicara",
+    "Harga Reguler",
+    "Harga VIP",
+    "Kapasitas",
+    "Terpakai",
+    "Tagline",
+    "Deskripsi",
+    "Highlights",
+    "Catatan",
+    "Persiapan",
+    "Agenda",
+    "Poster URL",
+    "Kontak WA",
+    "Kontak Telepon",
+    "Kontak Email",
+    "Dibuat",
+    "Diperbarui",
+    "Exported At",
+    "Pendapatan Reguler",
+    "Pendapatan VIP",
+    "Pendapatan Total",
+    "Peserta (paid)",
+  ];
+
+  const rows = eventList.map((event) => {
+    const key = event?.id || event?.slug || "";
+    const revenue = revenueMap.get(key) || { regular: 0, vip: 0, total: 0, participants: new Set() };
+    const participants = revenue.participants instanceof Set ? Array.from(revenue.participants) : [];
+    return [
+      key,
+      event.title || "",
+      event.category || "",
+      event.status || "draft",
+      event.schedule || event.date || "",
+      event.time || "",
+      event.location || "",
+      event.address || "",
+      event.speaker || "",
+      Number(event.priceRegular ?? event.amount ?? 0) || 0,
+      event.priceVip != null ? Number(event.priceVip) || 0 : "",
+      event.capacity ?? "",
+      event.seatsUsed ?? "",
+      event.tagline || "",
+      event.description || "",
+      serializeList(event.highlights),
+      serializeList(event.notes),
+      serializeList(event.preparation),
+      serializeAgenda(event.agenda),
+      event.imageUrl || "",
+      event.contact?.wa || "",
+      event.contact?.phone || "",
+      event.contact?.email || "",
+      formatDateForCsv(event.createdAt),
+      formatDateForCsv(event.updatedAt),
+      exportedAtText,
+      revenue.regular || 0,
+      revenue.vip || 0,
+      revenue.total || 0,
+      serializeList(participants),
+    ];
+  });
+
+  return csvRowsToString([header, ...rows], delimiter, true);
+}
+
+function downloadCsv(content, exportedAt = new Date(), filenamePrefix = "events") {
+  const pad = (n) => String(n).padStart(2, "0");
+  const ts = `${exportedAt.getFullYear()}${pad(exportedAt.getMonth() + 1)}${pad(exportedAt.getDate())}-${pad(
+    exportedAt.getHours(),
+  )}${pad(exportedAt.getMinutes())}`;
+  const sanitizedPrefix = filenamePrefix || "events";
+  const filename = `${sanitizedPrefix}-${ts}.csv`;
+  const bom = "\uFEFF";
+  const blob = new Blob([bom + content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+    link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+let exportInProgress = false;
+async function exportEventsToCsv() {
+  if (!isAdmin || exportInProgress) return;
+  exportInProgress = true;
+  const originalText = exportEventsBtn ? exportEventsBtn.textContent : "";
+  if (exportEventsBtn) {
+    exportEventsBtn.textContent = "Menyiapkan...";
+    exportEventsBtn.disabled = true;
+  }
+
+  try {
+    if (!eventsCache.size) {
+      await loadEvents();
+    }
+    if (!eventsCache.size) {
+      alert("Tidak ada event untuk diekspor.");
+      return;
+    }
+
+    const ordersSnap = await getDocs(collection(db, "orders"));
+    const orders = ordersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const revenueMap = summarizeOrdersByEvent(orders);
+    const exportedAt = new Date();
+    const sortedEvents = Array.from(eventsCache.values()).sort((a, b) => {
+      const titleA = (a.title || a.slug || "").toLowerCase();
+      const titleB = (b.title || b.slug || "").toLowerCase();
+      if (titleA < titleB) return -1;
+      if (titleA > titleB) return 1;
+      return 0;
+    });
+    const csv = buildEventsCsv(sortedEvents, revenueMap, exportedAt);
+    downloadCsv(csv, exportedAt, "events");
+  } catch (err) {
+    console.error("Ekspor CSV gagal:", err);
+    alert("Gagal menyiapkan ekspor CSV: " + (err?.message || err));
+  } finally {
+    exportInProgress = false;
+    if (exportEventsBtn) {
+      exportEventsBtn.textContent = originalText || "Download CSV";
+      exportEventsBtn.disabled = false;
+    }
+  }
+}
+
+function slugify(text, fallback = "events") {
+  const slug = (text || "")
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || fallback;
+}
+
+function computeOrderTotals(orders = []) {
+  return orders.reduce(
+    (acc, order) => {
+      const amount = Number(order.totalAmount ?? order.amount ?? 0) || 0;
+      const type = (order.ticketType || "regular").toLowerCase() === "vip" ? "vip" : "regular";
+      if (type === "vip") acc.totalVip += amount;
+      else acc.totalRegular += amount;
+      acc.totalAll += amount;
+      return acc;
+    },
+    { totalRegular: 0, totalVip: 0, totalAll: 0 },
+  );
+}
+
+function buildOrdersTableData(orders = [], exportedAt, eventLabel = "") {
+  const exportedAtText = formatDateForCsv(exportedAt || new Date());
+  const header = [
+    "Ref/MerchantRef",
+    "Event",
+    "Ticket Type",
+    "Customer Name",
+    "Customer Email",
+    "Customer Phone",
+    "Payment Method",
+    "Status",
+    "Check-in",
+    "Total (paid)",
+    "Created At",
+    "Updated At",
+    "Payment Type",
+    "Bank",
+    "Quantity",
+    "Exported At",
+    "Total Reguler (summary)",
+    "Total VIP (summary)",
+    "Total Semua (summary)",
+  ];
+
+  const dataRows = orders.map((order) => [
+    order.merchantRef || order.reference || order.id || "",
+    order.eventTitle || getEventLabel(getOrderEventIdentifier(order)) || order.eventId || "",
+    (order.ticketType || "regular").toUpperCase(),
+    order.customer?.name || "",
+    order.customer?.email || "",
+    order.customer?.phone || "",
+    formatMethod(order),
+    (order.status || "").toUpperCase(),
+    order.verified ? "Terverifikasi" : "Belum",
+    Number(order.totalAmount ?? order.amount ?? 0) || 0,
+    formatDateForCsv(order.createdAt || order.created_at),
+    formatDateForCsv(order.updatedAt),
+    order.paymentType || "",
+    order.bank || "",
+    order.quantity ?? order.qty ?? 1,
+    exportedAtText,
+    "", // summary cols empty per baris
+    "",
+    "",
+  ]);
+
+  const totals = computeOrderTotals(orders);
+  const summaryRow = [
+    "TOTAL",
+    eventLabel || "Semua event",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "PAID",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    exportedAtText,
+    totals.totalRegular || 0,
+    totals.totalVip || 0,
+    totals.totalAll || 0,
+  ];
+
+  return { header, dataRows, summaryRow, exportedAtText };
+}
+
+function buildOrdersCsv(orders = [], exportedAt, eventLabel = "", delimiter = CSV_DELIMITER) {
+  const { header, dataRows, summaryRow } = buildOrdersTableData(orders, exportedAt, eventLabel);
+  return csvRowsToString([header, ...dataRows, summaryRow], delimiter, true);
+}
+
+function styleOrdersWorksheet(ws, dataRowCount = 0) {
+  if (!ws || !ws["!ref"] || typeof XLSX === "undefined") return;
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+
+  // Header bold
+  for (let c = range.s.c; c <= range.e.c; c += 1) {
+    const ref = XLSX.utils.encode_cell({ c, r: range.s.r });
+    const cell = ws[ref];
+    if (cell) {
+      cell.s = { ...(cell.s || {}), font: { ...(cell.s?.font || {}), bold: true } };
+    }
+  }
+
+  // Treat phone as text to avoid scientific notation
+  const phoneCol = 5;
+  for (let r = 1; r <= dataRowCount; r += 1) {
+    const ref = XLSX.utils.encode_cell({ c: phoneCol, r });
+    const cell = ws[ref];
+    if (cell) {
+      cell.t = "s";
+      cell.v = cell.v == null ? "" : String(cell.v);
+      cell.z = undefined;
+    }
+  }
+
+  // Number formatting for totals/quantity (include summary row)
+  const numericCols = [9, 14, 16, 17, 18];
+  const lastRow = dataRowCount + 1; // includes summary row
+  numericCols.forEach((c) => {
+    for (let r = 1; r <= lastRow; r += 1) {
+      const ref = XLSX.utils.encode_cell({ c, r });
+      const cell = ws[ref];
+      if (cell && cell.v !== "" && cell.v !== null && cell.v !== undefined) {
+        const num = Number(cell.v);
+        if (!Number.isNaN(num)) {
+          cell.v = num;
+          cell.t = "n";
+          cell.z = "#,##0";
+        }
+      }
+    }
+  });
+
+  // Column widths for readability
+  ws["!cols"] = [
+    { wch: 18 }, // Ref
+    { wch: 28 }, // Event
+    { wch: 12 }, // Ticket Type
+    { wch: 24 }, // Customer Name
+    { wch: 26 }, // Customer Email
+    { wch: 16 }, // Customer Phone
+    { wch: 16 }, // Payment Method
+    { wch: 12 }, // Status
+    { wch: 12 }, // Check-in
+    { wch: 14 }, // Total (paid)
+    { wch: 20 }, // Created At
+    { wch: 20 }, // Updated At
+    { wch: 16 }, // Payment Type
+    { wch: 12 }, // Bank
+    { wch: 10 }, // Quantity
+    { wch: 20 }, // Exported At
+    { wch: 16 }, // Total Reguler
+    { wch: 16 }, // Total VIP
+    { wch: 16 }, // Total Semua
+  ];
+
+  const filterEndRow = Math.max(1, dataRowCount + 1);
+  ws["!autofilter"] = { ref: `A1:S${filterEndRow}` };
+}
+
+let exportOrdersInProgress = false;
+async function exportOrdersToExcel() {
+  if (!isAdmin || exportOrdersInProgress) return;
+  exportOrdersInProgress = true;
+  const originalText = exportOrdersBtn ? exportOrdersBtn.textContent : "";
+  if (exportOrdersBtn) {
+    exportOrdersBtn.textContent = "Menyiapkan...";
+    exportOrdersBtn.disabled = true;
+  }
+
+  try {
+    if (typeof XLSX === "undefined") {
+      alert("Library Excel belum dimuat. Muat ulang halaman lalu coba lagi.");
+      return;
+    }
+    const eventFilterValue = selectedOrderEventFilter || orderEventFilter?.value || "";
+    if (eventFilterValue) selectedOrderEventFilter = eventFilterValue;
+    const ordersSnap = await getDocs(collection(db, "orders"));
+    const allOrders = ordersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const paidOrders = allOrders.filter((o) => (o.status || "").toLowerCase() === "paid");
+    const filteredOrders = paidOrders.filter((o) => !eventFilterValue || matchesOrderEvent(o, eventFilterValue));
+
+    if (!filteredOrders.length) {
+      alert("Tidak ada transaksi paid untuk filter event ini.");
+      return;
+    }
+
+    const eventLabel = eventFilterValue ? getEventLabel(eventFilterValue) : "Semua event";
+    const exportedAt = new Date();
+    const { header, dataRows, summaryRow } = buildOrdersTableData(filteredOrders, exportedAt, eventLabel);
+    const rows = [header, ...dataRows, summaryRow];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    styleOrdersWorksheet(ws, dataRows.length);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Transaksi Paid");
+    const pad = (n) => String(n).padStart(2, "0");
+    const ts = `${exportedAt.getFullYear()}${pad(exportedAt.getMonth() + 1)}${pad(exportedAt.getDate())}-${pad(
+      exportedAt.getHours(),
+    )}${pad(exportedAt.getMinutes())}`;
+    const prefix = eventFilterValue
+      ? `${slugify(eventLabel || eventFilterValue, "event")}-paid`
+      : "all-events-paid";
+    const filename = `${prefix}-${ts}.xlsx`;
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Ekspor transaksi gagal:", err);
+    alert("Gagal menyiapkan ekspor transaksi: " + (err?.message || err));
+  } finally {
+    exportOrdersInProgress = false;
+    if (exportOrdersBtn) {
+      exportOrdersBtn.textContent = originalText || "Download Excel (Paid)";
+      exportOrdersBtn.disabled = false;
+    }
+  }
+}
+
 function fillForm(data) {
   if (!data) return;
   eventForm.title.value = data.title || "";
@@ -943,6 +1427,8 @@ newEventBtn?.addEventListener("click", () => {
   goToManagePage();
   resetForm();
 });
+exportEventsBtn?.addEventListener("click", exportEventsToCsv);
+exportOrdersBtn?.addEventListener("click", exportOrdersToExcel);
 eventForm?.addEventListener("submit", (ev) => saveEvent(ev));
 eventForm?.addEventListener("input", updatePreviewFromForm);
 uploadPosterBtn?.addEventListener("click", openUpload);
