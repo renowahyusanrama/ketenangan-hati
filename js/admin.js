@@ -426,18 +426,18 @@ function renderOrderStats(rows = [], eventFilter = "") {
   let paidCount = 0;
   let participants = 0;
   const breakdown = {};
-   const typeBreakdown = {};
+  const typeBreakdown = {};
   filteredRows.forEach((order) => {
     const status = (order.status || "pending").toLowerCase();
     breakdown[status] = (breakdown[status] || 0) + 1;
     if (status === "paid") {
       paidCount += 1;
       totalRevenue += Number(order.totalAmount ?? order.amount ?? 0) || 0;
+      const qty = Number(order.quantity ?? order.qty ?? 1);
+      participants += qty;
+      const type = (order.ticketType || "regular").toLowerCase();
+      typeBreakdown[type] = (typeBreakdown[type] || 0) + qty;
     }
-    const qty = Number(order.quantity ?? order.qty ?? 1);
-    participants += qty;
-    const type = (order.ticketType || "regular").toLowerCase();
-    typeBreakdown[type] = (typeBreakdown[type] || 0) + qty;
   });
 
   statRevenueEl.textContent = formatCurrency(totalRevenue);
