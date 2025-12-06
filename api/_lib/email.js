@@ -5,8 +5,8 @@ const { generateTicketPdf } = require("./ticket_pdf");
 // 🔑 pastikan ini di-set di Vercel (Production env)
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 
-// from boleh pakai onboarding@resend.dev (direkomendasikan Resend untuk testing)
-const RESEND_FROM = process.env.RESEND_FROM || "onboarding@resend.dev";
+// Gunakan domain terverifikasi di Resend (set di env RESEND_FROM untuk produksi)
+const RESEND_FROM = process.env.RESEND_FROM || "noreply@ketenanganjiwa.id";
 
 // email akun kamu di Resend (yang boleh terima email di mode testing)
 const RESEND_OWNER_EMAIL = process.env.RESEND_OWNER_EMAIL || "onmeren@gmail.com";
