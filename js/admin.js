@@ -95,6 +95,7 @@ const statStatusListEl = document.getElementById("statStatusList");
 const statUpdatedAtEl = document.getElementById("statUpdatedAt");
 const statEventFilter = document.getElementById("statEventFilter");
 const orderEventFilter = document.getElementById("orderEventFilter");
+
 const STATUS_DOT_COLORS = {
   paid: "#4ade80",
   pending: "#facc15",
@@ -134,6 +135,7 @@ function showLoggedInUI(email) {
   loginBtn?.classList.add("hidden");
   logoutBtn?.classList.remove("hidden");
 }
+
 let lastUsedWarningRef = null;
 const goToManagePage = () => {
   if (typeof window !== "undefined" && typeof window.switchAdminPage === "function") {
@@ -591,7 +593,6 @@ async function loadOrders(reset = true) {
         .map((o) => {
           const total = Number(o.totalAmount ?? o.amount ?? 0);
           const createdAt = formatDateTime(o.createdAt || o.created_at);
-          const verified = o.verified ? "Terverifikasi" : "Belum";
           const verifyBtn =
             (o.status || "").toLowerCase() === "paid"
               ? `<button class="outline" data-checkin="${o.id}" data-verified="${o.verified ? "false" : "true"}">${
@@ -736,15 +737,15 @@ async function loadEvents() {
   }
 }
 
+// === FORMAT TANGGAL UNTUK EXPORT (MIRIP FOTO KEDUA) ===
 function formatDateForCsv(value) {
   if (!value) return "";
   try {
     const d = value.toDate ? value.toDate() : new Date(value);
     if (Number.isNaN(d.getTime())) return "";
     const pad = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(
-      d.getMinutes(),
-    )}:${pad(d.getSeconds())}`;
+    const yy = String(d.getFullYear()).slice(-2); // 2 digit tahun
+    return `${yy}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   } catch (err) {
     return "";
   }
@@ -908,9 +909,9 @@ function buildEventsCsv(eventList = [], revenueMap = new Map(), exportedAt, deli
 
 function downloadCsv(content, exportedAt = new Date(), filenamePrefix = "events") {
   const pad = (n) => String(n).padStart(2, "0");
-  const ts = `${exportedAt.getFullYear()}${pad(exportedAt.getMonth() + 1)}${pad(exportedAt.getDate())}-${pad(
-    exportedAt.getHours(),
-  )}${pad(exportedAt.getMinutes())}`;
+  const ts = `${exportedAt.getFullYear()}${pad(exportedAt.getMonth() + 1)}${pad(
+    exportedAt.getDate(),
+  )}-${pad(exportedAt.getHours())}${pad(exportedAt.getMinutes())}`;
   const sanitizedPrefix = filenamePrefix || "events";
   const filename = `${sanitizedPrefix}-${ts}.csv`;
   const bom = "\uFEFF";
@@ -918,7 +919,7 @@ function downloadCsv(content, exportedAt = new Date(), filenamePrefix = "events"
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-    link.download = filename;
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -986,12 +987,16 @@ function computeOrderTotals(orders = []) {
       if (type === "vip") acc.totalVip += amount;
       else acc.totalRegular += amount;
       acc.totalAll += amount;
+      acc.countTotal += Number(order.quantity ?? order.qty ?? 1) || 0;
+      if (type === "vip") acc.countVip += Number(order.quantity ?? order.qty ?? 1) || 0;
+      else acc.countRegular += Number(order.quantity ?? order.qty ?? 1) || 0;
       return acc;
     },
-    { totalRegular: 0, totalVip: 0, totalAll: 0 },
+    { totalRegular: 0, totalVip: 0, totalAll: 0, countRegular: 0, countVip: 0, countTotal: 0 },
   );
 }
 
+// === BENTUK TABEL DATA TRANSAKSI (MIRIP FOTO KEDUA) ===
 function buildOrdersTableData(orders = [], exportedAt, eventLabel = "") {
   const exportedAtText = formatDateForCsv(exportedAt || new Date());
   const header = [
@@ -1030,10 +1035,10 @@ function buildOrdersTableData(orders = [], exportedAt, eventLabel = "") {
     formatDateForCsv(order.createdAt || order.created_at),
     formatDateForCsv(order.updatedAt),
     order.paymentType || "",
-    order.bank || "",
+    (order.bank || "").toString().toUpperCase(), // BANK UPPERCASE
     order.quantity ?? order.qty ?? 1,
     exportedAtText,
-    "", // summary cols empty per baris
+    "", // kolom summary kosong per baris
     "",
     "",
   ]);
@@ -1069,21 +1074,35 @@ function buildOrdersCsv(orders = [], exportedAt, eventLabel = "", delimiter = CS
   return csvRowsToString([header, ...dataRows, summaryRow], delimiter, true);
 }
 
+// === STYLING SHEET EXCEL AGAR MIRIP FOTO KEDUA ===
 function styleOrdersWorksheet(ws, dataRowCount = 0) {
   if (!ws || !ws["!ref"] || typeof XLSX === "undefined") return;
   const range = XLSX.utils.decode_range(ws["!ref"]);
 
+  // Tinggi baris (header lebih tinggi, data & total sedikit lebih tinggi)
+  const headerRowIndex = range.s.r; // biasanya 0
+  const summaryRowIndex = dataRowCount + 1; // 0-based (setelah data)
+  const lastRowIndex = Math.max(range.e.r, summaryRowIndex);
+  const headerRowHeight = 30; // pt
+  const dataRowHeight = 20; // pt
+
+  const rowsMeta = [];
+  for (let r = 0; r <= lastRowIndex; r += 1) {
+    rowsMeta[r] = { hpt: r === headerRowIndex ? headerRowHeight : dataRowHeight };
+  }
+  ws["!rows"] = rowsMeta;
+
   // Header bold
   for (let c = range.s.c; c <= range.e.c; c += 1) {
-    const ref = XLSX.utils.encode_cell({ c, r: range.s.r });
+    const ref = XLSX.utils.encode_cell({ c, r: headerRowIndex });
     const cell = ws[ref];
     if (cell) {
       cell.s = { ...(cell.s || {}), font: { ...(cell.s?.font || {}), bold: true } };
     }
   }
 
-  // Treat phone as text to avoid scientific notation
-  const phoneCol = 5;
+  // Kolom phone -> teks (hindari scientific notation)
+  const phoneCol = 5; // index 5 = kolom F
   for (let r = 1; r <= dataRowCount; r += 1) {
     const ref = XLSX.utils.encode_cell({ c: phoneCol, r });
     const cell = ws[ref];
@@ -1094,11 +1113,11 @@ function styleOrdersWorksheet(ws, dataRowCount = 0) {
     }
   }
 
-  // Number formatting for totals/quantity (include summary row)
-  const numericCols = [9, 14, 16, 17, 18];
-  const lastRow = dataRowCount + 1; // includes summary row
+  // Kolom angka dengan format #,##0 (termasuk baris summary)
+  const numericCols = [9, 14, 16, 17, 18]; // J, O, Q, R, S
+  const lastRowForNumbers = dataRowCount + 1; // termasuk summary row
   numericCols.forEach((c) => {
-    for (let r = 1; r <= lastRow; r += 1) {
+    for (let r = 1; r <= lastRowForNumbers; r += 1) {
       const ref = XLSX.utils.encode_cell({ c, r });
       const cell = ws[ref];
       if (cell && cell.v !== "" && cell.v !== null && cell.v !== undefined) {
@@ -1112,31 +1131,69 @@ function styleOrdersWorksheet(ws, dataRowCount = 0) {
     }
   });
 
-  // Column widths for readability
+  // Lebar kolom
   ws["!cols"] = [
-    { wch: 18 }, // Ref
-    { wch: 28 }, // Event
-    { wch: 12 }, // Ticket Type
-    { wch: 24 }, // Customer Name
-    { wch: 26 }, // Customer Email
-    { wch: 16 }, // Customer Phone
-    { wch: 16 }, // Payment Method
-    { wch: 12 }, // Status
-    { wch: 12 }, // Check-in
-    { wch: 14 }, // Total (paid)
-    { wch: 20 }, // Created At
-    { wch: 20 }, // Updated At
-    { wch: 16 }, // Payment Type
-    { wch: 12 }, // Bank
-    { wch: 10 }, // Quantity
-    { wch: 20 }, // Exported At
-    { wch: 16 }, // Total Reguler
-    { wch: 16 }, // Total VIP
-    { wch: 16 }, // Total Semua
+    { wch: 18 }, // A Ref
+    { wch: 28 }, // B Event
+    { wch: 12 }, // C Ticket Type
+    { wch: 24 }, // D Customer Name
+    { wch: 26 }, // E Customer Email
+    { wch: 16 }, // F Customer Phone
+    { wch: 16 }, // G Payment Method
+    { wch: 12 }, // H Status
+    { wch: 12 }, // I Check-in
+    { wch: 14 }, // J Total (paid)
+    { wch: 20 }, // K Created At
+    { wch: 20 }, // L Updated At
+    { wch: 16 }, // M Payment Type
+    { wch: 12 }, // N Bank
+    { wch: 10 }, // O Quantity
+    { wch: 20 }, // P Exported At
+    { wch: 16 }, // Q Total Reguler
+    { wch: 16 }, // R Total VIP
+    { wch: 16 }, // S Total Semua
   ];
 
   const filterEndRow = Math.max(1, dataRowCount + 1);
   ws["!autofilter"] = { ref: `A1:S${filterEndRow}` };
+
+  // Styling: header fill, borders, wrap, alignment
+  const headerFill = { patternType: "solid", fgColor: { rgb: "FFFFFF00" } }; // kuning terang
+  const summaryFill = { patternType: "solid", fgColor: { rgb: "FFF8F0D8" } }; // krem lembut
+  const thinBorder = {
+    top: { style: "thin", color: { rgb: "FFCCCCCC" } },
+    bottom: { style: "thin", color: { rgb: "FFCCCCCC" } },
+    left: { style: "thin", color: { rgb: "FFCCCCCC" } },
+    right: { style: "thin", color: { rgb: "FFCCCCCC" } },
+  };
+
+  for (let r = range.s.r; r <= range.e.r; r += 1) {
+    for (let c = range.s.c; c <= range.e.c; c += 1) {
+      const ref = XLSX.utils.encode_cell({ c, r });
+      const cell = ws[ref];
+      if (!cell) continue;
+      const isHeader = r === headerRowIndex;
+      const isSummary = r === summaryRowIndex;
+      const isNumber = numericCols.includes(c);
+      const baseAlign = {
+        vertical: "center",
+        horizontal: isHeader ? "center" : isNumber ? "right" : "left",
+        wrapText: true,
+      };
+      const baseFont = isHeader || isSummary ? { bold: true } : {};
+      const baseFill = isHeader ? headerFill : isSummary ? summaryFill : {};
+      cell.s = {
+        ...(cell.s || {}),
+        border: thinBorder,
+        alignment: { ...(cell.s?.alignment || {}), ...baseAlign },
+        font: { ...(cell.s?.font || {}), ...baseFont },
+        ...(isHeader || isSummary ? { fill: baseFill } : {}),
+      };
+    }
+  }
+
+  // Freeze header row
+  ws["!freeze"] = { xSplit: 0, ySplit: 1 };
 }
 
 let exportOrdersInProgress = false;
@@ -1175,14 +1232,14 @@ async function exportOrdersToExcel() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Transaksi Paid");
     const pad = (n) => String(n).padStart(2, "0");
-    const ts = `${exportedAt.getFullYear()}${pad(exportedAt.getMonth() + 1)}${pad(exportedAt.getDate())}-${pad(
-      exportedAt.getHours(),
-    )}${pad(exportedAt.getMinutes())}`;
+    const ts = `${exportedAt.getFullYear()}${pad(exportedAt.getMonth() + 1)}${pad(
+      exportedAt.getDate(),
+    )}-${pad(exportedAt.getHours())}${pad(exportedAt.getMinutes())}`;
     const prefix = eventFilterValue
       ? `${slugify(eventLabel || eventFilterValue, "event")}-paid`
       : "all-events-paid";
     const filename = `${prefix}-${ts}.xlsx`;
-    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
     const blob = new Blob([wbout], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
