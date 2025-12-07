@@ -1074,36 +1074,104 @@ function buildOrdersCsv(orders = [], exportedAt, eventLabel = "", delimiter = CS
   return csvRowsToString([header, ...dataRows, summaryRow], delimiter, true);
 }
 
+function buildOrdersSheetTemplate(rows = [], eventLabel = "", exportedAtText = "") {
+  const columnsCount = rows?.[0]?.length || 19;
+  const makeRow = () => Array.from({ length: columnsCount }, () => "");
+  const titleRow = makeRow();
+  const searchRow = makeRow();
+  const noteRow = makeRow();
+  const spacerRow = makeRow();
+
+  const titleText = eventLabel ? `Purchases - ${eventLabel}` : "Purchases";
+  const exportInfo =
+    exportedAtText && eventLabel
+      ? `Event: ${eventLabel} | Exported: ${exportedAtText}`
+      : exportedAtText
+        ? `Exported: ${exportedAtText}`
+        : `Event: ${eventLabel || "Semua event"}`;
+  const buttonText = "Add New Purchase";
+  titleRow[0] = titleText;
+  titleRow[Math.min(8, columnsCount - 5)] = exportInfo;
+  titleRow[Math.max(columnsCount - 4, 0)] = buttonText;
+
+  searchRow[2] = "Search status, input tracking ID";
+  noteRow[0] = "Paid-only export. Status badge colors follow the provided template.";
+
+  const topRows = [titleRow, searchRow, noteRow, spacerRow];
+  const headerRowIndex = topRows.length;
+  const dataRowCount = Math.max((rows?.length || 0) - 2, 0);
+  const summaryRowIndex = headerRowIndex + dataRowCount + 1;
+
+  const merges = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: Math.min(7, columnsCount - 1) } }, // title blob
+    { s: { r: 0, c: 8 }, e: { r: 0, c: Math.min(14, columnsCount - 1) } }, // info area
+    { s: { r: 0, c: Math.max(columnsCount - 4, 0) }, e: { r: 0, c: columnsCount - 1 } }, // button pill
+    { s: { r: 1, c: 2 }, e: { r: 1, c: Math.max(columnsCount - 3, 2) } }, // search bar
+    { s: { r: 2, c: 0 }, e: { r: 2, c: Math.min(12, columnsCount - 1) } }, // note line
+  ];
+
+  return {
+    rows: [...topRows, ...rows],
+    headerRowIndex,
+    summaryRowIndex,
+    dataRowCount,
+    templateRowsCount: topRows.length,
+    titleRowIndex: 0,
+    searchRowIndex: 1,
+    noteRowIndex: 2,
+    spacerRowIndex: 3,
+    searchArea: { startCol: 2, endCol: Math.max(columnsCount - 3, 2) },
+    titleArea: { startCol: 0, endCol: Math.min(7, columnsCount - 1) },
+    infoArea: { startCol: 8, endCol: Math.min(14, columnsCount - 1) },
+    buttonArea: { startCol: Math.max(columnsCount - 4, 0), endCol: columnsCount - 1 },
+    noteArea: { startCol: 0, endCol: Math.min(12, columnsCount - 1) },
+    merges,
+  };
+}
+
 // === STYLING SHEET EXCEL AGAR MIRIP FOTO KEDUA ===
-function styleOrdersWorksheet(ws, dataRowCount = 0) {
+function styleOrdersWorksheet(ws, options = {}) {
   if (!ws || !ws["!ref"] || typeof XLSX === "undefined") return;
   const range = XLSX.utils.decode_range(ws["!ref"]);
+  const columnsCount = range.e.c - range.s.c + 1;
+  const {
+    dataRowCount = 0,
+    headerRowIndex = 0,
+    summaryRowIndex: summaryIndexInput,
+    titleRowIndex = 0,
+    searchRowIndex = 1,
+    noteRowIndex = 2,
+    spacerRowIndex = 3,
+    searchArea = { startCol: 2, endCol: Math.max(columnsCount - 3, 2) },
+    titleArea = { startCol: 0, endCol: 7 },
+    infoArea = { startCol: 8, endCol: 14 },
+    buttonArea = { startCol: Math.max(columnsCount - 4, 0), endCol: columnsCount - 1 },
+    noteArea = { startCol: 0, endCol: 12 },
+  } = options;
 
-  // Tinggi baris (header lebih tinggi, data & total sedikit lebih tinggi)
-  const headerRowIndex = range.s.r; // biasanya 0
-  const summaryRowIndex = dataRowCount + 1; // 0-based (setelah data)
+  const summaryRowIndex = typeof summaryIndexInput === "number" ? summaryIndexInput : headerRowIndex + dataRowCount + 1;
+  const firstDataRowIndex = headerRowIndex + 1;
+  const lastDataRowIndex = dataRowCount > 0 ? firstDataRowIndex + dataRowCount - 1 : headerRowIndex;
   const lastRowIndex = Math.max(range.e.r, summaryRowIndex);
-  const headerRowHeight = 30; // pt
-  const dataRowHeight = 20; // pt
+  const tableStartRow = headerRowIndex;
+  const tableEndRow = summaryRowIndex;
+  const tableStartCol = range.s.c;
+  const tableEndCol = range.e.c;
+  const endColLetter = XLSX.utils.encode_col(range.e.c);
 
-  const rowsMeta = [];
-  for (let r = 0; r <= lastRowIndex; r += 1) {
-    rowsMeta[r] = { hpt: r === headerRowIndex ? headerRowHeight : dataRowHeight };
-  }
-  ws["!rows"] = rowsMeta;
-
-  // Header bold
-  for (let c = range.s.c; c <= range.e.c; c += 1) {
-    const ref = XLSX.utils.encode_cell({ c, r: headerRowIndex });
-    const cell = ws[ref];
-    if (cell) {
-      cell.s = { ...(cell.s || {}), font: { ...(cell.s?.font || {}), bold: true } };
+  // pastikan semua sel ada agar styling rata
+  for (let r = range.s.r; r <= range.e.r; r += 1) {
+    for (let c = range.s.c; c <= range.e.c; c += 1) {
+      const ref = XLSX.utils.encode_cell({ c, r });
+      if (!ws[ref]) {
+        ws[ref] = { t: "s", v: "" };
+      }
     }
   }
 
   // Kolom phone -> teks (hindari scientific notation)
   const phoneCol = 5; // index 5 = kolom F
-  for (let r = 1; r <= dataRowCount; r += 1) {
+  for (let r = firstDataRowIndex; r <= lastDataRowIndex; r += 1) {
     const ref = XLSX.utils.encode_cell({ c: phoneCol, r });
     const cell = ws[ref];
     if (cell) {
@@ -1115,9 +1183,9 @@ function styleOrdersWorksheet(ws, dataRowCount = 0) {
 
   // Kolom angka dengan format #,##0 (termasuk baris summary)
   const numericCols = [9, 14, 16, 17, 18]; // J, O, Q, R, S
-  const lastRowForNumbers = dataRowCount + 1; // termasuk summary row
+  const lastRowForNumbers = summaryRowIndex; // termasuk summary row
   numericCols.forEach((c) => {
-    for (let r = 1; r <= lastRowForNumbers; r += 1) {
+    for (let r = firstDataRowIndex; r <= lastRowForNumbers; r += 1) {
       const ref = XLSX.utils.encode_cell({ c, r });
       const cell = ws[ref];
       if (cell && cell.v !== "" && cell.v !== null && cell.v !== undefined) {
@@ -1131,69 +1199,201 @@ function styleOrdersWorksheet(ws, dataRowCount = 0) {
     }
   });
 
-  // Lebar kolom
+  // Lebar kolom (lebih lapang mirip contoh)
   ws["!cols"] = [
-    { wch: 18 }, // A Ref
+    { wch: 20 }, // A Ref
     { wch: 28 }, // B Event
-    { wch: 12 }, // C Ticket Type
+    { wch: 14 }, // C Ticket Type
     { wch: 24 }, // D Customer Name
-    { wch: 26 }, // E Customer Email
-    { wch: 16 }, // F Customer Phone
-    { wch: 16 }, // G Payment Method
-    { wch: 12 }, // H Status
+    { wch: 28 }, // E Customer Email
+    { wch: 18 }, // F Customer Phone
+    { wch: 18 }, // G Payment Method
+    { wch: 14 }, // H Status
     { wch: 12 }, // I Check-in
-    { wch: 14 }, // J Total (paid)
+    { wch: 16 }, // J Total (paid)
     { wch: 20 }, // K Created At
     { wch: 20 }, // L Updated At
     { wch: 16 }, // M Payment Type
     { wch: 12 }, // N Bank
-    { wch: 10 }, // O Quantity
-    { wch: 20 }, // P Exported At
+    { wch: 12 }, // O Quantity
+    { wch: 18 }, // P Exported At
     { wch: 16 }, // Q Total Reguler
     { wch: 16 }, // R Total VIP
     { wch: 16 }, // S Total Semua
   ];
 
-  const filterEndRow = Math.max(1, dataRowCount + 1);
-  ws["!autofilter"] = { ref: `A1:S${filterEndRow}` };
+  const filterStartRow = headerRowIndex + 1;
+  const filterEndRow = headerRowIndex + dataRowCount;
+  ws["!autofilter"] = { ref: `A${filterStartRow}:${endColLetter}${Math.max(filterStartRow, filterEndRow)}` };
 
-  // Styling: header fill, borders, wrap, alignment
-  const headerFill = { patternType: "solid", fgColor: { rgb: "FFFFFF00" } }; // kuning terang
-  const summaryFill = { patternType: "solid", fgColor: { rgb: "FFF8F0D8" } }; // krem lembut
-  const thinBorder = {
-    top: { style: "thin", color: { rgb: "FFCCCCCC" } },
-    bottom: { style: "thin", color: { rgb: "FFCCCCCC" } },
-    left: { style: "thin", color: { rgb: "FFCCCCCC" } },
-    right: { style: "thin", color: { rgb: "FFCCCCCC" } },
+  // Tinggi baris (title/search lebih tinggi)
+  const rowsMeta = [];
+  for (let r = 0; r <= lastRowIndex; r += 1) {
+    let hpt = 20;
+    if (r === titleRowIndex) hpt = 34;
+    else if (r === searchRowIndex) hpt = 24;
+    else if (r === noteRowIndex) hpt = 18;
+    else if (r === headerRowIndex) hpt = 26;
+    else if (r === summaryRowIndex) hpt = 24;
+    rowsMeta[r] = { hpt };
+  }
+  ws["!rows"] = rowsMeta;
+
+  const palette = {
+    paper: "FFF8F3EC",
+    headerFill: "FFE8D7C8",
+    summaryFill: "FFF5E6C8",
+    zebra: "FFFFFFFF",
+    zebraAlt: "FFFBF7F1",
+    titleFill: "FFF4E8DB",
+    titleText: "FF4F3A35",
+    infoText: "FF7A675E",
+    searchFill: "FFF8F3EC",
+    searchBorder: "FFCEBFAF",
+    noteFill: "FFFBF7F1",
+    buttonFill: "FF6E5577",
+    buttonText: "FFFFFFFF",
+    border: "FFD8C7B8",
+    text: "FF3B332C",
   };
+  const thinBorder = {
+    top: { style: "thin", color: { rgb: palette.border } },
+    bottom: { style: "thin", color: { rgb: palette.border } },
+    left: { style: "thin", color: { rgb: palette.border } },
+    right: { style: "thin", color: { rgb: palette.border } },
+  };
+  const statusStyles = {
+    paid: { fill: "FFE5F5EA", font: "FF2D7A46", borderColor: "FFC5E6CF" },
+    pending: { fill: "FFFDF3D2", font: "FF9B6B00", borderColor: "FFF4DE9A" },
+    expired: { fill: "FFF3F4F6", font: "FF6B7280", borderColor: "FFE5E7EB" },
+    failed: { fill: "FFF9E0E0", font: "FFB42318", borderColor: "FFE5B8B8" },
+    canceled: { fill: "FFF9E0E0", font: "FFB42318", borderColor: "FFE5B8B8" },
+    refunded: { fill: "FFE7F1FB", font: "FF1F5B9F", borderColor: "FFC7DBF4" },
+    default: { fill: "FFF1F0EC", font: "FF6B6B6B", borderColor: palette.border },
+  };
+
+  const isWithin = (col, area) => area && col >= area.startCol && col <= area.endCol;
 
   for (let r = range.s.r; r <= range.e.r; r += 1) {
     for (let c = range.s.c; c <= range.e.c; c += 1) {
       const ref = XLSX.utils.encode_cell({ c, r });
       const cell = ws[ref];
       if (!cell) continue;
+
       const isHeader = r === headerRowIndex;
       const isSummary = r === summaryRowIndex;
+      const isDataRow = r >= firstDataRowIndex && r <= lastDataRowIndex;
       const isNumber = numericCols.includes(c);
+      const isTitle = r === titleRowIndex && isWithin(c, titleArea);
+      const isInfo = r === titleRowIndex && isWithin(c, infoArea);
+      const isButton = r === titleRowIndex && isWithin(c, buttonArea);
+      const isSearch = r === searchRowIndex && isWithin(c, searchArea);
+      const isNote = r === noteRowIndex && isWithin(c, noteArea);
+
+      const zebraFillIdx = r - firstDataRowIndex;
+      const zebraFill =
+        isDataRow && zebraFillIdx >= 0 ? { patternType: "solid", fgColor: { rgb: zebraFillIdx % 2 === 0 ? palette.zebra : palette.zebraAlt } } : null;
+
+      let fill;
+      if (isButton) fill = { patternType: "solid", fgColor: { rgb: palette.buttonFill } };
+      else if (isSearch) fill = { patternType: "solid", fgColor: { rgb: palette.searchFill } };
+      else if (isTitle || isInfo) fill = { patternType: "solid", fgColor: { rgb: palette.titleFill } };
+      else if (isNote) fill = { patternType: "solid", fgColor: { rgb: palette.noteFill } };
+      else if (isHeader) fill = { patternType: "solid", fgColor: { rgb: palette.headerFill } };
+      else if (isSummary) fill = { patternType: "solid", fgColor: { rgb: palette.summaryFill } };
+      else if (zebraFill) fill = zebraFill;
+      else if (r < headerRowIndex) fill = { patternType: "solid", fgColor: { rgb: palette.paper } };
+
       const baseAlign = {
         vertical: "center",
-        horizontal: isHeader ? "center" : isNumber ? "right" : "left",
+        horizontal: isButton || isSearch || isInfo || c === 7 || c === 8 ? "center" : isNumber ? "right" : "left",
         wrapText: true,
       };
-      const baseFont = isHeader || isSummary ? { bold: true } : {};
-      const baseFill = isHeader ? headerFill : isSummary ? summaryFill : {};
+
+      const baseFont = {
+        name: "Segoe UI",
+        sz: isHeader || isSummary ? 11 : 10,
+        bold: isHeader || isSummary,
+        color: { rgb: palette.text },
+      };
+
+      if (isTitle) {
+        baseFont.name = "Georgia";
+        baseFont.sz = 18;
+        baseFont.bold = true;
+        baseFont.color = { rgb: palette.titleText };
+      } else if (isButton) {
+        baseFont.name = "Georgia";
+        baseFont.sz = 14;
+        baseFont.bold = true;
+        baseFont.color = { rgb: palette.buttonText };
+      } else if (isInfo) {
+        baseFont.color = { rgb: palette.infoText };
+        baseFont.bold = false;
+      } else if (isSearch || isNote) {
+        baseFont.bold = false;
+        baseFont.color = { rgb: palette.infoText };
+      }
+
+      const border = isSearch
+        ? {
+            top: { style: "thin", color: { rgb: palette.searchBorder } },
+            bottom: { style: "thin", color: { rgb: palette.searchBorder } },
+            left: { style: "thin", color: { rgb: palette.searchBorder } },
+            right: { style: "thin", color: { rgb: palette.searchBorder } },
+          }
+        : thinBorder;
+
       cell.s = {
         ...(cell.s || {}),
-        border: thinBorder,
+        border,
         alignment: { ...(cell.s?.alignment || {}), ...baseAlign },
         font: { ...(cell.s?.font || {}), ...baseFont },
-        ...(isHeader || isSummary ? { fill: baseFill } : {}),
+        ...(fill ? { fill } : {}),
       };
+
+      // Status badge color pill
+      if (isDataRow && c === 7) {
+        const statusKey = String(cell.v || "").toLowerCase();
+        const statusStyle = statusStyles[statusKey] || statusStyles.default;
+        cell.s = {
+          ...(cell.s || {}),
+          fill: { patternType: "solid", fgColor: { rgb: statusStyle.fill } },
+          font: {
+            ...(cell.s?.font || {}),
+            color: { rgb: statusStyle.font },
+            bold: true,
+          },
+          alignment: { ...(cell.s?.alignment || {}), horizontal: "center", vertical: "center" },
+          border: {
+            top: { style: "thin", color: { rgb: statusStyle.borderColor || palette.border } },
+            bottom: { style: "thin", color: { rgb: statusStyle.borderColor || palette.border } },
+            left: { style: "thin", color: { rgb: statusStyle.borderColor || palette.border } },
+            right: { style: "thin", color: { rgb: statusStyle.borderColor || palette.border } },
+          },
+        };
+      }
+
+      // Tebal di pinggir tabel
+      if (r >= tableStartRow && r <= tableEndRow && c >= tableStartCol && c <= tableEndCol) {
+        const isTop = r === tableStartRow;
+        const isBottom = r === tableEndRow;
+        const isLeft = c === tableStartCol;
+        const isRight = c === tableEndCol;
+        const thick = { style: "medium", color: { rgb: palette.border } };
+        cell.s.border = {
+          ...(cell.s.border || {}),
+          ...(isTop ? { top: thick } : {}),
+          ...(isBottom ? { bottom: thick } : {}),
+          ...(isLeft ? { left: thick } : {}),
+          ...(isRight ? { right: thick } : {}),
+        };
+      }
     }
   }
 
-  // Freeze header row
-  ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+  // Freeze blok header + dekorasi atas
+  ws["!freeze"] = { xSplit: 0, ySplit: headerRowIndex + 1 };
 }
 
 let exportOrdersInProgress = false;
@@ -1225,19 +1425,23 @@ async function exportOrdersToExcel() {
 
     const eventLabel = eventFilterValue ? getEventLabel(eventFilterValue) : "Semua event";
     const exportedAt = new Date();
-    const { header, dataRows, summaryRow } = buildOrdersTableData(filteredOrders, exportedAt, eventLabel);
+    const { header, dataRows, summaryRow, exportedAtText } = buildOrdersTableData(filteredOrders, exportedAt, eventLabel);
     const rows = [header, ...dataRows, summaryRow];
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    styleOrdersWorksheet(ws, dataRows.length);
+    const template = buildOrdersSheetTemplate(rows, eventLabel, exportedAtText);
+    const ws = XLSX.utils.aoa_to_sheet(template.rows);
+    if (template.merges?.length) {
+      ws["!merges"] = [...(ws["!merges"] || []), ...template.merges];
+    }
+    styleOrdersWorksheet(ws, template);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Transaksi Paid");
+    XLSX.utils.book_append_sheet(wb, ws, "Purchases");
     const pad = (n) => String(n).padStart(2, "0");
     const ts = `${exportedAt.getFullYear()}${pad(exportedAt.getMonth() + 1)}${pad(
       exportedAt.getDate(),
     )}-${pad(exportedAt.getHours())}${pad(exportedAt.getMinutes())}`;
     const prefix = eventFilterValue
-      ? `${slugify(eventLabel || eventFilterValue, "event")}-paid`
-      : "all-events-paid";
+      ? `${slugify(eventLabel || eventFilterValue, "event")}-purchases`
+      : "all-events-purchases";
     const filename = `${prefix}-${ts}.xlsx`;
     const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
     const blob = new Blob([wbout], {
