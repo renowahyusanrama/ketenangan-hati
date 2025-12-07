@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="css/admin_preview.css" />
   <link rel="icon" type="image/png" href="images/logo.png" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <style>
     :root {
@@ -538,6 +539,42 @@
       margin-top: 12px;
       font-size: 0.9rem;
     }
+    .stats-charts{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+      gap:16px;
+      margin-top:18px;
+      align-items:stretch;
+    }
+    .chart-card{
+      background:#f8fafc;
+      border-radius:16px;
+      padding:16px;
+      border:1px solid var(--border);
+      box-shadow:0 10px 24px rgba(0,0,0,0.04);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .chart-card h3{
+      margin:0;
+      font-size:1rem;
+      font-weight:700;
+      color:var(--text);
+    }
+    .chart-card p{
+      margin:0;
+      color:var(--muted);
+      font-size:0.9rem;
+    }
+    .chart-shell{
+      position:relative;
+      min-height:220px;
+    }
+    .chart-shell canvas{
+      width:100% !important;
+      height:220px !important;
+    }
 
     .status-text { 
       font-size: 14px; 
@@ -1019,6 +1056,26 @@
                 <ul class="stat-status-list" id="statStatusList">
                   <li class="muted">Menunggu data transaksi...</li>
                 </ul>
+                <div class="stats-charts">
+                  <div class="chart-card">
+                    <div>
+                      <h3>Status pesanan</h3>
+                      <p class="muted">Distribusi paid, pending, dll.</p>
+                    </div>
+                    <div class="chart-shell">
+                      <canvas id="statusChart" height="220"></canvas>
+                    </div>
+                  </div>
+                  <div class="chart-card">
+                    <div>
+                      <h3>Jenis tiket</h3>
+                      <p class="muted">Regular vs VIP yang terjual.</p>
+                    </div>
+                    <div class="chart-shell">
+                      <canvas id="typeChart" height="220"></canvas>
+                    </div>
+                  </div>
+                </div>
                 <p class="muted stat-updated" id="statUpdatedAt">Terakhir diperbarui: -</p>
               </div>
             </section>

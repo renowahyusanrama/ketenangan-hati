@@ -94,6 +94,10 @@ const statParticipantCountEl = document.getElementById("statParticipantCount");
 const statStatusListEl = document.getElementById("statStatusList");
 const statUpdatedAtEl = document.getElementById("statUpdatedAt");
 const statEventFilter = document.getElementById("statEventFilter");
+const statusChartCanvas = document.getElementById("statusChart");
+const typeChartCanvas = document.getElementById("typeChart");
+let statusChart;
+let typeChart;
 const orderEventFilter = document.getElementById("orderEventFilter");
 
 const STATUS_DOT_COLORS = {
@@ -477,6 +481,75 @@ function renderOrderStats(rows = [], eventFilter = "") {
       minute: "2-digit",
       second: "2-digit",
     }).format(new Date())}`;
+  }
+
+  updateStatsCharts(breakdown, typeBreakdown);
+}
+
+function updateStatsCharts(breakdown = {}, typeBreakdown = {}) {
+  if (typeof Chart === "undefined") return;
+  const statusLabels = ["paid", "pending", "canceled", "expired", "failed", "refunded"];
+  const statusColors = {
+    paid: "#4ade80",
+    pending: "#fbbf24",
+    canceled: "#f87171",
+    expired: "#cbd5e1",
+    failed: "#f87171",
+    refunded: "#60a5fa",
+  };
+  const statusData = statusLabels.map((k) => breakdown[k] || 0);
+
+  const typeLabels = Object.keys(typeBreakdown).length ? Object.keys(typeBreakdown) : ["regular", "vip"];
+  const typeData = typeLabels.map((k) => typeBreakdown[k] || 0);
+  const typeColors = ["#2563eb", "#f97316", "#22c55e", "#a855f7"];
+
+  if (statusChartCanvas) {
+    if (statusChart) statusChart.destroy();
+    statusChart = new Chart(statusChartCanvas, {
+      type: "bar",
+      data: {
+        labels: statusLabels.map((s) => s.toUpperCase()),
+        datasets: [
+          {
+            label: "Order",
+            data: statusData,
+            backgroundColor: statusLabels.map((s, i) => statusColors[s] || "#94a3b8"),
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+        },
+        plugins: { legend: { display: false } },
+      },
+    });
+  }
+
+  if (typeChartCanvas) {
+    if (typeChart) typeChart.destroy();
+    typeChart = new Chart(typeChartCanvas, {
+      type: "doughnut",
+      data: {
+        labels: typeLabels.map((t) => t.toUpperCase()),
+        datasets: [
+          {
+            data: typeData,
+            backgroundColor: typeLabels.map((_, i) => typeColors[i % typeColors.length]),
+            borderWidth: 0,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: "bottom" } },
+        cutout: "60%",
+      },
+    });
   }
 }
 
