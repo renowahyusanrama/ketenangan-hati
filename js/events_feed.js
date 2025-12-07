@@ -44,17 +44,17 @@ async function loadEvents() {
   const ref = collection(db, "events");
   let snap;
   try {
-    const q = query(ref, where("status", "==", "published"), orderBy("updatedAt", "desc"), limit(20));
+    const q = query(ref, where("status", "==", "published"), orderBy("updatedAt", "desc"), limit(1));
     snap = await getDocs(q);
   } catch (err) {
     console.warn("Fallback load events (tanpa orderBy):", err?.message);
-    const q = query(ref, where("status", "==", "published"), limit(20));
+    const q = query(ref, where("status", "==", "published"), limit(1));
     snap = await getDocs(q);
   }
 
   if (snap.empty) {
     console.warn("Firestore kosong, pakai fallback seed.");
-    renderList(EVENT_SEED_DATA.slice(0, 6));
+    renderList(EVENT_SEED_DATA.slice(0, 1));
     return;
   }
 
@@ -66,14 +66,15 @@ async function loadEvents() {
 }
 
 function renderList(data) {
-  if (!data || !data.length) {
+  const list = Array.isArray(data) ? data.slice(0, 1) : [];
+  if (!list.length) {
     cardsEl.innerHTML = '<p class="muted">Belum ada event yang dipublikasikan.</p>';
     if (typeof window.refreshEventSlider === "function") {
       window.refreshEventSlider();
     }
     return;
   }
-  cardsEl.innerHTML = data
+  cardsEl.innerHTML = list
     .map((e) => {
       const slug = e.slug || e.id;
       return `

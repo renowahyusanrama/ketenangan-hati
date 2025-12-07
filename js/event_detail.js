@@ -623,56 +623,6 @@ async function fetchEventBySlug(slug) {
   return fallback ? { id: fallback.slug, ...fallback } : null;
 }
 
-async function fetchRecommended(slug) {
-  try {
-    const ref = collection(db, "events");
-    let snap;
-    try {
-      const q = query(ref, where("status", "==", "published"), orderBy("updatedAt", "desc"), limit(3));
-      snap = await getDocs(q);
-    } catch (err) {
-      console.warn("Fallback recommended (tanpa orderBy):", err?.message);
-      const q = query(ref, where("status", "==", "published"), limit(3));
-      snap = await getDocs(q);
-    }
-    const list = [];
-    snap.forEach((d) => {
-      if (d.id !== slug) list.push({ id: d.id, ...d.data() });
-    });
-    if (!list.length) {
-      return EVENT_SEED_DATA.filter((e) => e.slug !== slug).slice(0, 3);
-    }
-    return list.slice(0, 3);
-  } catch (err) {
-    console.error("Fetch recommended error:", err);
-    return EVENT_SEED_DATA.filter((e) => e.slug !== slug).slice(0, 3);
-  }
-}
-
-function renderRecommended(list) {
-  const container = document.getElementById("otherEvents");
-  if (!container) return;
-  if (!list || !list.length) {
-    container.innerHTML = '<p class="muted">Belum ada event lain.</p>';
-    return;
-  }
-  container.innerHTML = "";
-  list.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "mini-card";
-    card.innerHTML = `
-      <span class="chip chip-green">${item.category || "Event"}</span>
-      <h4>${item.title || "-"}</h4>
-      <ul class="meta">
-        <li><i class="fa-regular fa-calendar-days"></i>${item.schedule || ""} ${item.time || ""}</li>
-        <li><i class="fa-solid fa-location-dot"></i>${item.location || ""}</li>
-      </ul>
-      <a class="btn btn-outline" href="event-detail.html?event=${item.slug || item.id}">Detail</a>
-    `;
-    container.appendChild(card);
-  });
-}
-
 function normalizeEvent(raw, slug) {
   if (!raw) return null;
   return {
@@ -779,6 +729,4 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   renderEvent(event);
-  const recommended = await fetchRecommended(slug);
-  renderRecommended(recommended);
 });

@@ -535,18 +535,10 @@ body.no-scroll{
     font-family:var(--accent-font), 'Poppins', sans-serif;
     text-align:center;
     position:relative;
-    padding-bottom:16px;
+    padding-bottom:0;
 }
 .section-title::after{
-    content:'';
-    position:absolute;
-    bottom:0;
-    left:50%;
-    transform:translateX(-50%);
-    width:80px;
-    height:3px;
-    background:var(--primary);
-    border-radius:3px;
+    content:none;
 }
 .lead{ 
     color:var(--muted); 
@@ -1388,6 +1380,14 @@ body.no-scroll{
     gap:12px;
     margin-top:24px;
     padding-bottom:12px;
+}
+.card a,
+.event-slider a{
+    text-decoration:none;
+}
+.card a:hover,
+.event-slider a:hover{
+    text-decoration:none;
 }
 .order-card {
     border:1px solid rgba(55,117,181,0.12);
