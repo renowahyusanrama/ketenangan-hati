@@ -7,10 +7,25 @@ const TRIPAY_MERCHANT_CODE = process.env.TRIPAY_MERCHANT_CODE || "";
 const TRIPAY_MODE = process.env.TRIPAY_MODE || "sandbox";
 const TRIPAY_CALLBACK_URL = process.env.TRIPAY_CALLBACK_URL || "";
 const TRIPAY_RETURN_URL = process.env.TRIPAY_RETURN_URL || "";
-const TRIPAY_GATEWAY_URL = process.env.TRIPAY_GATEWAY_URL || "";
+
+// Gateway di Hostinger
+// Di Vercel, cukup isi salah satu:
+// TRIPAY_GATEWAY_URL              = https://gw.ketengananjiwa.id/create-transaction.php
+// atau lebih spesifik:
+// TRIPAY_GATEWAY_CREATE_URL       = https://gw.ketengananjiwa.id/create-transaction.php
+// TRIPAY_GATEWAY_CANCEL_URL       = (nanti kalau kamu bikin endpoint cancel sendiri)
+const TRIPAY_GATEWAY_CREATE_URL =
+  process.env.TRIPAY_GATEWAY_CREATE_URL ||
+  process.env.TRIPAY_GATEWAY_URL ||
+  "";
+
+const TRIPAY_GATEWAY_CANCEL_URL =
+  process.env.TRIPAY_GATEWAY_CANCEL_URL || "";
 
 const TRIPAY_BASE_URL =
-  TRIPAY_MODE === "production" ? "https://tripay.co.id/api" : "https://tripay.co.id/api-sandbox";
+  TRIPAY_MODE === "production"
+    ? "https://tripay.co.id/api"
+    : "https://tripay.co.id/api-sandbox";
 
 function createTripaySignature(merchantRef, amount) {
   if (!TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) return "";
@@ -33,16 +48,40 @@ function resolveTripayMethod(paymentType, bank) {
   return map[normalized] || "BCAVA";
 }
 
+/**
+ * Create transaction ke Tripay.
+ * - Kalau TRIPAY_GATEWAY_CREATE_URL di-set ➜ kirim ke gateway Hostinger (tanpa Authorization)
+ * - Kalau tidak ➜ langsung ke Tripay (butuh TRIPAY_API_KEY & whitelist IP)
+ */
 async function createTripayTransaction(payload) {
-  const url = TRIPAY_GATEWAY_URL || `${TRIPAY_BASE_URL}/transaction/create`;
-  const headers = TRIPAY_GATEWAY_URL
-    ? { "Content-Type": "application/json" }
-    : { "Content-Type": "application/json", Authorization: `Bearer ${TRIPAY_API_KEY}` };
+  if (!TRIPAY_GATEWAY_CREATE_URL && !TRIPAY_API_KEY) {
+    throw new Error("Tripay tidak terkonfigurasi: gateway & API key kosong.");
+  }
 
-  const { data } = await axios.post(url, payload, { headers });
+  const url =
+    TRIPAY_GATEWAY_CREATE_URL ||
+    `${TRIPAY_BASE_URL}/transaction/create`;
+
+  const headers = TRIPAY_GATEWAY_CREATE_URL
+    ? { "Content-Type": "application/json" }
+    : {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${TRIPAY_API_KEY}`,
+      };
+
+  const { data } = await axios.post(url, payload, {
+    headers,
+    timeout: 15000,
+  });
+
   return data;
 }
 
+/**
+ * Cancel transaction.
+ * - Kalau TRIPAY_GATEWAY_CANCEL_URL di-set ➜ kirim ke gateway cancel.
+ * - Kalau tidak ➜ langsung ke Tripay (seperti behavior lama).
+ */
 async function cancelTripayTransaction({ reference, merchantRef }) {
   const ref = reference || merchantRef;
   if (!ref) throw new Error("reference atau merchantRef wajib untuk cancel Tripay");
@@ -50,12 +89,22 @@ async function cancelTripayTransaction({ reference, merchantRef }) {
   const payload = { reference: ref };
   if (merchantRef && !payload.merchant_ref) payload.merchant_ref = merchantRef;
 
-  const url = TRIPAY_GATEWAY_URL || `${TRIPAY_BASE_URL}/transaction/cancel`;
-  const headers = TRIPAY_GATEWAY_URL
-    ? { "Content-Type": "application/json" }
-    : { "Content-Type": "application/json", Authorization: `Bearer ${TRIPAY_API_KEY}` };
+  const url =
+    TRIPAY_GATEWAY_CANCEL_URL ||
+    `${TRIPAY_BASE_URL}/transaction/cancel`;
 
-  const { data } = await axios.post(url, payload, { headers });
+  const headers = TRIPAY_GATEWAY_CANCEL_URL
+    ? { "Content-Type": "application/json" }
+    : {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${TRIPAY_API_KEY}`,
+      };
+
+  const { data } = await axios.post(url, payload, {
+    headers,
+    timeout: 15000,
+  });
+
   return data;
 }
 
@@ -75,12 +124,14 @@ function normalizeTripayResponse(
     totalAmount,
     amountForTripay,
     ticketType,
-  },
+  }
 ) {
   const payCode = trx?.pay_code || trx?.va_number || trx?.payment_code || null;
   const total = totalAmount != null ? totalAmount : amount;
   const base = baseAmount != null ? baseAmount : amount;
-  const chargeAmount = amountForTripay != null ? amountForTripay : base + (platformTax || 0);
+  const chargeAmount =
+    amountForTripay != null ? amountForTripay : base + (platformTax || 0);
+
   return {
     provider: "tripay",
     orderId: merchantRef,
@@ -133,20 +184,35 @@ function verifyTripayCallback(body = {}, headers = {}, rawBody = "") {
 
   const expectedCandidates = [];
   for (const candidate of candidates) {
-    const expectedFromBody = crypto.createHmac("sha256", TRIPAY_PRIVATE_KEY).update(candidate).digest("hex");
+    const expectedFromBody = crypto
+      .createHmac("sha256", TRIPAY_PRIVATE_KEY)
+      .update(candidate)
+      .digest("hex");
     expectedCandidates.push(expectedFromBody);
     if (signature === expectedFromBody) return true;
   }
 
   // Fallback ke pola lama (merchant_code + merchant_ref + amount) jika diperlukan.
-  const merchantRef = body.merchant_ref || body.merchantRef || body.reference;
+  const merchantRef =
+    body.merchant_ref || body.merchantRef || body.reference;
   const amount =
-    body.total_amount ?? body.amount ?? body.amount_total ?? body.amount_received ?? body.amount_received_raw;
+    body.total_amount ??
+    body.amount ??
+    body.amount_total ??
+    body.amount_received ??
+    body.amount_received_raw;
   if (!merchantRef || amount == null) return false;
+
   const basePayload = `${merchantRef}${TRIPAY_MERCHANT_CODE}${amount}`;
   const altPayload = `${TRIPAY_MERCHANT_CODE}${merchantRef}${amount}`;
-  const expected = crypto.createHmac("sha256", TRIPAY_PRIVATE_KEY).update(basePayload).digest("hex");
-  const altExpected = crypto.createHmac("sha256", TRIPAY_PRIVATE_KEY).update(altPayload).digest("hex");
+  const expected = crypto
+    .createHmac("sha256", TRIPAY_PRIVATE_KEY)
+    .update(basePayload)
+    .digest("hex");
+  const altExpected = crypto
+    .createHmac("sha256", TRIPAY_PRIVATE_KEY)
+    .update(altPayload)
+    .digest("hex");
   const matched = signature === expected || signature === altExpected;
 
   if (!matched) {
