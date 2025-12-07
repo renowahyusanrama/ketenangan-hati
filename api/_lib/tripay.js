@@ -7,6 +7,7 @@ const TRIPAY_MERCHANT_CODE = process.env.TRIPAY_MERCHANT_CODE || "";
 const TRIPAY_MODE = process.env.TRIPAY_MODE || "sandbox";
 const TRIPAY_CALLBACK_URL = process.env.TRIPAY_CALLBACK_URL || "";
 const TRIPAY_RETURN_URL = process.env.TRIPAY_RETURN_URL || "";
+const TRIPAY_GATEWAY_URL = process.env.TRIPAY_GATEWAY_URL || "";
 
 const TRIPAY_BASE_URL =
   TRIPAY_MODE === "production" ? "https://tripay.co.id/api" : "https://tripay.co.id/api-sandbox";
@@ -33,12 +34,12 @@ function resolveTripayMethod(paymentType, bank) {
 }
 
 async function createTripayTransaction(payload) {
-  const { data } = await axios.post(`${TRIPAY_BASE_URL}/transaction/create`, payload, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${TRIPAY_API_KEY}`,
-    },
-  });
+  const url = TRIPAY_GATEWAY_URL || `${TRIPAY_BASE_URL}/transaction/create`;
+  const headers = TRIPAY_GATEWAY_URL
+    ? { "Content-Type": "application/json" }
+    : { "Content-Type": "application/json", Authorization: `Bearer ${TRIPAY_API_KEY}` };
+
+  const { data } = await axios.post(url, payload, { headers });
   return data;
 }
 
@@ -49,12 +50,12 @@ async function cancelTripayTransaction({ reference, merchantRef }) {
   const payload = { reference: ref };
   if (merchantRef && !payload.merchant_ref) payload.merchant_ref = merchantRef;
 
-  const { data } = await axios.post(`${TRIPAY_BASE_URL}/transaction/cancel`, payload, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${TRIPAY_API_KEY}`,
-    },
-  });
+  const url = TRIPAY_GATEWAY_URL || `${TRIPAY_BASE_URL}/transaction/cancel`;
+  const headers = TRIPAY_GATEWAY_URL
+    ? { "Content-Type": "application/json" }
+    : { "Content-Type": "application/json", Authorization: `Bearer ${TRIPAY_API_KEY}` };
+
+  const { data } = await axios.post(url, payload, { headers });
   return data;
 }
 
