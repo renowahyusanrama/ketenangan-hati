@@ -754,9 +754,13 @@ function initPaymentForm(event) {
       setHint(
         isFree
           ? "E-ticket berhasil dikirim ke email. Cek inbox/spam."
-          : "Tagihan berhasil dibuat. Segera selesaikan pembayaran.",
+          : "Tagihan berhasil dibuat. Mengarahkan ke halaman pembayaran Tripay...",
         "success",
       );
+      if (!isFree && data.checkoutUrl) {
+        // Buka halaman pembayaran Tripay di tab baru supaya user langsung ke template Tripay
+        window.open(data.checkoutUrl, "_blank", "noopener");
+      }
       const normalizedInitialStatus = (data.status || data.rawStatus || "").toLowerCase();
       if (!isFree && normalizedInitialStatus !== "paid") {
         const orderKey = data.orderId || data.merchantRef || data.reference;
