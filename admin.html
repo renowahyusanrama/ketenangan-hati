@@ -7,7 +7,9 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/coolvetica">
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico:wght@400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="css/admin_preview.css" />
   <link rel="icon" type="image/png" href="images/logo.png" />
@@ -30,6 +32,9 @@
       --highlight: rgba(37, 99, 235, 0.08);
       --shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
       --shadow-lg: 0 16px 32px rgba(15, 23, 42, 0.1);
+      --font-heading: 'Coolvetica', Arial, sans-serif;
+      --font-subheading: 'Neulis Cursive Bold','Pacifico',cursive;
+      --font-body: Arial, sans-serif;
     }
     * { 
       box-sizing: border-box;
@@ -37,12 +42,14 @@
       padding: 0;
     }
     body {
-      font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+      font-family: var(--font-body);
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       line-height: 1.6;
     }
+    h1 { font-family: var(--font-heading); }
+    h2, h3 { font-family: var(--font-subheading); }
     .container {
       max-width: 1200px;
       margin: 0 auto;
@@ -75,6 +82,9 @@
       align-items:center;
       gap:12px;
       box-shadow:var(--shadow);
+    }
+    .sidebar-brand strong{
+      font-family: var(--font-heading);
     }
     .sidebar-brand img{
       width:44px;
