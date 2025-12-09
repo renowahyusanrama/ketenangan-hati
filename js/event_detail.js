@@ -315,6 +315,24 @@ function setupExpiryCountdown(container, expiresAt, { onExpire } = {}) {
   activeExpiryTimer = setInterval(tick, 1000);
 }
 
+function renderFeeBreakdown(data) {
+  if (!data) return "";
+  const base = Number.isFinite(data.baseAmount) ? Number(data.baseAmount) : null;
+  const platformTax = Number.isFinite(data.platformTax) ? Number(data.platformTax) : null;
+  const tripayFee = Number.isFinite(data.tripayFee) ? Number(data.tripayFee) : null;
+  const total = Number.isFinite(data.amount) ? Number(data.amount) : null;
+  const hasAny = base !== null || platformTax !== null || tripayFee !== null || total !== null;
+  if (!hasAny) return "";
+  return `
+    <div class="payment-info-row fee-breakdown">
+      ${base !== null ? `<div><span>Harga tiket</span><strong>${formatCurrency(base)}</strong></div>` : ""}
+      ${platformTax !== null ? `<div><span>Pajak website (1%)</span><strong>${formatCurrency(platformTax)}</strong></div>` : ""}
+      ${tripayFee !== null ? `<div><span>Biaya Tripay</span><strong>${formatCurrency(tripayFee)}</strong></div>` : ""}
+      ${total !== null ? `<div><span>Total bayar</span><strong>${formatCurrency(total)}</strong></div>` : ""}
+    </div>
+  `;
+}
+
 function renderPaymentResult(container, data, options = {}) {
   if (!container) return;
   if (!data) {
@@ -385,6 +403,7 @@ function renderPaymentResult(container, data, options = {}) {
   if (data.paymentType === "bank_transfer") {
     const bank = (data.bank || data.paymentName || "VA").toString().toUpperCase();
     const va = data.vaNumber || data.payCode || data.pay_code || "-";
+    const feeBreakdown = renderFeeBreakdown(data);
     container.innerHTML = `
       <div class="payment-info-row">
         <div>
@@ -404,6 +423,7 @@ function renderPaymentResult(container, data, options = {}) {
         <button class="copy-btn" data-copy="${va}">Salin</button>
       </div>
       <p class="form-hint">Transfer tepat sesuai nominal. Tagihan akan diverifikasi otomatis setelah pembayaran berhasil.</p>
+      ${feeBreakdown}
       ${
         data.expiresAt
           ? `<p class="form-hint warning" data-expiry-countdown>Waktu pembayaran: memuat...</p>`
@@ -417,12 +437,14 @@ function renderPaymentResult(container, data, options = {}) {
     `;
   } else {
     const qrUrl = data.qrUrl || createQrUrl(data.qrString) || "";
+    const feeBreakdown = renderFeeBreakdown(data);
     container.innerHTML = `
       <div class="qr-preview">
         ${qrUrl ? `<img src="${qrUrl}" alt="QRIS">` : ""}
         <strong>${formatCurrency(data.amount)}</strong>
         <p>Pindai QRIS menggunakan mobile banking / e-wallet.</p>
       </div>
+      ${feeBreakdown}
       ${checkoutLink}
       ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
       ${

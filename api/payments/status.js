@@ -95,6 +95,7 @@ module.exports = async (req, res) => {
     bank: order.bank || null,
     amount: order.amount ?? null,
     totalAmount: order.totalAmount ?? order.amount ?? null,
+    baseAmount: order.baseAmount ?? null,
     ticketEmailStatus: order.ticketEmail?.status || null,
     ticketEmailRecipient: order.ticketEmail?.recipient || order.customer?.email || null,
     ticketEmail: order.ticketEmail || null,
