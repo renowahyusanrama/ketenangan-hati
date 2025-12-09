@@ -24,19 +24,6 @@ function parseBody(req) {
   return {};
 }
 
-async function releaseSeatIfNeeded(db, eventId) {
-  if (!eventId) return;
-  const eventRef = db.collection("events").doc(eventId);
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(eventRef);
-    if (!snap.exists) return;
-    const data = snap.data() || {};
-    const used = Number(data.seatsUsed) || 0;
-    const next = used > 0 ? used - 1 : 0;
-    tx.set(eventRef, { seatsUsed: next }, { merge: true });
-  });
-}
-
 async function findOrder(db, value) {
   if (!value) return null;
   // 1) coba langsung doc id
@@ -158,9 +145,6 @@ module.exports = async (req, res) => {
 
   try {
     await docRef.set(updatePayload, { merge: true });
-    if (order.reserved && order.eventId && newStatus !== "paid") {
-      await releaseSeatIfNeeded(db, order.eventId);
-    }
   } catch (err) {
     console.error("Gagal update order setelah cancel:", err?.message || err);
     return send(res, 500, { error: "Pesanan dibatalkan di Tripay, tapi gagal update database." });

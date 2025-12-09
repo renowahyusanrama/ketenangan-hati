@@ -56,7 +56,7 @@ const guardPanel = document.getElementById("guardPanel");
 const guardMessage = document.getElementById("guardMessage");
 const dashboard = document.getElementById("dashboard");
 const adminStatus = document.getElementById("adminStatus");
-const eventForm = document.getElementById("eventForm");
+  const eventForm = document.getElementById("eventForm");
 const formStatus = document.getElementById("formStatus");
 const posterPreview = document.getElementById("posterPreview");
 const uploadPosterBtn = document.getElementById("uploadPosterBtn");
@@ -790,7 +790,16 @@ async function loadEvents() {
         const img = e.imageUrl ? `<a href="${e.imageUrl}" target="_blank">Lihat</a>` : "-";
         const capacity = Number(e.capacity) || 0;
         const used = Number(e.seatsUsed) || 0;
-        const quotaText = capacity ? `${used}/${capacity}` : "∞";
+        const quotaRegular = Number(e.quotaRegular) || 0;
+        const quotaVip = Number(e.quotaVip) || 0;
+        const usedReg = Number(e.seatsUsedRegular) || 0;
+        const usedVip = Number(e.seatsUsedVip) || 0;
+        let quotaText = capacity ? `${used}/${capacity}` : "∞";
+        if (quotaRegular || quotaVip) {
+          const regText = quotaRegular ? `${usedReg}/${quotaRegular} Reg` : null;
+          const vipText = quotaVip ? `${usedVip}/${quotaVip} VIP` : null;
+          quotaText = [regText, vipText].filter(Boolean).join(" · ") || quotaText;
+        }
         const priceRegular = Number(e.priceRegular ?? e.amount ?? 0);
         const priceVip = Number(e.priceVip ?? 0);
         const priceText = priceVip
@@ -933,7 +942,11 @@ function buildEventsCsv(eventList = [], revenueMap = new Map(), exportedAt, deli
     "Harga Reguler",
     "Harga VIP",
     "Kapasitas",
-    "Terpakai",
+    "Kuota Reg",
+    "Kuota VIP",
+    "Terpakai Reg",
+    "Terpakai VIP",
+    "Terpakai (total)",
     "Tagline",
     "Deskripsi",
     "Highlights",
@@ -970,6 +983,10 @@ function buildEventsCsv(eventList = [], revenueMap = new Map(), exportedAt, deli
       Number(event.priceRegular ?? event.amount ?? 0) || 0,
       event.priceVip != null ? Number(event.priceVip) || 0 : "",
       event.capacity ?? "",
+      event.quotaRegular ?? "",
+      event.quotaVip ?? "",
+      event.seatsUsedRegular ?? "",
+      event.seatsUsedVip ?? "",
       event.seatsUsed ?? "",
       event.tagline || "",
       event.description || "",
@@ -1568,6 +1585,8 @@ function fillForm(data) {
   eventForm.priceRegular.value = data.priceRegular ?? data.amount ?? 0;
   eventForm.priceVip.value = data.priceVip ?? 0;
   eventForm.capacity.value = data.capacity ?? "";
+  eventForm.quotaRegular.value = data.quotaRegular ?? "";
+  eventForm.quotaVip.value = data.quotaVip ?? "";
   eventForm.tagline.value = data.tagline || "";
   eventForm.description.value = data.description || "";
   eventForm.imageUrl.value = data.imageUrl || "";
@@ -1599,6 +1618,9 @@ function resetForm() {
   eventForm.status.value = "draft";
   eventForm.priceRegular.value = 0;
   eventForm.priceVip.value = 0;
+  eventForm.capacity.value = "";
+  eventForm.quotaRegular.value = "";
+  eventForm.quotaVip.value = "";
   renderPosterPreview("");
   formStatus.textContent = "";
   updatePreviewFromForm();
@@ -1631,6 +1653,8 @@ async function saveEvent(e, { forceNew = false, redirectToPublic = false } = {})
     priceRegular,
     priceVip,
     capacity: eventForm.capacity.value ? Number(eventForm.capacity.value) : null,
+    quotaRegular: eventForm.quotaRegular.value ? Number(eventForm.quotaRegular.value) : null,
+    quotaVip: eventForm.quotaVip.value ? Number(eventForm.quotaVip.value) : null,
     tagline: (eventForm.tagline.value || "").trim(),
     description: (eventForm.description.value || "").trim(),
     imageUrl: normalizePosterUrl((eventForm.imageUrl.value || "").trim()),

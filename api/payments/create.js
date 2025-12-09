@@ -79,18 +79,29 @@ async function reserveSeatAndSaveOrder(db, eventDocId, orderDocId, orderData) {
     const evSnap = await tx.get(eventRef);
     const evData = evSnap.exists ? evSnap.data() || {} : {};
     const capacity = Number(evData.capacity) || 0;
-    const used = Number(evData.seatsUsed) || 0;
-    if (capacity > 0 && used >= capacity) {
+    const usedTotal = Number(evData.seatsUsed) || 0;
+    const quotaRegular = Number(evData.quotaRegular) || 0;
+    const quotaVip = Number(evData.quotaVip) || 0;
+    const usedReg = Number(evData.seatsUsedRegular) || 0;
+    const usedVip = Number(evData.seatsUsedVip) || 0;
+    const type = (orderData.ticketType || "regular") === "vip" ? "vip" : "regular";
+
+    if (type === "vip") {
+      if (quotaVip > 0 && usedVip >= quotaVip) {
+        throw new Error("Tiket VIP sudah habis.");
+      }
+    } else {
+      if (quotaRegular > 0 && usedReg >= quotaRegular) {
+        throw new Error("Tiket Reguler sudah habis.");
+      }
+    }
+
+    if (capacity > 0 && usedTotal >= capacity) {
       throw new Error("Kuota event sudah penuh.");
     }
 
-    if (evSnap.exists) {
-      tx.update(eventRef, { seatsUsed: admin.firestore.FieldValue.increment(1) });
-    } else {
-      tx.set(eventRef, { seatsUsed: admin.firestore.FieldValue.increment(1) }, { merge: true });
-    }
-
-    tx.set(orderRef, orderData);
+    // Tidak menambah kuota di tahap pending; hanya simpan order.
+    tx.set(orderRef, orderData, { merge: true });
   });
 }
 

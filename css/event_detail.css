@@ -213,6 +213,12 @@
   background:#e7f1ff;
   color:#0f172a;
 }
+.ticket-btn.sold-out{
+  border-style:dashed;
+  color:#94a3b8;
+  background:#f1f5f9;
+  cursor:not-allowed;
+}
 
 .booking-card .btn {
   width: 100%;
@@ -551,7 +557,6 @@
   font-size: 14px;
   color: #0f172a;
 }
-
 
 
 

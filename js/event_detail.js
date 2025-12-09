@@ -537,6 +537,12 @@ function initPaymentForm(event) {
   const nameInput = form?.querySelector('input[name="name"]');
   const emailInput = form?.querySelector('input[name="email"]');
   const phoneInput = form?.querySelector('input[name="phone"]');
+  const quotaRegular = Number(event.quotaRegular || 0);
+  const quotaVip = Number(event.quotaVip || 0);
+  const seatsUsedRegular = Number(event.seatsUsedRegular || 0);
+  const seatsUsedVip = Number(event.seatsUsedVip || 0);
+  const soldOutRegular = quotaRegular > 0 && seatsUsedRegular >= quotaRegular;
+  const soldOutVip = quotaVip > 0 && seatsUsedVip >= quotaVip;
 
   const formStorageKey = `${FORM_KEY_PREFIX}${event.id}`;
   const orderStorageKey = `${ORDER_KEY_PREFIX}${event.id}`;
@@ -547,6 +553,8 @@ function initPaymentForm(event) {
   const priceVip = event.priceVip != null ? Number(event.priceVip) : null;
   const savedForm = readFromStorage(formStorageKey) || {};
   let selectedTicket = savedForm.ticketType || (priceRegular ? "regular" : priceVip ? "vip" : "regular");
+  if (soldOutRegular && !soldOutVip && priceVip) selectedTicket = "vip";
+  if (soldOutRegular && soldOutVip) selectedTicket = "regular";
   let selectedPrice = selectedTicket === "vip" ? priceVip || priceRegular || 0 : priceRegular || 0;
   let method = savedForm.method || "qris";
   let bank = savedForm.bank || null;
@@ -592,6 +600,10 @@ function initPaymentForm(event) {
   if (phoneInput && savedForm.phone) phoneInput.value = savedForm.phone;
 
   function updateTicketSelection(type) {
+    if ((type === "vip" && soldOutVip) || (type !== "vip" && soldOutRegular)) {
+      setHint("Tiket yang dipilih sudah habis. Pilih tipe lain.", "warning");
+      return;
+    }
     selectedTicket = type === "vip" ? "vip" : "regular";
     selectedPrice = selectedTicket === "vip" ? priceVip || priceRegular || 0 : priceRegular || 0;
     if (ticketTypeInput) ticketTypeInput.value = selectedTicket;
@@ -640,9 +652,26 @@ function initPaymentForm(event) {
       ticketVipBtn?.classList.add("hidden");
     }
   }
+  if (soldOutRegular) {
+    ticketRegularBtn?.setAttribute("disabled", "true");
+    ticketRegularBtn?.classList.add("sold-out");
+    ticketRegularBtn.querySelector("span")?.classList.add("muted");
+    ticketRegularBtn.textContent = "Reguler Sold Out";
+  }
+  if (soldOutVip) {
+    ticketVipBtn?.setAttribute("disabled", "true");
+    ticketVipBtn?.classList.add("sold-out");
+    ticketVipBtn.querySelector("span")?.classList.add("muted");
+    ticketVipBtn.textContent = "VIP Sold Out";
+  }
   ticketRegularBtn?.addEventListener("click", () => updateTicketSelection("regular"));
   ticketVipBtn?.addEventListener("click", () => updateTicketSelection("vip"));
   updateTicketSelection(selectedTicket);
+  if (soldOutRegular && soldOutVip) {
+    setHint("Semua tiket sudah habis.", "warning");
+    payBtn.disabled = true;
+    methodButtons.forEach((btn) => btn.setAttribute("disabled", "true"));
+  }
 
   function selectMethodButton(preferredMethod, preferredBank) {
     if (!methodButtons || !methodButtons.length) return;
@@ -692,6 +721,15 @@ function initPaymentForm(event) {
     e.preventDefault();
     if (!form.checkValidity()) {
       form.reportValidity();
+      return;
+    }
+
+    if (selectedTicket === "vip" && soldOutVip) {
+      setHint("Tiket VIP sudah habis.", "error");
+      return;
+    }
+    if (selectedTicket !== "vip" && soldOutRegular) {
+      setHint("Tiket Reguler sudah habis.", "error");
       return;
     }
 
@@ -925,6 +963,10 @@ function normalizeEvent(raw, slug) {
     contact: raw.contact || null,
     capacity: raw.capacity ?? null,
     seatsUsed: raw.seatsUsed ?? null,
+    quotaRegular: raw.quotaRegular ?? null,
+    quotaVip: raw.quotaVip ?? null,
+    seatsUsedRegular: raw.seatsUsedRegular ?? null,
+    seatsUsedVip: raw.seatsUsedVip ?? null,
   };
 }
 
@@ -960,16 +1002,8 @@ function renderEvent(event) {
 
   const quotaEl = document.getElementById("quotaInfo");
   if (quotaEl) {
-    const capacity = Number(event.capacity) || 0;
-    const used = Number(event.seatsUsed) || 0;
-    if (capacity > 0) {
-      const remaining = Math.max(capacity - used, 0);
-      quotaEl.innerHTML = `<div><i class="fa-regular fa-user"></i><span>Sisa kuota: ${remaining} / ${capacity}</span></div>`;
-      quotaEl.classList.remove("hidden");
-    } else {
-      quotaEl.innerHTML = "";
-      quotaEl.classList.add("hidden");
-    }
+    quotaEl.innerHTML = "";
+    quotaEl.classList.add("hidden");
   }
 
   renderList("eventHighlights", event.highlights);

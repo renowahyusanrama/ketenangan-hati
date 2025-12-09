@@ -13,7 +13,7 @@ function send(res, status, body) {
   res.status(status).json(body);
 }
 
-async function releaseSeatIfNeeded(db, eventId) {
+async function releaseSeatIfNeeded(db, eventId, ticketType) {
   if (!eventId) return;
   const eventRef = db.collection("events").doc(eventId);
   await db.runTransaction(async (tx) => {
@@ -21,8 +21,54 @@ async function releaseSeatIfNeeded(db, eventId) {
     if (!snap.exists) return;
     const data = snap.data() || {};
     const used = Number(data.seatsUsed) || 0;
-    const next = used > 0 ? used - 1 : 0;
-    tx.set(eventRef, { seatsUsed: next }, { merge: true });
+    const usedReg = Number(data.seatsUsedRegular) || 0;
+    const usedVip = Number(data.seatsUsedVip) || 0;
+    const isVip = (ticketType || "").toLowerCase() === "vip";
+    const updates = {
+      seatsUsed: used > 0 ? used - 1 : 0,
+    };
+    if (isVip) {
+      updates.seatsUsedVip = usedVip > 0 ? usedVip - 1 : 0;
+    } else {
+      updates.seatsUsedRegular = usedReg > 0 ? usedReg - 1 : 0;
+    }
+    tx.set(eventRef, updates, { merge: true });
+  });
+}
+
+async function addSeatIfNeeded(db, eventId, ticketType) {
+  if (!eventId) return;
+  const eventRef = db.collection("events").doc(eventId);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(eventRef);
+    if (!snap.exists) return;
+    const data = snap.data() || {};
+    const capacity = Number(data.capacity) || 0;
+    const used = Number(data.seatsUsed) || 0;
+    const usedReg = Number(data.seatsUsedRegular) || 0;
+    const usedVip = Number(data.seatsUsedVip) || 0;
+    const quotaRegular = Number(data.quotaRegular) || 0;
+    const quotaVip = Number(data.quotaVip) || 0;
+    const isVip = (ticketType || "").toLowerCase() === "vip";
+
+    if (capacity > 0 && used >= capacity) {
+      throw new Error("Kuota total penuh.");
+    }
+    if (!isVip && quotaRegular > 0 && usedReg >= quotaRegular) {
+      throw new Error("Kuota reguler penuh.");
+    }
+    if (isVip && quotaVip > 0 && usedVip >= quotaVip) {
+      throw new Error("Kuota VIP penuh.");
+    }
+
+    const inc = admin.firestore.FieldValue.increment(1);
+    const updates = { seatsUsed: inc };
+    if (isVip) {
+      updates.seatsUsedVip = inc;
+    } else {
+      updates.seatsUsedRegular = inc;
+    }
+    tx.set(eventRef, updates, { merge: true });
   });
 }
 async function findOrderDoc(db, merchantRef, reference) {
@@ -127,20 +173,24 @@ module.exports = async (req, res) => {
     );
 
     const releaseStatuses = ["expired", "failed", "canceled", "refunded"];
+    const wasPaid = previous && previous.status === "paid";
+    const nowPaid = newStatus === "paid";
+    if (nowPaid && !wasPaid && previous?.eventId) {
+      try {
+        await addSeatIfNeeded(db, previous.eventId, previous.ticketType);
+      } catch (err) {
+        console.warn("Tambah kuota gagal saat paid:", err?.message || err);
+      }
+    }
     const shouldRelease =
       previous &&
-      previous.reserved &&
       previous.eventId &&
       releaseStatuses.includes(newStatus) &&
       previous.status !== "paid";
 
     if (shouldRelease) {
-      await releaseSeatIfNeeded(db, previous.eventId);
-      await docRef.set({ reserved: false }, { merge: true });
+      await releaseSeatIfNeeded(db, previous.eventId, previous.ticketType);
     }
-
-    const wasPaid = previous && previous.status === "paid";
-    const nowPaid = newStatus === "paid";
     const emailAlreadySent = previous?.ticketEmail?.status === "sent";
 
     if (nowPaid && !emailAlreadySent && previous) {
