@@ -31,8 +31,10 @@
 
 .preview-media img {
   width: 100%;
-  height: 220px;
-  object-fit: cover;
+  height: auto;
+  max-height: 420px;
+  object-fit: contain;
+  background: #e5e7eb;
   display: block;
 }
 
@@ -105,6 +107,27 @@
   text-align: center;
   padding: 20px;
   color: var(--card-muted);
+}
+
+#posterPreview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  min-height: 120px;
+  padding: 8px;
+  margin-left: 12px;
+  background: #f8fafc;
+  border: 1px dashed var(--card-border);
+  border-radius: 12px;
+}
+
+#posterPreview img {
+  max-width: 160px;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: var(--card-shadow);
 }
 
 @media (max-width: 960px) {

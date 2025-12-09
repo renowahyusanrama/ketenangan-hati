@@ -40,6 +40,7 @@ const firebaseConfig = {
 const CLOUDINARY_CLOUD_NAME = "dkhieufnk";
 const CLOUDINARY_UPLOAD_PRESET = "posters"; // nama preset unsigned yang kamu buat
 const CLOUDINARY_FOLDER = "posters";
+const POSTER_TRANSFORM = "f_auto,q_auto:good,c_limit,w_2000";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -125,6 +126,17 @@ let qrScanning = false;
 const SCAN_DELAY_MS = 300;
 const SCAN_COOLDOWN_MS = 1200;
 let scanBusy = false;
+
+function normalizePosterUrl(url) {
+  if (!url || typeof url !== "string") return "";
+  if (!url.includes("/upload/")) return url;
+  const [prefix, rest] = url.split("/upload/");
+  if (!rest) return url;
+  const alreadyHasTransform =
+    rest.startsWith("f_") || rest.startsWith("c_") || rest.startsWith("q_") || rest.startsWith("w_") || rest.startsWith("ar_");
+  if (alreadyHasTransform) return url;
+  return `${prefix}/upload/${POSTER_TRANSFORM}/${rest}`;
+}
 
 function showLoggedOutUI() {
   userInfo.textContent = "";
@@ -719,6 +731,7 @@ function updatePreviewFromForm() {
   const priceRegular = Number(eventForm.priceRegular?.value) || 0;
   const priceVip = Number(eventForm.priceVip?.value) || 0;
   const image = eventForm.imageUrl?.value?.trim() || "./images/placeholder.jpg";
+  const displayImage = normalizePosterUrl(image);
   const displayPrice = priceVip ? `${formatCurrency(priceRegular || priceVip)} / VIP ${formatCurrency(priceVip)}` : formatCurrency(priceRegular);
 
   if (previewTitle) previewTitle.textContent = title;
@@ -728,11 +741,12 @@ function updatePreviewFromForm() {
   if (previewLocation) previewLocation.textContent = location;
   if (previewSpeaker) previewSpeaker.textContent = speaker;
   if (previewPrice) previewPrice.textContent = displayPrice;
-  if (previewImage && previewImage.src !== image) previewImage.src = image;
+  if (previewImage && previewImage.src !== displayImage) previewImage.src = displayImage;
 }
 
 function renderPosterPreview(url) {
   if (!posterPreview) return;
+  const normalized = normalizePosterUrl(url);
   if (!url) {
     posterPreview.classList.add("hidden");
     posterPreview.innerHTML = "";
@@ -740,8 +754,8 @@ function renderPosterPreview(url) {
     return;
   }
   posterPreview.classList.remove("hidden");
-  posterPreview.innerHTML = `<img src="${url}" alt="Poster" />`;
-  if (previewImage) previewImage.src = url;
+  posterPreview.innerHTML = `<img src="${normalized}" alt="Poster" />`;
+  if (previewImage) previewImage.src = normalized;
 }
 
 async function requireAdmin(user) {
@@ -1619,7 +1633,7 @@ async function saveEvent(e, { forceNew = false, redirectToPublic = false } = {})
     capacity: eventForm.capacity.value ? Number(eventForm.capacity.value) : null,
     tagline: (eventForm.tagline.value || "").trim(),
     description: (eventForm.description.value || "").trim(),
-    imageUrl: (eventForm.imageUrl.value || "").trim(),
+    imageUrl: normalizePosterUrl((eventForm.imageUrl.value || "").trim()),
     contact: {
       wa: (eventForm.contactWa.value || "").trim(),
       phone: (eventForm.contactPhone.value || "").trim(),
@@ -1716,6 +1730,14 @@ function initCloudinaryWidget() {
       folder: CLOUDINARY_FOLDER,
       sources: ["local", "url", "camera"],
       multiple: false,
+      cropping: true, // user bisa crop bebas, tidak dipaksa rasio
+      croppingAspectRatio: null,
+      croppingShowDimensions: true,
+      showSkipCropButton: true,
+      maxFileSize: 6 * 1024 * 1024, // 6 MB
+      maxImageWidth: 4000,
+      maxImageHeight: 4000,
+      clientAllowedFormats: ["jpg", "jpeg", "png", "webp"],
     },
     (error, result) => {
       if (error) {
@@ -1724,10 +1746,13 @@ function initCloudinaryWidget() {
         return;
       }
       if (result && result.event === "success") {
-        const url = result.info.secure_url;
-        eventForm.imageUrl.value = url;
-        renderPosterPreview(url);
-        formStatus.textContent = "Poster diunggah.";
+        const info = result.info || {};
+        const url = info.secure_url;
+        const finalUrl = normalizePosterUrl(url);
+        eventForm.imageUrl.value = finalUrl;
+        renderPosterPreview(finalUrl);
+        const dimensionNote = info.width && info.height ? ` (${info.width}x${info.height})` : "";
+        formStatus.textContent = `Poster diunggah${dimensionNote}.`;
       }
     },
   );
