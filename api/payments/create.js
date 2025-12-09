@@ -334,6 +334,15 @@ module.exports = async (req, res) => {
       ticketEmail: { ...ticketEmailMeta },
       tripay: tripayResponse,
       status: mapStatus(tripayData?.status || tripayResponse?.status),
+      // Data resume pembayaran supaya bisa ditampilkan kembali setelah refresh
+      payCode: normalized.payCode,
+      vaNumber: normalized.vaNumber,
+      checkoutUrl: normalized.checkoutUrl,
+      qrUrl: normalized.qrUrl,
+      qrString: normalized.qrString,
+      paymentName: normalized.paymentName || method,
+      expiresAt: normalized.expiresAt || null,
+      instructions: normalized.instructions || [],
       reserved: true,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
