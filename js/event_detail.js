@@ -293,9 +293,13 @@ function setupExpiryCountdown(container, expiresAt, { onExpire } = {}) {
   function formatDiff(ms) {
     if (ms <= 0) return "Waktu pembayaran telah habis.";
     const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    return `Selesaikan sebelum kadaluarsa (${minutes}m ${seconds.toString().padStart(2, "0")}s)`;
+    const h = hours.toString().padStart(2, "0");
+    const m = minutes.toString().padStart(2, "0");
+    const s = seconds.toString().padStart(2, "0");
+    return `Selesaikan sebelum kadaluarsa (${h}:${m}:${s})`;
   }
 
   function tick() {
