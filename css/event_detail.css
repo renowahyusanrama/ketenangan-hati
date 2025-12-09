@@ -531,6 +531,26 @@
 .form-hint.error { color: #dc2626; }
 .form-hint.success { color: #3775B5; }
 
+.fee-breakdown {
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 12px;
+}
+
+.fee-breakdown span {
+  display: block;
+  font-size: 13px;
+  color: #475569;
+}
+
+.fee-breakdown strong {
+  font-size: 14px;
+  color: #0f172a;
+}
 
 
 
