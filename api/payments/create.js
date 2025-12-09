@@ -60,7 +60,9 @@ function computeFees(paymentType, bank, baseAmount) {
     const normalizedBank = (bank || "").toLowerCase();
     tripayFee = normalizedBank === "bca" ? 5500 : 4250;
   } else if (paymentType === "qris") {
-    tripayFee = Math.ceil(750 + base * 0.007); // 750 + 0.70%
+    // Hitung fee Tripay berdasarkan nominal yang dibebankan (harga + pajak website)
+    const chargeBase = base + platformTax;
+    tripayFee = Math.ceil(750 + chargeBase * 0.007); // 750 + 0.70%
   }
 
   const amountForTripay = Math.max(0, Math.ceil(base + platformTax));
