@@ -525,6 +525,29 @@ body.no-scroll{
     flex-wrap:wrap 
 }
 
+/* Pastikan gambar slider hero tidak terpotong */
+#heroSlider .hero-slide{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+#heroSlider .hero-slide img{
+    width:100%;
+    height:auto;
+    min-height:500px;
+    max-height:80vh;
+    max-width:none;
+    object-fit:contain;
+    background:#0b1624;
+    display:block;
+}
+@media (max-width: 768px){
+    #heroSlider .hero-slide img{
+        min-height:340px;
+        max-height:60vh;
+    }
+}
+
 /* ===== Sections ===== */
 .section{ 
     padding:80px 0; 
