@@ -664,7 +664,7 @@ async function loadOrders(reset = true) {
     const status = (o.status || "").toLowerCase();
     if (statusFilter && status !== statusFilter) return false;
     if (searchTerm) {
-      const haystack = `${o.merchantRef || ""} ${o.reference || ""} ${o.customer?.email || ""} ${o.customer?.name || ""}`.toLowerCase();
+      const haystack = `${o.reference || ""} ${o.merchantRef || ""} ${o.customer?.email || ""} ${o.customer?.name || ""}`.toLowerCase();
       if (!haystack.includes(searchTerm)) return false;
     }
     return true;
@@ -684,15 +684,16 @@ async function loadOrders(reset = true) {
                   o.verified ? "Batalkan" : "Verifikasi"
                 }</button>`
               : `<span class="muted">-</span>`;
+          const displayRef = o.reference || o.merchantRef || "-";
           return `
             <tr>
-              <td data-label="Ref">${o.merchantRef || o.reference || "-"}</td>
+              <td data-label="Ref">${displayRef}</td>
               <td data-label="Event">${o.eventTitle || o.eventId || "-"}</td>
               <td data-label="Tipe">${(o.ticketType || "regular").toUpperCase()}</td>
               <td data-label="Customer">${o.customer?.name || "-"}<br><span class="muted">${o.customer?.email || ""}</span></td>
               <td data-label="Metode">${formatMethod(o)}</td>
-              <td data-label="Status">${formatStatusBadge(o.status)}</td>
-              <td data-label="Check-in">${o.verified ? `<span class="badge green">Terverifikasi</span>` : `<span class="badge gray">Belum</span>`}<br>${verifyBtn}</td>
+              <td class="status-col" data-label="Status">${formatStatusBadge(o.status)}</td>
+              <td class="checkin-col" data-label="Check-in">${o.verified ? `<span class="badge green">Terverifikasi</span>` : `<span class="badge gray">Belum</span>`}<br>${verifyBtn}</td>
               <td data-label="Total">${formatCurrency(total)}</td>
               <td data-label="Dibuat">${createdAt}</td>
             </tr>
@@ -1126,7 +1127,7 @@ function buildOrdersTableData(orders = [], exportedAt, eventLabel = "") {
   ];
 
   const dataRows = orders.map((order) => [
-    order.merchantRef || order.reference || order.id || "",
+    order.reference || order.merchantRef || order.id || "",
     order.eventTitle || getEventLabel(getOrderEventIdentifier(order)) || order.eventId || "",
     (order.ticketType || "regular").toUpperCase(),
     order.customer?.name || "",

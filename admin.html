@@ -440,6 +440,27 @@
     .table tr:hover {
       background: #f1f5f9;
     }
+    /* Orders table specific sizing to keep status badges readable */
+    #ordersTable {
+      table-layout: auto;
+    }
+    #ordersTable th.status-col,
+    #ordersTable td.status-col {
+      min-width: 120px;
+      white-space: nowrap;
+    }
+    #ordersTable th.checkin-col,
+    #ordersTable td.checkin-col {
+      min-width: 130px;
+    }
+    #ordersTable td.status-col .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 90px;
+      padding: 6px 12px;
+      white-space: nowrap;
+    }
     .badge { 
       padding: 4px 10px; 
       border-radius: 999px; 
@@ -912,6 +933,16 @@
         min-width:0 !important;
         width:100% !important;
       }
+      #ordersTable th.status-col,
+      #ordersTable td.status-col,
+      #ordersTable th.checkin-col,
+      #ordersTable td.checkin-col{
+        min-width:0;
+      }
+      #ordersTable td.status-col .badge{
+        min-width:0;
+        width:auto;
+      }
       #ordersTable thead,
       #eventsTable thead{
         display:none;
@@ -1361,8 +1392,8 @@
                 <th>Tipe</th>
                 <th>Customer</th>
                 <th>Metode</th>
-                <th>Status</th>
-                <th>Check-in</th>
+                <th class="status-col">Status</th>
+                <th class="checkin-col">Check-in</th>
                 <th>Total</th>
                         <th>Dibuat</th>
                       </tr>
