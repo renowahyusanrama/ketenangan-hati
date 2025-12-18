@@ -63,13 +63,14 @@ const ORDER_STATUS_CLASSES = {
 // ——— Modal helpers
 function closeModal(){
   if(!modal) return;
-  if(!auth.currentUser){
-    modal.classList.add('open'); // tetap buka
-    document.body.style.overflow = 'hidden';
-    return;
-  }
   modal.classList.remove('open');
   document.body.style.overflow = '';
+}
+
+function openModal() {
+  if(!modal) return;
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
 // ——— Pastikan ada #auth-slot untuk swap UI
@@ -110,35 +111,25 @@ function renderUserChip(user){
   slot.dataset.state = 'logged-in';
   slot.classList.remove('hidden');
   const photo = user.photoURL
-    ? `<img class="avatar" src="${user.photoURL}" alt="">`
+    ? `<img class="avatar" src="${user.photoURL}" alt="" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">`
     : `<span class="avatar avatar-fallback">${(user.displayName||user.email||'U').charAt(0)}</span>`;
   slot.innerHTML = `
-    <div class="profile-head">
+    <div class="profile-head" style="display:flex; align-items:center; gap:10px; padding:10px;">
       ${photo}
-      <div>
-        <p class="profile-name">${user.displayName || user.email}</p>
-        <p class="profile-email">${user.email || ''}</p>
+      <div style="display:flex; flex-direction:column; text-align:left;">
+        <p class="profile-name" style="font-weight:bold; font-size:14px; margin:0;">${user.displayName || user.email}</p>
+        <p class="profile-email" style="font-size:12px; color:#666; margin:0;">${user.email || ''}</p>
       </div>
     </div>
-    <ul class="menu">
+    <ul class="menu" style="list-style:none; padding:10px; margin:0; border-top:1px solid #eee;">
       ${isAdmin ? '<li><a href="admin.html">Admin</a></li>' : ''}
     </ul>
-    <button class="logout-btn" type="button">Keluar</button>
+    <button class="logout-btn" type="button" style="width:100%; padding:10px; color:red; border:none; background:none; cursor:pointer; text-align:left;">Keluar</button>
   `;
   slot.querySelector('.logout-btn')?.addEventListener('click', async ()=>{
-    try{ await signOut(auth); }catch(e){ console.error(e); }
+    try{ await signOut(auth); location.reload(); }catch(e){ console.error(e); }
     slot.classList.remove('open');
   });
-  injectChipStyles();
-}
-
-function injectChipStyles(){
-  if(document.getElementById('userChipStyle')) return;
-  const css = `
-    /* dropdown styles are defined in css/home_page.css */
-  `;
-  const style = Object.assign(document.createElement('style'), { id:'userChipStyle', textContent:css });
-  document.head.appendChild(style);
 }
 
 function formatCurrency(amount) {
@@ -294,6 +285,7 @@ async function renderAfterAuth(user){
   await refreshAdminFlag(user);
   renderUserChip(user);
   hideAuthGate();
+  closeModal();
 }
 
 // ——— GOOGLE LOGIN (popup + fallback redirect)
@@ -325,35 +317,31 @@ getRedirectResult(auth)
   .then(async (res) => { if(res?.user){ await renderAfterAuth(res.user); closeModal(); } })
   .catch(err => console.error('Redirect error:', err.code));
 
-// ——— Observer state
+// ——— Observer state (FIX: Tidak mengunci di awal)
 onAuthStateChanged(auth, (user)=>{
   loadUserOrders(user ? user.email : null);
   if(user) {
     renderAfterAuth(user);
-    // pastikan gate & modal tertutup jika sudah login (termasuk saat reload)
     hideAuthGate();
     modal?.classList.remove('open');
     document.body.style.overflow = '';
   } else {
     isAdmin = false;
     renderLoginButton();
-    showAuthGate();
-    modal?.classList.add('open'); // paksa modal tampil
-    document.body.style.overflow = 'hidden';
+    // PERINTAH PINDAHKAN LOGIN: Dashboard jangan dikunci
+    hideAuthGate(); 
+    modal?.classList.remove('open');
   }
 });
 
-// Tombol login pada gate -> buka modal & hilangkan gate
+// Tombol login pada gate
 document.querySelector('.gate-login-btn')?.addEventListener('click', (e)=>{
   e.preventDefault();
   hideAuthGate();
-  modal?.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  openModal();
 });
 
 // Render awal
 renderLoginButton();
-// Paksa tampilkan modal & kunci konten sampai login
-showAuthGate();
-modal?.classList.add('open');
-document.body.style.overflow = 'hidden';
+// Pastikan gate tersembunyi saat awal buka web
+hideAuthGate();
