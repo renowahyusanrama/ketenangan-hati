@@ -60,18 +60,27 @@ const ORDER_STATUS_CLASSES = {
   refunded: "blue",
 };
 
-// ——— Modal helpers
+// ——— Modal helpers (FIX: TOMBOL SILANG AKTIF)
 function closeModal(){
   if(!modal) return;
   modal.classList.remove('open');
+  modal.style.display = 'none'; // Tambahkan ini agar overlay tidak menghalangi
   document.body.style.overflow = '';
 }
 
 function openModal() {
   if(!modal) return;
   modal.classList.add('open');
+  modal.style.display = 'block'; // Tambahkan ini agar modal muncul
   document.body.style.overflow = 'hidden';
 }
+
+// Tambahan Event Listener untuk Tombol Silang dan Area Luar
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.modal-close') || e.target.closest('[data-close="true"]') || e.target.classList.contains('modal-overlay')) {
+    closeModal();
+  }
+});
 
 // ——— Pastikan ada #auth-slot untuk swap UI
 function ensureAuthSlot(){
@@ -96,7 +105,7 @@ function renderLoginButton(){
   slot.classList.remove('hidden');
   slot.innerHTML = `
     <div class="login-inline">
-      <button type="button" class="btn-inline-login">Login</button>
+      <button type="button" class="btn-inline-login" style="padding: 8px 16px; background: #3775B5; color: white; border-radius: 8px; border: none; cursor: pointer;">Login</button>
     </div>
   `;
   slot.querySelector('.btn-inline-login')?.addEventListener('click', (e)=>{
@@ -105,36 +114,35 @@ function renderLoginButton(){
   });
 }
 
-// FIX: PERBAIKAN TAMPILAN PROFIL (Agar tidak miring)
+// FIX: TAMPILAN PROFIL LURUS (Tidak Miring)
 function renderUserChip(user){
   const slot = getAuthSlot();
   if(!slot) return;
   slot.dataset.state = 'logged-in';
   slot.classList.remove('hidden');
   const photo = user.photoURL
-    ? `<img class="avatar" src="${user.photoURL}" alt="" style="width:35px; height:35px; border-radius:50%; object-fit:cover;">`
-    : `<span class="avatar avatar-fallback" style="width:35px; height:35px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#eee;">${(user.displayName||user.email||'U').charAt(0)}</span>`;
+    ? `<img class="avatar" src="${user.photoURL}" alt="" style="width:35px; height:35px; border-radius:50%; object-fit:cover; flex-shrink:0;">`
+    : `<span class="avatar avatar-fallback" style="width:35px; height:35px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#eee; flex-shrink:0;">${(user.displayName||user.email||'U').charAt(0)}</span>`;
   
   slot.innerHTML = `
     <div class="profile-head" style="display:flex; align-items:center; gap:12px; padding:15px; border-bottom:1px solid #eee;">
       ${photo}
-      <div style="display:flex; flex-direction:column; text-align:left; line-height:1.2;">
-        <p class="profile-name" style="font-weight:bold; font-size:14px; margin:0; color:#333;">${user.displayName || user.email}</p>
-        <p class="profile-email" style="font-size:11px; color:#777; margin:0;">${user.email || ''}</p>
+      <div style="display:flex; flex-direction:column; text-align:left; line-height:1.2; overflow:hidden;">
+        <p class="profile-name" style="font-weight:bold; font-size:14px; margin:0; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.displayName || user.email}</p>
+        <p class="profile-email" style="font-size:11px; color:#777; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.email || ''}</p>
       </div>
     </div>
     <ul class="menu" style="list-style:none; padding:10px; margin:0;">
-      ${isAdmin ? '<li><a href="admin.html" style="padding:8px 0; display:block;">Admin</a></li>' : ''}
+      ${isAdmin ? '<li><a href="admin.html" style="padding:8px 0; display:block; color:#3775B5;">Admin</a></li>' : ''}
     </ul>
-    <button class="logout-btn" type="button" style="width:100%; text-align:left; padding:10px; border:none; background:none; color:#e11d48; cursor:pointer; font-weight:500;">Keluar</button>
+    <button class="logout-btn" type="button" style="width:100%; text-align:left; padding:10px; color:#e11d48; border:none; background:none; cursor:pointer; font-weight:600;">Keluar</button>
   `;
   slot.querySelector('.logout-btn')?.addEventListener('click', async ()=>{
     try{ await signOut(auth); location.reload(); }catch(e){ console.error(e); }
-    slot.classList.remove('open');
   });
 }
 
-// ——— Helper functions (Tetap dipertahankan)
+// ——— Helper functions (Tetap dipertahankan sesuai kode Reno)
 function formatCurrency(amount) {
   const n = Number(amount) || 0;
   if (!n) return "Gratis";
@@ -214,6 +222,7 @@ async function loadUserOrders(email) {
 
 function hideAuthGate(){
   authGate?.classList.add('hidden');
+  if(authGate) authGate.style.display = 'none'; // Sembunyikan total agar tidak menghalangi tombol
   bodyEl.classList.remove('auth-locked');
   document.body.style.overflow = '';
 }
@@ -230,9 +239,10 @@ async function renderAfterAuth(user){
   await refreshAdminFlag(user);
   renderUserChip(user);
   hideAuthGate();
+  closeModal();
 }
 
-// ——— GOOGLE LOGIN (FIX: Responsif)
+// ——— GOOGLE LOGIN (FIX: TOMBOL GOOGLE AKTIF)
 let authBusy = false;
 document.addEventListener('click', async (e)=>{
   const btn = e.target.closest('.btn-google');
@@ -243,7 +253,7 @@ document.addEventListener('click', async (e)=>{
 
   try{
     const res = await signInWithPopup(auth, provider);
-    if(res?.user){ await renderAfterAuth(res.user); closeModal(); }
+    if(res?.user){ await renderAfterAuth(res.user); }
   }catch(err){
     if (err.code === 'auth/popup-blocked') {
       await signInWithRedirect(auth, provider);
@@ -253,7 +263,7 @@ document.addEventListener('click', async (e)=>{
   }
 });
 
-getRedirectResult(auth).then(async (res) => { if(res?.user){ await renderAfterAuth(res.user); closeModal(); } });
+getRedirectResult(auth).then(async (res) => { if(res?.user){ await renderAfterAuth(res.user); } });
 
 // ——— Observer state (FIX: Dashboard jangan dikunci)
 onAuthStateChanged(auth, (user)=>{
@@ -265,7 +275,6 @@ onAuthStateChanged(auth, (user)=>{
   } else {
     isAdmin = false;
     renderLoginButton();
-    // PERINTAH: Jangan kunci layar di awal
     hideAuthGate(); 
     modal?.classList.remove('open');
   }
@@ -273,4 +282,13 @@ onAuthStateChanged(auth, (user)=>{
 
 // Init awal
 renderLoginButton();
-hideAuthGate(); // Sembunyikan gate agar dashboard terlihat langsung
+hideAuthGate();
+
+// SEMBUNYIKAN DAFTAR SEKARANG & FORM LOGIN MANUAL
+window.addEventListener('DOMContentLoaded', () => {
+  const elements = ['.modal-footnote', '.divider', '#loginForm'];
+  elements.forEach(sel => {
+    const el = document.querySelector(sel);
+    if (el) el.style.display = 'none';
+  });
+});
