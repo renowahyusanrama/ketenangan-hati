@@ -4,36 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Detail Event | ketenangan jiwa</title>
-  <meta name="description" content="Lihat detail jadwal, lokasi, dan pemateri untuk kajian serta event Islami di ketenangan jiwa.">
-  <link rel="canonical" href="https://ketenanganjiwa.id/event-detail.html">
-
-  <!-- Open Graph -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Detail Event | ketenangan jiwa">
-  <meta property="og:description" content="Detail lengkap jadwal, lokasi, pemateri, dan pendaftaran kajian/event Islami.">
-  <meta property="og:url" content="https://ketenanganjiwa.id/event-detail.html">
-  <meta property="og:image" content="https://ketenanganjiwa.id/images/logokj.png">
-  <meta property="og:image:alt" content="Logo ketenangan jiwa">
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Detail Event | ketenangan jiwa">
-  <meta name="twitter:description" content="Jadwal, lokasi, pemateri, dan pendaftaran kajian/event Islami.">
-  <meta name="twitter:image" content="https://ketenanganjiwa.id/images/logokj.png">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/coolvetica">
   <link href="https://fonts.googleapis.com/css2?family=Pacifico:wght@400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer" />
-  <link rel="icon" type="image/png" href="images/logokj.png" />
-
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  
   <link rel="stylesheet" href="css/home_page.css" />
   <link rel="stylesheet" href="css/event_detail.css" />
+  <link rel="icon" type="image/png" href="images/logokj.png" />
 </head>
 <body>
-  <!-- Gate: wajib login sebelum akses konten -->
   <div id="auth-gate" class="auth-gate hidden">
     <div class="gate-card">
       <div class="gate-logo">
@@ -44,6 +28,7 @@
       <button class="btn gate-login-btn" type="button">Login</button>
     </div>
   </div>
+
   <header class="site-header pb-3">
     <div class="container nav nav-shell">
       <div class="nav-left">
@@ -68,7 +53,6 @@
     </div>
   </header>
 
-  <!-- Overlay menu (dari tombol garis tiga) -->
   <div id="menuOverlay" class="menu-overlay">
     <div class="menu-panel">
       <div class="menu-logo">
@@ -82,192 +66,112 @@
         <li><a href="index.html#event">Event</a></li>
         <li><a href="index.html#kontak">Kontak</a></li>
       </ul>
-      <div class="menu-contact">
-        <h4>Kontak Kami</h4>
-        <ul>
-          <li><strong>Instagram:</strong> @ketenanganjiwa.id</li>
-          <li><strong>TikTok:</strong> @ketenanganjiwa.id</li>
-          <li><strong>Email:</strong> ketenanganjiwa.id@gmail.com</li>
-          <li><strong>Alamat:</strong> Jalan Taman Internasional I Blok B8 No. 11 Sambikerep, Kota Surabaya, Jawa Timur, Indonesia 60219</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <!-- Drawer keranjang -->
-  <div id="cartOverlay" class="cart-overlay">
-    <div class="cart-drawer">
-      <div class="drawer-header">
-        <h3>Pesanan Saya</h3>
-        <button class="overlay-close" id="cartClose" aria-label="Tutup keranjang">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="drawer-body">
-        <div class="drawer-orders">
-          <div id="cartOrdersStatus" class="orders-status muted">Memuat pesanan...</div>
-          <div id="cartOrdersList" class="orders-list">
-            <p class="muted">Lihat ringkasan pesanan Anda di sini.</p>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
   <section class="event-hero" id="beranda">
     <div class="container hero-content">
-      <h1 id="eventTitle" class="hero-title">Judul Event</h1>
-      <p id="eventTagline" class="hero-tagline">Tagline singkat acara akan muncul di sini.</p>
+      <h1 id="eventTitle" class="hero-title text-3xl font-bold text-white">Judul Event</h1>
+      <p id="eventTagline" class="hero-tagline text-white">Tagline singkat acara akan muncul di sini.</p>
 
-      <ul class="event-meta">
-        <li><i class="fa-regular fa-calendar-days"></i><span id="eventDate">Tanggal dan Waktu</span></li>
-        <li><i class="fa-solid fa-location-dot"></i><span id="eventLocation">Lokasi acara</span></li>
-        <li><i class="fa-regular fa-user"></i><span id="eventSpeaker">Pemateri</span></li>
+      <ul class="event-meta text-white">
+        <li><i class="fa-regular fa-calendar-days"></i> <span id="eventDate">Tanggal dan Waktu</span></li>
+        <li><i class="fa-solid fa-location-dot"></i> <span id="eventLocation">Lokasi acara</span></li>
+        <li><i class="fa-regular fa-user"></i> <span id="eventSpeaker">Pemateri</span></li>
       </ul>
     </div>
   </section>
 
   <main>
-    <section id="detail" class="section event-detail">
-      <div class="container event-layout">
-        <article class="event-main">
-          <div class="event-summary">
-            <h2>Deskripsi Acara</h2>
-            <p id="eventDescription">Deskripsi lengkap acara akan dimuat melalui JavaScript.</p>
+    <section id="detail" class="section event-detail py-10">
+      <div class="container mx-auto px-4 flex flex-col md:flex-row gap-8">
+        <article class="event-main flex-1">
+          <div class="event-summary mb-6">
+            <h2 class="text-2xl font-bold mb-3">Deskripsi Acara</h2>
+            <p id="eventDescription" class="text-gray-700 leading-relaxed text-justify">Deskripsi lengkap acara akan dimuat melalui JavaScript.</p>
           </div>
+          </article>
 
-          <div id="eventHighlightsBlock" class="event-block">
-            <h3>Highlight Materi</h3>
-            <ul id="eventHighlights" class="bullet-list"></ul>
-          </div>
-
-          <div id="eventAgendaBlock" class="event-block">
-            <h3>Agenda</h3>
-            <ul id="eventAgenda" class="agenda-list"></ul>
-          </div>
-
-          <div id="eventNotesBlock" class="event-block">
-            <h3>Catatan</h3>
-            <ul id="eventNotes" class="bullet-list"></ul>
-          </div>
-
-          <div class="info-box preparation-block">
-            <h4>Persiapan Peserta</h4>
-            <ul id="eventPreparation" class="bullet-list"></ul>
-          </div>
-        </article>
-
-        <aside class="event-sidebar">
-            <div class="booking-card">
-              <div class="price-tag">
-                <span class="label">Harga Tiket</span>
-                <span id="eventPrice" class="price-value">Rp 0</span>
-              </div>
-              <div class="info-list" id="quotaInfo" aria-live="polite" style="margin-top:8px;"></div>
-              <div class="info-list">
-                <div><i class="fa-regular fa-clock"></i><span id="eventTime">Waktu</span></div>
-                <div><i class="fa-solid fa-location-dot"></i><span id="eventAddress">Alamat lengkap</span></div>
-              </div>
-              <div class="ticket-choice" id="ticketChoice">
-                <p class="label">Pilih Tiket</p>
-                <div class="ticket-buttons">
-                  <button type="button" class="ticket-btn active" data-ticket="regular" id="ticketRegularBtn">Reguler <span id="priceRegularLabel"></span></button>
-                  <button type="button" class="ticket-btn" data-ticket="vip" id="ticketVipBtn">VIP <span id="priceVipLabel"></span></button>
-                </div>
-              </div>
-
+        <aside class="event-sidebar w-full md:w-80">
+          <div class="booking-card bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+            <div class="price-tag mb-4">
+              <span class="label text-gray-500 block">Harga Tiket</span>
+              <span id="eventPrice" class="price-value text-2xl font-extrabold text-[#3775B5]">Rp 0</span>
+            </div>
+            
             <div class="payment-form" id="paymentSection">
-              <h4>Pendaftaran Online</h4>
+              <h4 class="font-bold mb-4 border-b pb-2">Pendaftaran Online</h4>
               <form id="paymentForm">
                 <input type="hidden" name="ticketType" value="regular">
-                <label class="label">Nama Lengkap</label>
-                <input type="text" class="input" name="name" placeholder="Nama peserta" required>
+                <label class="block text-sm font-medium mb-1">Nama Lengkap</label>
+                <input type="text" class="w-full p-2 border rounded-lg mb-3" name="name" placeholder="Nama peserta" required>
 
-                <label class="label">Email</label>
-                <input type="email" class="input" name="email" placeholder="nama@gmail.com" required>
-                <p class="form-hint warning">Pendaftaran wajib menggunakan Gmail (contoh: nama@gmail.com).</p>
+                <label class="block text-sm font-medium mb-1">Email (Gmail)</label>
+                <input type="email" class="w-full p-2 border rounded-lg mb-1" name="email" placeholder="nama@gmail.com" required>
+                
+                <label class="block text-sm font-medium mb-1">No. WhatsApp</label>
+                <input type="tel" class="w-full p-2 border rounded-lg mb-4" name="phone" placeholder="08xxxxxxxxxx" required>
 
-                <label class="label">No. WhatsApp</label>
-                <input type="tel" class="input" name="phone" placeholder="08xxxxxxxxxx" required>
-
-                <p class="label">Metode Pembayaran</p>
-                <div class="method-grid" role="group" aria-label="Metode Pembayaran">
-                  <button type="button" class="method-btn" data-method="qris">QRIS</button>
-                  <button type="button" class="method-btn" data-method="va" data-bank="bca">VA BCA</button>
-                  <button type="button" class="method-btn" data-method="va" data-bank="bni">VA BNI</button>
-                  <button type="button" class="method-btn" data-method="va" data-bank="bri">VA BRI</button>
-                  <button type="button" class="method-btn" data-method="va" data-bank="mandiri">VA Mandiri</button>
-                </div>
-
-                <button class="btn btn-primary btn-full" type="submit" id="payNowBtn">Buat Tagihan</button>
-                <p class="form-hint" id="paymentHint">Silakan isi data peserta dengan email Gmail lalu pilih metode pembayaran.</p>
+                <button class="w-full bg-[#3775B5] text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition" type="submit" id="payNowBtn">
+                  Buat Tagihan
+                </button>
               </form>
             </div>
-
-            <div id="paymentResult" class="payment-result hidden" aria-live="polite"></div>
-
-            <p class="contact-hint">Butuh bantuan? Hubungi panitia:</p>
-            <ul id="eventContact" class="contact-list"></ul>
           </div>
         </aside>
       </div>
     </section>
-
   </main>
 
-  <a class="floating-back" href="index.html#event" aria-label="Kembali ke daftar event">
-    Kembali
-  </a>
-
-  <footer class="footer">
-    <div class="container footer-inner">
-      <div class="footer-brand">
-      <span class="brand-logo"><img src="images/logokj.png" alt="ketenangan jiwa" /></span>
-        <span class="brand-text">ketenangan jiwa</span>
-      </div>
-      <div class="footer-copy">
-        &copy; <span id="year"></span> ketenangan jiwa. All rights reserved.
-      </div>
-    </div>
-  </footer>
-
-  <div id="loginModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="modal-overlay" data-close="true"></div>
-    <div class="modal-dialog" role="document" aria-labelledby="loginTitle">
-      <button class="modal-close" aria-label="Tutup" data-close="true"><i class="fa-solid fa-xmark"></i></button>
-      <div class="modal-header">
-        <div class="modal-logo"><i class="fa-solid fa-moon"></i></div>
-        <h3 id="loginTitle">Selamat Datang</h3>
-        <p class="modal-sub">Login untuk mengikuti kajian dan event Islamic</p>
+  <div id="loginModal" class="modal fixed inset-0 z-[999] hidden flex items-center justify-center">
+    <div class="modal-overlay absolute inset-0 bg-black/50" onclick="document.getElementById('loginModal').classList.add('hidden')"></div>
+    <div class="modal-dialog relative bg-white p-8 rounded-3xl w-[90%] max-w-md shadow-2xl">
+      <div class="modal-header text-center mb-6">
+        <h3 class="text-2xl font-bold">Selamat Datang</h3>
+        <p class="text-gray-500">Login untuk mengikuti kajian</p>
       </div>
       <div class="modal-body">
-        <button class="btn btn-google" type="button" aria-label="Login dengan Google">
-          <svg class="gmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-            <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303C33.843,31.912,29.363,35,24,35c-6.627,0-12-5.373-12-12 s5.373-12,12-12c3.059,0,5.842,1.154,7.964,3.036l5.657-5.657C33.643,5.059,28.983,3,24,3C12.955,3,4,11.955,4,23 s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
-            <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,16.131,18.961,13,24,13c3.059,0,5.842,1.154,7.964,3.036l5.657-5.657 C33.643,5.059,28.983,3,24,3C16.318,3,9.656,7.337,6.306,14.691z"/>
-            <path fill="#4CAF50" d="M24,43c5.305,0,10.124-2.037,13.73-5.343l-6.333-5.353C29.38,33.195,26.833,34,24,34 c-5.329,0-9.797-3.584-11.403-8.421l-6.51,5.02C9.393,38.658,16.106,43,24,43z"/>
-            <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-1.636,4.71-6.084,8-11.303,8c-5.329,0-9.797-3.584-11.403-8.421 l-6.51,5.02C9.393,38.658,16.106,43,24,43c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
-          </svg>
+        <button class="w-full flex items-center justify-center gap-3 border py-3 rounded-xl hover:bg-gray-50 transition mb-4">
+          <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" class="w-5" alt="Google">
           Login dengan Google
         </button>
-        <div class="divider"><span>atau</span></div>
-        <form id="loginForm" autocomplete="on" novalidate>
-          <label class="label">Email</label>
-          <input class="input" type="email" name="email" placeholder="nama@email.com" required />
-          <label class="label">Password</label>
-          <input class="input" type="password" name="password" placeholder="Ketik password" required />
-          <button class="btn btn-primary btn-login-submit" type="submit">Login</button>
+        <div class="text-center text-gray-400 my-4 text-sm">Atau</div>
+        <form id="loginForm" class="space-y-4">
+          <input class="w-full p-3 border rounded-xl" type="email" placeholder="Email" required />
+          <input class="w-full p-3 border rounded-xl" type="password" placeholder="Password" required />
+          <button class="w-full bg-[#3775B5] text-white py-3 rounded-xl font-bold" type="submit">Login</button>
         </form>
-        <p class="modal-footnote">Belum punya akun? <a href="#" class="link-register">Daftar sekarang</a></p>
       </div>
     </div>
   </div>
 
   <script src="js/home_page.js"></script>
-  <script>
-    window.__API_BASE_URL__ = "https://ketenangan-jiwa.vercel.app/api";
-  </script>
+  <script>window.__API_BASE_URL__ = "https://ketenangan-jiwa.vercel.app/api";</script>
   <script type="module" src="js/event_detail.js"></script>
   <script type="module" src="js/auth.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const pForm = document.getElementById('paymentForm');
+      const lModal = document.getElementById('loginModal');
+      
+      if (pForm) {
+        pForm.addEventListener('submit', function(e) {
+          // Periksa apakah ada data user di storage
+          const session = localStorage.getItem('user') || localStorage.getItem('userToken');
+          
+          if (!session) {
+            e.preventDefault(); // Stop proses pendaftaran
+            e.stopImmediatePropagation(); // Kunci agar script Reno tidak jalan
+            
+            // Tampilkan Modal Login
+            lModal.classList.remove('hidden');
+            lModal.style.display = 'flex';
+            alert("Harap login terlebih dahulu untuk membuat tagihan.");
+          }
+        }, true);
+      }
+    });
+  </script>
 </body>
 </html>
