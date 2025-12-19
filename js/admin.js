@@ -414,6 +414,63 @@ function formatMethod(order) {
   return order.method || order.paymentType || "-";
 }
 
+function getAmountForTripay(order) {
+  if (!order) return null;
+  const direct = Number(order.amountForTripay);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const base = Number(order.baseAmount);
+  const tax = Number(order.platformTax);
+  if (Number.isFinite(base) && Number.isFinite(tax)) {
+    const sum = base + tax;
+    if (Number.isFinite(sum) && sum > 0) return sum;
+  }
+  return null;
+}
+
+function getTripayFee(order) {
+  if (!order) return 0;
+  if (order.tripayFee !== undefined && order.tripayFee !== null && order.tripayFee !== "") {
+    const explicit = Number(order.tripayFee);
+    if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  }
+  const paymentType = (order.paymentType || "").toString().toLowerCase();
+  const bankValue = (order.bank || "").toString().toLowerCase();
+  const methodValue = (order.method || order.paymentName || "").toString().toLowerCase();
+  const isQris = paymentType === "qris" || methodValue === "qris";
+  const isBankTransfer = paymentType === "bank_transfer" || (!!bankValue && !isQris);
+  if (isBankTransfer) {
+    const bank = bankValue || methodValue;
+    return bank === "bca" ? 5500 : 4250;
+  }
+  if (isQris) {
+    const amountForTripay = getAmountForTripay(order);
+    if (Number.isFinite(amountForTripay) && amountForTripay > 0) {
+      return Math.ceil(750 + amountForTripay * 0.007);
+    }
+    const total = Number(order.totalAmount ?? order.amount ?? 0);
+    if (Number.isFinite(total) && total > 0) {
+      let amount = total;
+      for (let i = 0; i < 5; i += 1) {
+        const fee = Math.ceil(750 + amount * 0.007);
+        const next = total - fee;
+        if (next <= 0 || next === amount) break;
+        amount = next;
+      }
+      const fallbackFee = Math.ceil(750 + amount * 0.007);
+      if (Number.isFinite(fallbackFee) && fallbackFee > 0) return fallbackFee;
+    }
+  }
+  return 0;
+}
+
+function getNetRevenue(order) {
+  const gross = Number(order?.totalAmount ?? order?.amount ?? 0) || 0;
+  if (!gross) return 0;
+  const fee = getTripayFee(order);
+  const net = gross - fee;
+  return net > 0 ? net : 0;
+}
+
 function getOrderEventIdentifier(order) {
   if (!order) return "";
   if (order.eventId) return String(order.eventId);
@@ -450,7 +507,7 @@ function renderOrderStats(rows = [], eventFilter = "") {
     breakdown[status] = (breakdown[status] || 0) + 1;
     if (status === "paid") {
       paidCount += 1;
-      totalRevenue += Number(order.totalAmount ?? order.amount ?? 0) || 0;
+      totalRevenue += getNetRevenue(order);
       const qty = Number(order.quantity ?? order.qty ?? 1);
       participants += qty;
       const type = (order.ticketType || "regular").toLowerCase();
@@ -906,7 +963,7 @@ function summarizeOrdersByEvent(orders = []) {
       "";
     if (!key) return;
     const type = (order.ticketType || "regular").toLowerCase() === "vip" ? "vip" : "regular";
-    const revenue = Number(order.totalAmount ?? order.amount ?? 0) || 0;
+    const revenue = getNetRevenue(order);
     const entry =
       map.get(key) || {
         regular: 0,
@@ -961,9 +1018,9 @@ function buildEventsCsv(eventList = [], revenueMap = new Map(), exportedAt, deli
     "Dibuat",
     "Diperbarui",
     "Exported At",
-    "Pendapatan Reguler",
-    "Pendapatan VIP",
-    "Pendapatan Total",
+    "Pendapatan Reguler (bersih)",
+    "Pendapatan VIP (bersih)",
+    "Pendapatan Total (bersih)",
     "Peserta (paid)",
   ];
 
@@ -1087,7 +1144,7 @@ function slugify(text, fallback = "events") {
 function computeOrderTotals(orders = []) {
   return orders.reduce(
     (acc, order) => {
-      const amount = Number(order.totalAmount ?? order.amount ?? 0) || 0;
+      const amount = getNetRevenue(order);
       const type = (order.ticketType || "regular").toLowerCase() === "vip" ? "vip" : "regular";
       if (type === "vip") acc.totalVip += amount;
       else acc.totalRegular += amount;
@@ -1121,9 +1178,9 @@ function buildOrdersTableData(orders = [], exportedAt, eventLabel = "") {
     "Bank",
     "Quantity",
     "Exported At",
-    "Total Reguler (summary)",
-    "Total VIP (summary)",
-    "Total Semua (summary)",
+    "Total Reguler (bersih)",
+    "Total VIP (bersih)",
+    "Total Semua (bersih)",
   ];
 
   const dataRows = orders.map((order) => [
