@@ -1,5 +1,3 @@
-// js/auth.js — Login Google & Email (Fix Dashboard Terbuka)
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword,
@@ -10,7 +8,6 @@ import {
   getFirestore
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// === Konfigurasi Firebase ===
 const firebaseConfig = {
   apiKey: "AIzaSyCoa_Ioa-Gp9TnL5eke6fwTkfQGkbWGJBw",
   authDomain: "pengajian-online.firebaseapp.com",
@@ -32,7 +29,7 @@ provider.setCustomParameters({ prompt: 'select_account' });
 const modal = document.getElementById('loginModal');
 const authGate = document.getElementById('auth-gate');
 
-// --- Fungsi Modal ---
+// --- Helper Functions ---
 function closeModal(){
   if(modal) {
     modal.classList.remove('open');
@@ -49,12 +46,28 @@ function openModal() {
   }
 }
 
-// --- Render Profil & Tombol Login ---
+// --- FITUR AUTO-FILL (OTOMATIS ISI FORM) ---
+function autoFillForm(user) {
+    const nameInput = document.querySelector('input[name="name"]');
+    const emailInput = document.querySelector('input[name="email"]');
+    
+    if (user) {
+        if (nameInput && !nameInput.value && user.displayName) {
+            nameInput.value = user.displayName;
+        }
+        if (emailInput && !emailInput.value && user.email) {
+            emailInput.value = user.email;
+            // Buat efek visual bahwa ini sudah terisi
+            emailInput.style.backgroundColor = "#f0fdf4";
+            emailInput.style.borderColor = "#22c55e";
+        }
+    }
+}
+
+// --- Render User Interface ---
 function getAuthSlot(){
   let slot = document.getElementById('profileDropdown');
   if (slot) return slot;
-  
-  // Jika belum ada, buat baru di navbar
   const navRight = document.querySelector('.nav-right');
   if (!navRight) return null;
   slot = document.createElement('div');
@@ -67,8 +80,7 @@ function getAuthSlot(){
 function renderLoginButton(){
   const slot = getAuthSlot();
   if(!slot) return;
-  // Tampilkan tombol login sederhana
-  slot.innerHTML = `<button type="button" class="btn-inline-login" style="width:100%; padding:10px; background:#3775B5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Login</button>`;
+  slot.innerHTML = `<button type="button" class="btn-inline-login" style="padding: 8px 16px; background: #3775B5; color: white; border-radius: 8px; border: none; cursor: pointer; font-weight: bold;">Login</button>`;
   slot.querySelector('.btn-inline-login')?.addEventListener('click', openModal);
 }
 
@@ -76,17 +88,16 @@ function renderUserChip(user){
   const slot = getAuthSlot();
   if(!slot) return;
   slot.classList.remove('hidden');
-  
   const photo = user.photoURL 
     ? `<img src="${user.photoURL}" style="width:35px; height:35px; border-radius:50%; object-fit:cover; flex-shrink:0;">` 
-    : `<div style="width:35px; height:35px; border-radius:50%; background:#ddd; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:bold;">${(user.displayName||'U').charAt(0)}</div>`;
+    : `<div style="width:35px; height:35px; border-radius:50%; background:#ddd; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${(user.displayName||'U').charAt(0)}</div>`;
   
   slot.innerHTML = `
     <div style="display: flex; align-items: center; gap: 12px; padding: 15px; border-bottom: 1px solid #eee;">
       ${photo}
       <div style="display: flex; flex-direction: column; text-align: left; line-height: 1.2;">
         <span style="font-weight: bold; font-size: 14px; color: #333;">${user.displayName || 'User'}</span>
-        <span style="font-size: 11px; color: #777; overflow:hidden; text-overflow:ellipsis; max-width:140px;">${user.email}</span>
+        <span style="font-size: 11px; color: #777;">${user.email}</span>
       </div>
     </div>
     <div style="padding: 10px;">
@@ -96,75 +107,64 @@ function renderUserChip(user){
   slot.querySelector('.logout-btn')?.addEventListener('click', () => signOut(auth).then(() => location.reload()));
 }
 
-// --- Handler Klik (Event Delegation) ---
+// --- Event Listeners ---
 document.addEventListener('click', async (e) => {
-  // 1. Tutup Modal (Tombol X atau Overlay)
-  if (e.target.closest('#closeModalBtn') || e.target.classList.contains('modal-overlay')) {
-    closeModal();
-  }
+  // Tutup Modal
+  if (e.target.closest('#closeModalBtn') || e.target.classList.contains('modal-overlay')) closeModal();
 
-  // 2. Login Google
-  // Kita cari id="googleLoginBtn" atau class ".btn-google"
+  // Login Google
   const btnGoogle = e.target.closest('#googleLoginBtn') || e.target.closest('.btn-google');
   if (btnGoogle) {
     e.preventDefault();
-    e.stopImmediatePropagation(); // PENTING: Mencegah bentrok dengan script lain
-    
+    e.stopImmediatePropagation();
     try {
       const res = await signInWithPopup(auth, provider);
       if (res?.user) {
-        console.log("Login Google Berhasil:", res.user.email);
         closeModal();
+        autoFillForm(res.user); // PANGGIL FUNGSI AUTO-FILL
         
-        // Cek jika ada auto-submit tertunda (dari halaman event)
+        // Lanjut ke pendaftaran jika tadi klik Buat Tagihan
         if(sessionStorage.getItem('pendingSubmit')) {
-          sessionStorage.removeItem('pendingSubmit');
-          const payBtn = document.getElementById('payNowBtn');
-          if(payBtn) payBtn.click();
+            sessionStorage.removeItem('pendingSubmit');
+            // Beri jeda sedikit agar user lihat datanya terisi
+            setTimeout(() => document.getElementById('payNowBtn')?.click(), 500);
         }
       }
-    } catch (err) { 
-      console.error("Error Google Login:", err);
-      if(err.code === 'auth/popup-blocked'){
-         signInWithRedirect(auth, provider);
-      }
+    } catch (err) {
+       console.error(err);
+       if(err.code === 'auth/popup-blocked') signInWithRedirect(auth, provider);
     }
   }
 });
 
-// --- Login Email Manual ---
+// Login Email
 const loginForm = document.getElementById('loginForm');
 if(loginForm){
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = loginForm.email.value;
-    const pass = loginForm.password.value;
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
+      const res = await signInWithEmailAndPassword(auth, loginForm.email.value, loginForm.password.value);
       closeModal();
-      // Auto submit check
+      autoFillForm(res.user); // PANGGIL FUNGSI AUTO-FILL
+      
       if(sessionStorage.getItem('pendingSubmit')) {
           sessionStorage.removeItem('pendingSubmit');
-          document.getElementById('payNowBtn')?.click();
+          setTimeout(() => document.getElementById('payNowBtn')?.click(), 500);
       }
-    } catch(err) {
-      alert("Login gagal: Email atau password salah.");
-    }
+    } catch(err) { alert("Email atau Password salah."); }
   });
 }
 
-// --- State Observer (PENTING: Logika Gate) ---
+// --- Observer (Menjaga status login) ---
 onAuthStateChanged(auth, (user) => {
-  // Pastikan gate SELALU hilang, apapun statusnya (agar dashboard terbuka)
-  if(authGate) authGate.style.display = 'none';
-  if(authGate) authGate.classList.add('hidden');
-
+  // Selalu hilangkan gate
+  if(authGate) { authGate.style.display = 'none'; authGate.classList.add('hidden'); }
+  
   if (user) {
-    // User Login
     renderUserChip(user);
+    autoFillForm(user); // Pastikan form terisi jika user refresh halaman
     closeModal();
   } else {
-    // User Belum Login
     renderLoginButton();
   }
 });
