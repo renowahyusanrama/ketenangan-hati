@@ -44,22 +44,54 @@ function openModal() {
   if(modal) { modal.classList.add('open'); modal.style.display = 'block'; document.body.style.overflow = 'hidden'; }
 }
 
-// Auto-fill form setelah login
-function autoFillForm(user) {
+function getAuthSlot(){
+  if (profileDropdown) return profileDropdown;
+  return document.getElementById('profileDropdown');
+}
+
+// --- FITUR AUTO-FILL & AUTO-SUBMIT CERDAS ---
+function handlePostLogin(user) {
     const nameInput = document.querySelector('input[name="name"]');
     const emailInput = document.querySelector('input[name="email"]');
+    const phoneInput = document.querySelector('input[name="phone"]'); // Ambil input WA
+    
+    // 1. Isi Form Otomatis
     if (user) {
         if (nameInput && !nameInput.value && user.displayName) nameInput.value = user.displayName;
         if (emailInput && !emailInput.value && user.email) {
             emailInput.value = user.email;
-            emailInput.style.backgroundColor = "#f0fdf4";
+            emailInput.style.backgroundColor = "#f0fdf4"; // Hijau muda (tanda sukses)
         }
     }
-}
 
-function getAuthSlot(){
-  if (profileDropdown) return profileDropdown;
-  return document.getElementById('profileDropdown');
+    // 2. Cek apakah ada antrian klik "Buat Tagihan"
+    if(sessionStorage.getItem('pendingSubmit')) {
+        sessionStorage.removeItem('pendingSubmit');
+        
+        // Beri jeda 1 detik agar Firebase sempat simpan token di LocalStorage
+        setTimeout(() => {
+            const payBtn = document.getElementById('payNowBtn');
+            const paymentForm = document.getElementById('paymentForm');
+
+            // Cek apakah form valid (WA sudah diisi?)
+            if (paymentForm && paymentForm.checkValidity()) {
+                // JIKA LENGKAP: Klik tombol otomatis
+                console.log("Data lengkap, auto-submit...");
+                payBtn?.click(); 
+            } else {
+                // JIKA BELUM LENGKAP (Misal WA kosong): Fokus ke kolom WA
+                console.log("Data belum lengkap, fokus ke input...");
+                if(phoneInput && !phoneInput.value) {
+                    phoneInput.focus();
+                    phoneInput.style.boxShadow = "0 0 10px rgba(255,0,0,0.5)"; // Highlight merah
+                    alert("Login berhasil! Silakan lengkapi No. WhatsApp untuk melanjutkan.");
+                } else {
+                    // Kasus lain, paksa klik biar browser memunculkan pesan error "Please fill this field"
+                    payBtn?.click();
+                }
+            }
+        }, 1000); // Delay 1 detik
+    }
 }
 
 function renderLoginButton(){
@@ -75,16 +107,11 @@ async function renderUserChip(user){
   if(!slot) return;
   slot.classList.remove('hidden');
   
-  // Cek Admin (Token Claim ATAU Email Khusus)
   let adminMenuHtml = '';
   try {
       const token = await getIdTokenResult(user);
       if (token.claims.admin || user.email === "zhuansyahwa45@gmail.com") {
-          adminMenuHtml = `
-            <a href="admin.html" style="display:block; text-decoration:none; color:#333; font-weight:600; padding:10px 0; margin-bottom:5px;">
-              Admin
-            </a>
-          `;
+          adminMenuHtml = `<a href="admin.html" style="display:block; text-decoration:none; color:#333; font-weight:600; padding:10px 0; margin-bottom:5px;">Admin</a>`;
       }
   } catch (err) { console.log("Gagal cek admin:", err); }
 
@@ -112,7 +139,6 @@ async function renderUserChip(user){
 if(profileBtn && profileDropdown) {
   profileBtn.addEventListener('click', (e) => {
     e.preventDefault(); e.stopPropagation();
-    // Toggle Menu
     if (profileDropdown.classList.contains('hidden')) {
         profileDropdown.classList.remove('hidden'); profileDropdown.classList.add('open');
     } else {
@@ -122,28 +148,22 @@ if(profileBtn && profileDropdown) {
 }
 
 document.addEventListener('click', (e) => {
-  // Tutup dropdown jika klik di luar
   if (profileDropdown && !profileDropdown.classList.contains('hidden')) {
     if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
       profileDropdown.classList.add('hidden'); profileDropdown.classList.remove('open');
     }
   }
   
-  // Tutup Modal
   if (e.target.closest('#closeModalBtn') || e.target.classList.contains('modal-overlay')) closeModal();
   
-  // Login Google
   const btnGoogle = e.target.closest('#googleLoginBtn') || e.target.closest('.btn-google');
   if (btnGoogle) {
     e.preventDefault(); e.stopImmediatePropagation();
     signInWithPopup(auth, provider).then((res) => {
       if(res.user) {
-        closeModal(); autoFillForm(res.user); renderUserChip(res.user);
-        // Lanjut ke Buat Tagihan jika pending
-        if(sessionStorage.getItem('pendingSubmit')) {
-            sessionStorage.removeItem('pendingSubmit');
-            setTimeout(() => document.getElementById('payNowBtn')?.click(), 500);
-        }
+        closeModal();
+        renderUserChip(res.user);
+        handlePostLogin(res.user); // JALANKAN AUTO SUBMIT
       }
     }).catch(err => {
       if(err.code === 'auth/popup-blocked') signInWithRedirect(auth, provider);
@@ -151,25 +171,30 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Login Email
 const loginForm = document.getElementById('loginForm');
 if(loginForm){
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
       const res = await signInWithEmailAndPassword(auth, loginForm.email.value, loginForm.password.value);
-      closeModal(); autoFillForm(res.user); renderUserChip(res.user);
-      if(sessionStorage.getItem('pendingSubmit')) {
-          sessionStorage.removeItem('pendingSubmit');
-          setTimeout(() => document.getElementById('payNowBtn')?.click(), 500);
-      }
+      closeModal(); 
+      renderUserChip(res.user);
+      handlePostLogin(res.user); // JALANKAN AUTO SUBMIT
     } catch(err) { alert("Email/Password salah."); }
   });
 }
 
-// Observer
 onAuthStateChanged(auth, (user) => {
   if(authGate) { authGate.style.display = 'none'; authGate.classList.add('hidden'); }
-  if (user) { renderUserChip(user); autoFillForm(user); closeModal(); }
+  if (user) { 
+      renderUserChip(user); 
+      closeModal(); 
+      // Kita panggil juga disini untuk jaga-jaga kalau user refresh halaman
+      // Tapi tanpa alert agar tidak mengganggu
+      const nameInput = document.querySelector('input[name="name"]');
+      if (nameInput && !nameInput.value && user.displayName) nameInput.value = user.displayName;
+      const emailInput = document.querySelector('input[name="email"]');
+      if (emailInput && !emailInput.value && user.email) emailInput.value = user.email;
+  }
   else { renderLoginButton(); }
 });
