@@ -65,27 +65,16 @@
             <hr>
             <h3>Deskripsi</h3>
             <p id="eventDescription">Memuat deskripsi...</p>
-            
-            <div id="eventHighlightsBlock" class="event-block">
-                <h3>Highlight</h3>
-                <ul id="eventHighlights" class="bullet-list"></ul>
-            </div>
-            
-            <div id="eventAgendaBlock" class="event-block">
-                <h3>Agenda</h3>
-                <ul id="eventAgenda" class="agenda-list"></ul>
-            </div>
+            <div id="eventHighlightsBlock" class="event-block"><h3>Highlight</h3><ul id="eventHighlights" class="bullet-list"></ul></div>
+            <div id="eventAgendaBlock" class="event-block"><h3>Agenda</h3><ul id="eventAgenda" class="agenda-list"></ul></div>
           </div>
         </article>
 
         <aside class="event-sidebar">
           <div class="booking-card">
-            <div class="price-tag">
-              <span class="label">Harga Tiket</span>
-              <span id="eventPrice" class="price-value">Rp 0</span>
-            </div>
-
-            <div class="info-list" id="quotaInfo" aria-live="polite" style="margin-top:8px;"></div>
+            <div class="price-tag"><span class="label">Harga Tiket</span><span id="eventPrice" class="price-value">Rp 0</span></div>
+            
+            <div class="info-list" id="quotaInfo" style="margin-top:8px;"></div>
             
             <div class="ticket-choice" id="ticketChoice" style="margin-bottom: 15px;">
               <p class="label">Pilih Tiket</p>
@@ -109,17 +98,16 @@
               <input type="tel" class="input" name="phone" placeholder="08xxxxxxxxxx" required>
               
               <p class="label">Metode Pembayaran</p>
-              <div class="method-grid" role="group">
+              <div class="method-grid">
                   <button type="button" class="method-btn" data-method="qris">QRIS</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="bca">VA BCA</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="bni">VA BNI</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="bri">VA BRI</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="mandiri">VA Mandiri</button>
               </div>
-
+              
               <button class="btn btn-primary btn-full" type="submit" id="payNowBtn">Buat Tagihan</button>
             </form>
-            
             <div id="paymentResult" class="payment-result hidden"></div>
           </div>
         </aside>
@@ -130,22 +118,16 @@
   <div id="loginModal" class="modal" aria-hidden="true" role="dialog" style="display: none;">
     <div class="modal-overlay" data-close="true"></div>
     <div class="modal-dialog">
-      <button class="modal-close" id="closeModalBtn" data-close="true" type="button"><i class="fa-solid fa-xmark"></i></button>
-      <div class="modal-header">
-        <h3>Selamat Datang</h3>
-        <p>Login untuk otomatis mengisi data pendaftaran</p>
-      </div>
+      <button class="modal-close" id="closeModalBtn" data-close="true"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-header"><h3>Selamat Datang</h3><p class="modal-sub">Login untuk otomatis mengisi data pendaftaran</p></div>
       <div class="modal-body">
         <button class="btn btn-google" type="button" id="googleLoginBtn">
-          <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" width="20" alt="G"> 
-          Login dengan Google
+            <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" width="20"> Login dengan Google
         </button>
         <div class="divider"><span>atau</span></div>
         <form id="loginForm">
-          <label class="label">Email</label>
-          <input class="input" type="email" name="email" placeholder="Email" required />
-          <label class="label">Password</label>
-          <input class="input" type="password" name="password" placeholder="Password" required />
+          <label class="label">Email</label><input class="input" type="email" name="email" placeholder="Email" required />
+          <label class="label">Password</label><input class="input" type="password" name="password" placeholder="Password" required />
           <button class="btn btn-primary btn-login-submit" type="submit">Login</button>
         </form>
       </div>
@@ -161,21 +143,17 @@
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       const pForm = document.getElementById('paymentForm');
-      
-      // Mencegah submit jika belum login
       if (pForm) {
         pForm.addEventListener('submit', function(e) {
           const isUser = Object.keys(localStorage).some(k => k.startsWith('firebase:authUser'));
           if (!isUser) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            // Munculkan modal
+            e.preventDefault(); e.stopImmediatePropagation();
             const modal = document.getElementById('loginModal');
-            if (modal) {
-              modal.classList.add('open');
-              modal.style.display = 'block';
-              alert("Silakan login terlebih dahulu, data akan terisi otomatis.");
-              sessionStorage.setItem('pendingSubmit', 'true');
+            if (modal) { 
+                modal.classList.add('open'); 
+                modal.style.display = 'block'; 
+                alert("Silakan login terlebih dahulu."); 
+                sessionStorage.setItem('pendingSubmit', 'true'); 
             }
           }
         }, true);
