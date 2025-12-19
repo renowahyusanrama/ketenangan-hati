@@ -43,7 +43,7 @@ if (isBrowser && window.__API_BASE_URL__) {
 } else {
     API_BASE = !isBrowser
       ? PROD_FUNCTION_BASE
-      : window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      : window.location.hostname === "localhost" || window.location.hostname === "https://ketenanganjiwa.id"
       ? LOCAL_FUNCTION_BASE
       : "/api";
 }
