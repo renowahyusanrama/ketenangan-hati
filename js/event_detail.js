@@ -1,6 +1,8 @@
-import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+// js/event_detail.js (FULL VERSION - ORIGINAL CODE RESTORED)
+
+// 1. IMPORT DARI AUTH.JS (Supaya koneksi Database & Login NYAMBUNG)
+import { db, auth } from "./auth.js"; 
 import {
-  getFirestore,
   doc,
   getDoc,
   collection,
@@ -12,28 +14,15 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { EVENT_SEED_DATA } from "./events_seed_data.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCoa_Ioa-Gp9TnL5eke6fwTkfQGkbWGJBw",
-  authDomain: "pengajian-online.firebaseapp.com",
-  projectId: "pengajian-online",
-  storageBucket: "pengajian-online.firebasestorage.app",
-  messagingSenderId: "965180253441",
-  appId: "1:965180253441:web:f03f6cb969e422fd7e2700",
-  measurementId: "G-YJ81SDXM5E",
-};
+// (Konfigurasi Firebase lokal dihapus karena sudah pakai dari auth.js agar tidak bentrok)
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// ==== BAGIAN INI SAYA PERBAIKI AGAR TIDAK MACET ====
-const PROD_FUNCTION_BASE = "https://ketenangan-jiwa.vercel.app/api"; // URL PASTI
+// ==== 2. FIX API URL (AGAR TIDAK MACET DI VERCEL) ====
+const PROD_FUNCTION_BASE = "https://ketenangan-jiwa.vercel.app/api"; 
 const LOCAL_FUNCTION_BASE = "http://localhost:5001/pengajian-online/us-central1/api";
-
 const isBrowser = typeof window !== "undefined";
 
-// Logika: Jika di HTML ada window.__API_BASE_URL__, pakai itu (Paling Aman).
-// Jika tidak, baru pakai logika lama.
 let API_BASE;
+// Prioritaskan setting dari HTML jika ada, atau fallback ke Prod/Local
 if (isBrowser && window.__API_BASE_URL__) {
     API_BASE = window.__API_BASE_URL__;
 } else {
@@ -41,9 +30,8 @@ if (isBrowser && window.__API_BASE_URL__) {
       ? PROD_FUNCTION_BASE
       : window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
       ? LOCAL_FUNCTION_BASE
-      : "/api"; // Fallback
+      : "/api"; 
 }
-console.log("System Connected to:", API_BASE); // Cek Console untuk memastikan
 
 let activeOrderStatusPoll = null;
 let activeExpiryTimer = null;
@@ -51,6 +39,8 @@ let activeExpiryTimer = null;
 const FORM_KEY_PREFIX = "kj-payment-form-";
 const ORDER_KEY_PREFIX = "kj-payment-order-";
 
+// =========================================================
+// BAGIAN INI ADALAH KODE ASLI ANDA (TIDAK SAYA HAPUS)
 // =========================================================
 
 function formatCurrency(amount) {
@@ -74,11 +64,11 @@ function renderList(listId, items, formatter) {
   container.innerHTML = "";
   if (!items || !items.length) {
     block?.classList.add("is-hidden");
-    if(block) block.style.display = 'none';
+    if(block) block.style.display = 'none'; // Fallback visual
     return;
   }
   block?.classList.remove("is-hidden");
-  if(block) block.style.display = 'block';
+  if(block) block.style.display = 'block'; // Fallback visual
 
   items.forEach((item) => {
     const li = document.createElement("li");
@@ -134,21 +124,43 @@ function renderNotFound() {
       </section>
     `;
   }
+  // Reset UI Hero
+  const hero = document.querySelector(".event-hero");
+  if(hero) hero.style.setProperty("--hero-image", "url('./assets/img/event-1.jpg')");
+  setText("eventCategory", "Event");
+  setText("eventTitle", "Event tidak ditemukan");
+  setText("eventTagline", "Silakan kembali ke halaman utama untuk melihat jadwal terbaru.");
+  document.getElementById("eventRegisterHero")?.setAttribute("href", "index.html#event");
 }
 
 function saveToStorage(key, value) {
   if (!isBrowser || !key) return;
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) {}
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn("saveToStorage error:", err?.message || err);
+  }
 }
 
 function readFromStorage(key) {
   if (!isBrowser || !key) return null;
-  try { return JSON.parse(localStorage.getItem(key)); } catch (err) { return null; }
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn("readFromStorage error:", err?.message || err);
+    return null;
+  }
 }
 
 function removeFromStorage(key) {
   if (!isBrowser || !key) return;
-  try { localStorage.removeItem(key); } catch (err) {}
+  try {
+    localStorage.removeItem(key);
+  } catch (err) {
+    console.warn("removeFromStorage error:", err?.message || err);
+  }
 }
 
 function createQrUrl(qrString) {
@@ -177,9 +189,16 @@ function buildEmailHintHtml(data) {
   const status = (data.ticketEmailStatus || data.ticketEmail?.status || "").toLowerCase();
   const recipient = data.ticketEmailRecipient || data.customer?.email || "";
   if (!status) return "";
-  if (status === "sent") return `<p class="form-hint success">E-ticket sudah dikirim ke email ${recipient || "Anda"}.</p>`;
-  if (status === "pending") return `<p class="form-hint muted">E-ticket akan otomatis dikirim setelah pembayaran selesai.</p>`;
-  if (status === "error") return `<p class="form-hint error">Gagal mengirim e-ticket. Silakan hubungi panitia.</p>`;
+
+  if (status === "sent") {
+    return `<p class="form-hint success">E-ticket sudah dikirim ke email ${recipient || "Anda"}.</p>`;
+  }
+  if (status === "pending") {
+    return `<p class="form-hint muted">E-ticket akan otomatis dikirim setelah pembayaran selesai.</p>`;
+  }
+  if (status === "error") {
+    return `<p class="form-hint error">Gagal mengirim e-ticket. Silakan hubungi panitia.</p>`;
+  }
   return "";
 }
 
@@ -192,8 +211,14 @@ function renderPaymentSuccess(container, data) {
   const emailHintHtml = buildEmailHintHtml(data);
   container.innerHTML = `
     <div class="payment-info-row" style="align-items:center;">
-      <div><span>Status</span><strong style="color:green;">${statusText}</strong></div>
-      <div><span>Total</span><strong>${formatCurrency(amount)}</strong></div>
+      <div>
+        <span>Status</span>
+        <strong style="color:green;">${statusText}</strong>
+      </div>
+      <div>
+        <span>Total</span>
+        <strong>${formatCurrency(amount)}</strong>
+      </div>
     </div>
     <p class="form-hint success" style="margin-top:10px;">Pembayaran berhasil, e-ticket Anda sudah terkirim.</p>
     ${reference ? `<p class="form-hint">Ref: ${reference}</p>` : ""}
@@ -226,15 +251,29 @@ function startOrderStatusPolling(refValue, onStatus) {
           }
         }
       }
-    } catch (err) { console.error("Order status poll error:", err); }
-    if (!cancelled) timer = setTimeout(poll, 5000);
+    } catch (err) {
+      console.error("Order status poll error:", err);
+    }
+    if (!cancelled) {
+      timer = setTimeout(poll, 5000);
+    }
   }
+
   poll();
-  return { stop() { cancelled = true; if (timer) clearTimeout(timer); } };
+
+  return {
+    stop() {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    },
+  };
 }
 
 function stopExpiryTimer() {
-  if (activeExpiryTimer) { clearInterval(activeExpiryTimer); activeExpiryTimer = null; }
+  if (activeExpiryTimer) {
+    clearInterval(activeExpiryTimer);
+    activeExpiryTimer = null;
+  }
 }
 
 function setupExpiryCountdown(container, expiresAt, { onExpire } = {}) {
@@ -260,8 +299,12 @@ function setupExpiryCountdown(container, expiresAt, { onExpire } = {}) {
   function tick() {
     const diff = target - Date.now();
     label.textContent = formatDiff(diff);
-    if (diff <= 0) { stopExpiryTimer(); if (typeof onExpire === "function") onExpire(); }
+    if (diff <= 0) {
+      stopExpiryTimer();
+      if (typeof onExpire === "function") onExpire();
+    }
   }
+
   tick();
   activeExpiryTimer = setInterval(tick, 1000);
 }
@@ -289,15 +332,15 @@ function renderPaymentResult(container, data, options = {}) {
   if (!data) {
     stopExpiryTimer();
     container.classList.add("hidden");
-    container.style.display = "none";
+    container.style.display = 'none';
     return;
   }
 
-  // --- AUTO SCROLL (Agar user lihat tagihan) ---
+  // 3. FIX SCROLL OTOMATIS (Agar user lihat tagihan di bawah)
   container.classList.remove("hidden");
-  container.style.display = "block";
+  container.style.display = 'block';
   setTimeout(() => {
-    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      container.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 300);
 
   const statusText = (data.status || data.rawStatus || "").toLowerCase();
@@ -309,10 +352,17 @@ function renderPaymentResult(container, data, options = {}) {
   if (data.paymentType === "free") {
     container.innerHTML = `
       <div class="payment-info-row">
-        <div><span>Metode</span><strong>Gratis</strong></div>
-        <div><span>Total</span><strong>${formatCurrency(0)}</strong></div>
+        <div>
+          <span>Metode</span>
+          <strong>Gratis</strong>
+        </div>
+        <div>
+          <span>Total</span>
+          <strong>${formatCurrency(0)}</strong>
+        </div>
       </div>
       <p class="form-hint success">Pendaftaran berhasil. E-ticket telah dikirim ke email.</p>
+      ${data.reference ? `<p class="form-hint">Ref: ${data.reference}</p>` : ""}
     `;
     return;
   }
@@ -325,13 +375,29 @@ function renderPaymentResult(container, data, options = {}) {
   const canCancel =
     (data.provider || "").toLowerCase() === "tripay" && isPending && (data.reference || data.orderId);
   const cancelHtml = canCancel
-    ? `<div class="payment-info-row" style="align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;">
-        <div><span>Status</span><strong style="color:orange;">${statusText ? statusText.toUpperCase() : "PENDING"}</strong></div>
+    ? `
+      <div class="payment-info-row" style="align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;">
+        <div>
+          <span>Status</span>
+          <strong style="color:orange;">${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
+        </div>
         <button data-cancel-order style="background:#ef4444;color:white;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:12px;">Batalkan pesanan</button>
-      </div><p class="form-hint" data-cancel-status style="font-size:12px;">Tagihan menunggu pembayaran.</p>`
-    : `<div class="payment-info-row" style="align-items:center;">
-        <div><span>Status</span><strong style="color:orange;">${statusText ? statusText.toUpperCase() : "PENDING"}</strong></div>
-      </div>`;
+      </div>
+      <p class="form-hint" data-cancel-status style="font-size:12px;">Tagihan menunggu pembayaran. Klik batalkan jika ingin mengganti metode.</p>
+    `
+    : `
+      <div class="payment-info-row" style="align-items:center;">
+        <div>
+          <span>Status</span>
+          <strong style="color:orange;">${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
+        </div>
+      </div>
+      ${
+        isPending
+          ? '<p class="form-hint">Tagihan menunggu pembayaran. Hubungi panitia jika perlu mengganti metode.</p>'
+          : ""
+      }
+    `;
 
   const emailHintHtml = buildEmailHintHtml(data);
 
@@ -341,17 +407,31 @@ function renderPaymentResult(container, data, options = {}) {
     const feeBreakdown = renderFeeBreakdown(data);
     container.innerHTML = `
       <div class="payment-info-row" style="margin-bottom:10px;">
-        <div><span>Metode</span><strong>VA ${bank}</strong></div>
-        <div><span>Total</span><strong>${formatCurrency(data.amount)}</strong></div>
+        <div>
+          <span>Metode</span>
+          <strong>VA ${bank}</strong>
+        </div>
+        <div>
+          <span>Total</span>
+          <strong>${formatCurrency(data.amount)}</strong>
+        </div>
       </div>
       <div class="payment-info-row" style="background:#f1f5f9; padding:15px; border-radius:8px;">
-        <div><span style="display:block; font-size:12px; color:#64748b;">Nomor VA</span><strong id="vaNumberText" style="font-size:18px;">${va}</strong></div>
+        <div>
+          <span style="display:block; font-size:12px; color:#64748b;">Nomor VA</span>
+          <strong id="vaNumberText" style="font-size:18px;">${va}</strong>
+        </div>
         <button class="copy-btn" data-copy="${va}" style="padding:5px 10px;">Salin</button>
       </div>
-      <p class="form-hint">Transfer tepat sesuai nominal.</p>
+      <p class="form-hint">Transfer tepat sesuai nominal. Tagihan akan diverifikasi otomatis setelah pembayaran berhasil.</p>
       ${feeBreakdown}
-      ${data.expiresAt ? `<p class="form-hint warning" data-expiry-countdown style="color:red; font-weight:bold;">Waktu pembayaran: memuat...</p>` : ""}
+      ${
+        data.expiresAt
+          ? `<p class="form-hint warning" data-expiry-countdown style="color:red; font-weight:bold;">Waktu pembayaran: memuat...</p>`
+          : ""
+      }
       ${checkoutLink}
+      ${referenceText ? `<p class="form-hint" style="font-size:11px; color:#999;">Ref: ${referenceText}</p>` : ""}
       ${buildInstructionsHtml(data.instructions)}
       ${cancelHtml}
       ${emailHintHtml}
@@ -367,7 +447,12 @@ function renderPaymentResult(container, data, options = {}) {
       </div>
       ${feeBreakdown}
       ${checkoutLink}
-      ${data.expiresAt ? `<p class="form-hint warning" data-expiry-countdown style="color:red; font-weight:bold;">Waktu pembayaran: memuat...</p>` : ""}
+      ${referenceText ? `<p class="form-hint" style="font-size:11px; color:#999;">Ref: ${referenceText}</p>` : ""}
+      ${
+        data.expiresAt
+          ? `<p class="form-hint warning" data-expiry-countdown style="color:red; font-weight:bold;">Waktu pembayaran: memuat...</p>`
+          : ""
+      }
       ${buildInstructionsHtml(data.instructions)}
       ${cancelHtml}
       ${emailHintHtml}
@@ -375,9 +460,16 @@ function renderPaymentResult(container, data, options = {}) {
   }
 
   container.classList.remove("hidden");
+  const terminalStatuses = ["paid", "failed", "expired", "canceled", "refunded"];
+  if (terminalStatuses.includes(statusText) && typeof options.onTerminalStatus === "function") {
+    options.onTerminalStatus(statusText);
+  }
+
   if (["pending", "unpaid", ""].includes(statusText) && data.expiresAt) {
     setupExpiryCountdown(container, data.expiresAt, { onExpire: options.onExpire });
-  } else stopExpiryTimer();
+  } else {
+    stopExpiryTimer();
+  }
 
   container.querySelectorAll("[data-copy]").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -385,7 +477,9 @@ function renderPaymentResult(container, data, options = {}) {
         await navigator.clipboard.writeText(btn.dataset.copy || "");
         btn.textContent = "Disalin";
         setTimeout(() => (btn.textContent = "Salin"), 2000);
-      } catch (err) {}
+      } catch (err) {
+        console.error(err);
+      }
     });
   });
 
@@ -406,26 +500,42 @@ function renderPaymentResult(container, data, options = {}) {
             requestedBy: "user",
           }),
         });
-        if (!resp.ok) throw new Error("Gagal membatalkan.");
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || "Gagal membatalkan pesanan.");
+        }
         const result = await resp.json();
-        container.innerHTML = `<p class="form-hint success">Pesanan dibatalkan. Status: ${(result.status || "canceled").toUpperCase()}.</p>`;
+        const warning = result.tripayWarning
+          ? `<p class="form-hint warning">${result.tripayWarning}</p>`
+          : "";
+        container.innerHTML = `
+          <p class="form-hint success">Pesanan dibatalkan. Status: ${(result.status || "canceled").toUpperCase()}.</p>
+          ${warning}
+          <p class="form-hint">Buat tagihan baru jika ingin mengganti metode pembayaran.</p>
+        `;
       } catch (err) {
-        if (cancelStatus) cancelStatus.textContent = err.message || "Gagal membatalkan.";
+        console.error(err);
+        if (cancelStatus) cancelStatus.textContent = err.message || "Gagal membatalkan pesanan.";
         cancelBtn.disabled = false;
       }
     });
   }
 }
 
+
 function initPaymentForm(event) {
   const form = document.getElementById("paymentForm");
   const methodButtons = document.querySelectorAll(".method-btn");
   const resultBox = document.getElementById("paymentResult");
+  const hint = document.getElementById("paymentHint"); // Fallback jika tidak ada di HTML
   const payBtn = document.getElementById("payNowBtn");
   const methodGrid = document.querySelector(".method-grid");
+  
+  // Element Tambahan dari HTML Baru
   const ticketTypeInput = form?.querySelector('input[name="ticketType"]');
   const ticketRegularBtn = document.getElementById("ticketRegularBtn");
   const ticketVipBtn = document.getElementById("ticketVipBtn");
+  
   const priceRegularLabel = document.getElementById("priceRegularLabel");
   const priceVipLabel = document.getElementById("priceVipLabel");
   const nameInput = form?.querySelector('input[name="name"]');
@@ -448,15 +558,22 @@ function initPaymentForm(event) {
   const priceVip = event.priceVip != null ? Number(event.priceVip) : null;
   const savedForm = readFromStorage(formStorageKey) || {};
   let selectedTicket = savedForm.ticketType || (priceRegular ? "regular" : priceVip ? "vip" : "regular");
+  if (soldOutRegular && !soldOutVip && priceVip) selectedTicket = "vip";
+  if (soldOutRegular && soldOutVip) selectedTicket = "regular";
+  let selectedPrice = selectedTicket === "vip" ? priceVip || priceRegular || 0 : priceRegular || 0;
   let method = savedForm.method || "qris";
   let bank = savedForm.bank || null;
+  const defaultPayLabel = selectedPrice > 0 ? "Buat Tagihan" : "Kirim E-Ticket";
 
   function setHint(message, variant = "info") {
-     const hint = document.getElementById("paymentHint");
-     if (!hint) return;
-     hint.textContent = message;
-     hint.classList.remove("error", "success", "warning");
-     if (variant !== "info") hint.classList.add(variant);
+    if (!hint) return;
+    hint.textContent = message;
+    hint.classList.remove("error", "success", "warning");
+    if (variant !== "info") hint.classList.add(variant);
+  }
+
+  function setPayLabel(label) {
+    if (payBtn) payBtn.textContent = label;
   }
 
   function saveFormState() {
@@ -470,9 +587,18 @@ function initPaymentForm(event) {
     });
   }
 
-  function loadPendingOrder() { return readFromStorage(orderStorageKey); }
-  function savePendingOrder(orderData) { if (orderData) saveToStorage(orderStorageKey, orderData); }
-  function clearPendingOrder() { removeFromStorage(orderStorageKey); }
+  function loadPendingOrder() {
+    return readFromStorage(orderStorageKey);
+  }
+
+  function savePendingOrder(orderData) {
+    if (!orderData) return;
+    saveToStorage(orderStorageKey, orderData);
+  }
+
+  function clearPendingOrder() {
+    removeFromStorage(orderStorageKey);
+  }
 
   if (nameInput && savedForm.name) nameInput.value = savedForm.name;
   if (emailInput && savedForm.email) emailInput.value = savedForm.email;
@@ -480,51 +606,124 @@ function initPaymentForm(event) {
 
   function updateTicketSelection(type) {
     if ((type === "vip" && soldOutVip) || (type !== "vip" && soldOutRegular)) {
-      alert("Tiket habis.");
+      setHint("Tiket yang dipilih sudah habis. Pilih tipe lain.", "warning");
       return;
     }
     selectedTicket = type === "vip" ? "vip" : "regular";
-    const selectedPrice = selectedTicket === "vip" ? priceVip || priceRegular || 0 : priceRegular || 0;
+    selectedPrice = selectedTicket === "vip" ? priceVip || priceRegular || 0 : priceRegular || 0;
+    
     if (ticketTypeInput) ticketTypeInput.value = selectedTicket;
     
     ticketRegularBtn?.classList.toggle("active", selectedTicket === "regular");
     ticketVipBtn?.classList.toggle("active", selectedTicket === "vip");
 
     const isFree = selectedPrice <= 0;
-    const priceDisplay = document.getElementById("eventPrice");
-    if(priceDisplay) priceDisplay.textContent = isFree ? "Gratis" : formatCurrency(selectedPrice);
-
     if (isFree) {
-      method = "free"; bank = null;
-      if(methodGrid) methodGrid.classList.add("hidden");
-      payBtn.textContent = "Kirim E-Ticket";
+      method = "free";
+      bank = null;
+      methodGrid?.classList.add("hidden");
+      methodButtons.forEach((btn) => {
+        btn.setAttribute("disabled", "true");
+        btn.classList.remove("active");
+      });
+      setPayLabel("Kirim E-Ticket");
+      setHint("Event gratis, e-ticket akan dikirim otomatis tanpa pembayaran.", "success");
     } else {
-      if(methodGrid) methodGrid.classList.remove("hidden");
-      payBtn.textContent = "Buat Tagihan";
+      methodGrid?.classList.remove("hidden");
+      methodButtons.forEach((btn) => btn.removeAttribute("disabled"));
+      if (!method || method === "free") method = "qris";
+      setPayLabel(defaultPayLabel);
+      setHint("Silakan isi data peserta dengan email Gmail lalu pilih metode pembayaran.");
+    }
+
+    const priceDisplay = document.getElementById("eventPrice");
+    if (priceDisplay) {
+      if (priceVip) {
+        priceDisplay.textContent = selectedTicket === "vip" ? formatCurrency(priceVip) : formatCurrency(priceRegular);
+      } else {
+        priceDisplay.textContent = selectedPrice ? formatCurrency(selectedPrice) : "Gratis";
+      }
     }
     saveFormState();
   }
 
   if (priceRegularLabel) priceRegularLabel.textContent = priceRegular ? formatCurrency(priceRegular) : "Gratis";
-  if (priceVipLabel) priceVipLabel.textContent = priceVip ? formatCurrency(priceVip) : "N/A";
-  
-  if (soldOutRegular) ticketRegularBtn?.classList.add("sold-out");
-  if (soldOutVip) ticketVipBtn?.classList.add("sold-out");
-
+  if (priceVipLabel) {
+    if (priceVip) {
+      priceVipLabel.textContent = formatCurrency(priceVip);
+      ticketVipBtn?.classList.remove("hidden");
+      ticketVipBtn?.removeAttribute("disabled");
+    } else {
+      priceVipLabel.textContent = "N/A";
+      ticketVipBtn?.setAttribute("disabled", "true");
+      ticketVipBtn?.classList.add("hidden");
+    }
+  }
+  if (soldOutRegular) {
+    ticketRegularBtn?.setAttribute("disabled", "true");
+    ticketRegularBtn?.classList.add("sold-out");
+    ticketRegularBtn.querySelector("span")?.classList.add("muted");
+    ticketRegularBtn.textContent = "Reguler Sold Out";
+  }
+  if (soldOutVip) {
+    ticketVipBtn?.setAttribute("disabled", "true");
+    ticketVipBtn?.classList.add("sold-out");
+    ticketVipBtn.querySelector("span")?.classList.add("muted");
+    ticketVipBtn.textContent = "VIP Sold Out";
+  }
   ticketRegularBtn?.addEventListener("click", () => updateTicketSelection("regular"));
   ticketVipBtn?.addEventListener("click", () => updateTicketSelection("vip"));
   updateTicketSelection(selectedTicket);
+  if (soldOutRegular && soldOutVip) {
+    setHint("Semua tiket sudah habis.", "warning");
+    payBtn.disabled = true;
+    methodButtons.forEach((btn) => btn.setAttribute("disabled", "true"));
+  }
+
+  function selectMethodButton(preferredMethod, preferredBank) {
+    if (!methodButtons || !methodButtons.length) return;
+    if (preferredMethod === "bank_transfer") {
+      const target =
+        Array.from(methodButtons).find(
+          (btn) => btn.dataset.method === "va" && (!preferredBank || btn.dataset.bank === preferredBank),
+        ) || null;
+      if (target) {
+        target.click();
+        return;
+      }
+    }
+    if (preferredMethod === "qris") {
+      const target = Array.from(methodButtons).find((btn) => btn.dataset.method === "qris");
+      if (target) {
+        target.click();
+        return;
+      }
+    }
+    methodButtons[0]?.click();
+  }
 
   methodButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
-      methodButtons.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
       const chosen = btn.dataset.method;
       method = chosen === "va" ? "bank_transfer" : "qris";
       bank = chosen === "va" ? btn.dataset.bank || null : null;
+      methodButtons.forEach((b) => b.classList.toggle("active", b === btn));
+      
+      // Update hidden input jika ada
+      const hiddenMethod = document.getElementById('paymentMethodInput');
+      if(hiddenMethod) hiddenMethod.value = method + (bank ? '_' + bank : '');
+
+      setHint(
+        method === "bank_transfer"
+          ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
+          : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
+      );
       saveFormState();
     });
   });
+  if (selectedPrice > 0) {
+    selectMethodButton(method, bank);
+  }
 
   [nameInput, emailInput, phoneInput].forEach((el) => {
     el?.addEventListener("input", () => saveFormState());
@@ -532,22 +731,38 @@ function initPaymentForm(event) {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!form.checkValidity()) { form.reportValidity(); return; }
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
 
-    const originalText = payBtn.textContent;
-    payBtn.disabled = true;
-    payBtn.textContent = "Memproses...";
+    if (selectedTicket === "vip" && soldOutVip) {
+      setHint("Tiket VIP sudah habis.", "error");
+      return;
+    }
+    if (selectedTicket !== "vip" && soldOutRegular) {
+      setHint("Tiket Reguler sudah habis.", "error");
+      return;
+    }
+
     resultBox?.classList.add("hidden");
+    resultBox.style.display = 'none'; // Ensure hidden
+    
+    const isFree = selectedPrice <= 0;
+    setHint(isFree ? "Memproses e-ticket gratis..." : "Membuat tagihan pembayaran...", "info");
+    payBtn.disabled = true;
+    const originalText = payBtn.textContent;
+    setPayLabel("Memproses...");
 
     const formData = new FormData(form);
     const email = formData.get("email")?.toString().trim() || "";
-    if(!email.includes("@")) {
-        alert("Email tidak valid!");
-        payBtn.disabled = false;
-        payBtn.textContent = originalText;
-        return;
+    if (!/@gmail\.com$/i.test(email)) {
+      setHint("Email harus menggunakan Gmail (contoh: nama@gmail.com).", "error");
+      alert("Harap gunakan email Gmail!");
+      payBtn.disabled = false;
+      setPayLabel(originalText);
+      return;
     }
-    const isFree = (selectedTicket === "vip" ? priceVip : priceRegular) <= 0;
 
     const payload = {
       eventId: event.id,
@@ -562,6 +777,7 @@ function initPaymentForm(event) {
     };
 
     try {
+      console.log("Sending to:", `${API_BASE}/payments/create`); // Debug log
       const response = await fetch(`${API_BASE}/payments/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -570,75 +786,275 @@ function initPaymentForm(event) {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || "Gagal membuat tagihan.");
+        throw new Error(err.error || `Error ${response.status}: Gagal membuat pembayaran.`);
       }
 
       const data = await response.json();
-      if (isFree) clearPendingOrder(); else savePendingOrder(data);
-      renderPaymentResult(resultBox, data);
-
-      if (!isFree && data.checkoutUrl) window.open(data.checkoutUrl, "_blank", "noopener");
-
+      if (isFree) {
+        clearPendingOrder();
+      } else {
+        savePendingOrder(data);
+      }
+      renderPaymentResult(resultBox, data, {
+        onExpire: () => {
+          setHint("Waktu pembayaran sudah kadaluarsa. Buat tagihan baru untuk melanjutkan.", "warning");
+          clearPendingOrder();
+        },
+        onTerminalStatus: (statusValue) => {
+          if (["paid", "failed", "expired", "canceled", "refunded"].includes(statusValue)) {
+            clearPendingOrder();
+          }
+        },
+      });
+      setHint(
+        isFree
+          ? "E-ticket berhasil dikirim ke email. Cek inbox/spam."
+          : "Tagihan berhasil dibuat. Mengarahkan ke halaman pembayaran Tripay...",
+        "success",
+      );
+      if (!isFree && data.checkoutUrl) {
+        // Buka halaman pembayaran Tripay di tab baru supaya user langsung ke template Tripay
+        window.open(data.checkoutUrl, "_blank", "noopener");
+      }
+      const normalizedInitialStatus = (data.status || data.rawStatus || "").toLowerCase();
+      if (!isFree && normalizedInitialStatus !== "paid") {
+        const orderKey = data.orderId || data.merchantRef || data.reference;
+        if (orderKey) {
+          activeOrderStatusPoll?.stop();
+          const handleStatusUpdate = (statusPayload) => {
+            if (!statusPayload) return;
+            const statusValue = (statusPayload.status || "").toLowerCase();
+            if (!statusValue) return;
+            const mergedData = {
+              ...data,
+              ...statusPayload,
+              ticketEmailStatus:
+                statusPayload.ticketEmailStatus ||
+                statusPayload.ticketEmail?.status ||
+                data.ticketEmailStatus,
+              ticketEmailRecipient:
+                statusPayload.ticketEmailRecipient ||
+                statusPayload.ticketEmail?.recipient ||
+                data.ticketEmailRecipient,
+            };
+            renderPaymentResult(resultBox, mergedData, {
+              onExpire: () => {
+                setHint("Waktu pembayaran sudah kadaluarsa. Buat tagihan baru untuk melanjutkan.", "warning");
+                clearPendingOrder();
+              },
+              onTerminalStatus: (statusValue2) => {
+                if (["paid", "failed", "expired", "canceled", "refunded"].includes(statusValue2)) {
+                  clearPendingOrder();
+                }
+              },
+            });
+            savePendingOrder(mergedData);
+            if (["paid", "failed", "expired", "canceled", "refunded"].includes(statusValue)) {
+              activeOrderStatusPoll?.stop();
+              setHint(
+                statusValue === "paid"
+                  ? "Pembayaran berhasil, e-ticket Anda sudah terkirim."
+                  : `Status pembayaran: ${statusValue.toUpperCase()}`,
+                statusValue === "paid" ? "success" : "warning",
+              );
+            }
+          };
+          activeOrderStatusPoll = startOrderStatusPolling(orderKey, handleStatusUpdate);
+        }
+      }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan: " + err.message);
+      setHint(err.message || "Gagal memproses pembayaran.", "error");
+      alert("Error: " + (err.message || "Gagal koneksi ke server."));
+      renderPaymentResult(resultBox, null);
     } finally {
       payBtn.disabled = false;
-      payBtn.textContent = originalText;
+      setPayLabel(defaultPayLabel);
     }
   });
 
-  const cached = loadPendingOrder();
-  if (cached && cached.status !== "paid") {
-      renderPaymentResult(resultBox, cached);
+  // Pulihkan tagihan yang masih pending setelah refresh
+  const cachedOrder = loadPendingOrder();
+  if (
+    cachedOrder &&
+    cachedOrder.status !== "paid" &&
+    (cachedOrder.status || cachedOrder.reference || cachedOrder.orderId || cachedOrder.merchantRef)
+  ) {
+    renderPaymentResult(resultBox, cachedOrder, {
+      onExpire: () => {
+        setHint("Waktu pembayaran sudah kadaluarsa. Buat tagihan baru untuk melanjutkan.", "warning");
+        clearPendingOrder();
+      },
+      onTerminalStatus: (statusValue) => {
+        if (["paid", "failed", "expired", "canceled", "refunded"].includes(statusValue)) {
+          clearPendingOrder();
+        }
+      },
+    });
+    const orderKey = cachedOrder.orderId || cachedOrder.merchantRef || cachedOrder.reference;
+    if (orderKey) {
+      activeOrderStatusPoll?.stop();
+      const handleStatusUpdate = (statusPayload) => {
+        if (!statusPayload) return;
+        const statusValue = (statusPayload.status || "").toLowerCase();
+        if (!statusValue) return;
+        const mergedData = {
+          ...cachedOrder,
+          ...statusPayload,
+          ticketEmailStatus:
+            statusPayload.ticketEmailStatus ||
+            statusPayload.ticketEmail?.status ||
+            cachedOrder.ticketEmailStatus,
+          ticketEmailRecipient:
+            statusPayload.ticketEmailRecipient ||
+            statusPayload.ticketEmail?.recipient ||
+            cachedOrder.ticketEmailRecipient,
+        };
+        renderPaymentResult(resultBox, mergedData, {
+          onExpire: () => {
+            setHint("Waktu pembayaran sudah kadaluarsa. Buat tagihan baru untuk melanjutkan.", "warning");
+            clearPendingOrder();
+          },
+          onTerminalStatus: (statusValue2) => {
+            if (["paid", "failed", "expired", "canceled", "refunded"].includes(statusValue2)) {
+              clearPendingOrder();
+            }
+          },
+        });
+        savePendingOrder(mergedData);
+        if (["paid", "failed", "expired", "canceled", "refunded"].includes(statusValue)) {
+          activeOrderStatusPoll?.stop();
+          clearPendingOrder();
+          setHint(
+            statusValue === "paid"
+              ? "Pembayaran berhasil, e-ticket Anda sudah terkirim."
+              : `Status pembayaran: ${statusValue.toUpperCase()}`,
+            statusValue === "paid" ? "success" : "warning",
+          );
+        }
+      };
+      activeOrderStatusPoll = startOrderStatusPolling(orderKey, handleStatusUpdate);
+    }
   }
 }
+
 
 async function fetchEventBySlug(slug) {
   if (!slug) return null;
   try {
     const snap = await getDoc(doc(db, "events", slug));
-    if (snap.exists()) return { id: snap.id, ...snap.data() };
-  } catch (err) { console.error(err); }
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.status && data.status !== "published") return null;
+      return { id: snap.id, ...data };
+    }
+  } catch (err) {
+    console.error("Fetch event error:", err);
+  }
   const fallback = EVENT_SEED_DATA.find((e) => e.slug === slug);
   return fallback ? { id: fallback.slug, ...fallback } : null;
 }
 
 function normalizeEvent(raw, slug) {
-  if(!raw) return null;
+  if (!raw) return null;
   return {
     id: slug || raw.id,
     slug: raw.slug || slug,
     title: raw.title || "Event",
-    tagline: raw.tagline || "",
+    tagline: raw.tagline || raw.description || "",
     category: raw.category || "Event",
     chipClass: raw.chipClass || "chip-green",
-    imageUrl: raw.imageUrl || "./assets/img/event-1.jpg",
+    imageUrl: raw.imageUrl || raw.image || "./assets/img/event-1.jpg",
     schedule: raw.schedule || "",
     time: raw.time || "",
     location: raw.location || "",
-    priceRegular: Number(raw.priceRegular ?? raw.amount ?? 0),
+    address: raw.address || "",
+    speaker: raw.speaker || "",
+    priceRegular: Number(raw.priceRegular ?? raw.amount ?? 0) || 0,
     priceVip: raw.priceVip != null ? Number(raw.priceVip) : null,
-    priceLabel: raw.priceLabel || null,
+    priceLabel: raw.priceLabel || (Number(raw.priceRegular ?? raw.amount) ? null : "Gratis"),
     description: raw.description || "",
     highlights: raw.highlights || [],
     agenda: raw.agenda || [],
     notes: raw.notes || [],
     preparation: raw.preparation || [],
     contact: raw.contact || null,
-    quotaRegular: raw.quotaRegular,
-    quotaVip: raw.quotaVip,
-    seatsUsedRegular: raw.seatsUsedRegular,
-    seatsUsedVip: raw.seatsUsedVip
+    capacity: raw.capacity ?? null,
+    seatsUsed: raw.seatsUsed ?? null,
+    quotaRegular: raw.quotaRegular ?? null,
+    quotaVip: raw.quotaVip ?? null,
+    seatsUsedRegular: raw.seatsUsedRegular ?? null,
+    seatsUsedVip: raw.seatsUsedVip ?? null,
   };
+}
+
+function renderEvent(event) {
+  if (!event) return renderNotFound();
+
+  document.title = `${event.title} | ketenangan jiwa`;
+
+  const hero = document.querySelector(".event-hero");
+  if(hero) hero.style.setProperty("--hero-image", `url('${event.imageUrl}')`);
+
+  const category = document.getElementById("eventCategory");
+  if (category) {
+    category.textContent = event.category;
+    category.classList.add(event.chipClass || "chip-green");
+  }
+
+  setText("eventTitle", event.title);
+  setText("eventTagline", event.tagline);
+  setText("eventDate", `${event.schedule} - ${event.time}`);
+  setText("eventLocation", event.location);
+  setText("eventSpeaker", event.speaker);
+  setText("eventDescription", event.description);
+  const priceRegular = Number(event.priceRegular || 0);
+  const priceVip = event.priceVip != null ? Number(event.priceVip) : null;
+  let priceText = priceRegular ? formatCurrency(priceRegular) : event.priceLabel || "Gratis";
+  if (priceVip) {
+    priceText = `Reg: ${formatCurrency(priceRegular)} / VIP: ${formatCurrency(priceVip)}`;
+  }
+  setText("eventPrice", priceText);
+  setText("eventTime", event.time);
+  setText("eventAddress", event.address);
+
+  const quotaEl = document.getElementById("quotaInfo");
+  if (quotaEl) {
+    quotaEl.innerHTML = "";
+    quotaEl.classList.add("hidden");
+  }
+
+  renderList("eventHighlights", event.highlights);
+  renderList("eventAgenda", event.agenda, renderAgendaItem);
+  renderList("eventNotes", event.notes);
+  renderList("eventPreparation", event.preparation);
+  renderContact("eventContact", event.contact);
+
+  document.getElementById("eventRegisterHero")?.setAttribute("href", "#paymentSection");
+  initPaymentForm(event);
+}
+
+function updateFooterYear() {
+  const yearEl = document.getElementById("year");
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
   updateFooterYear();
+
   const params = new URLSearchParams(window.location.search);
-  const slug = params.get("event") || "teka-teki-takdir";
+  const slug = params.get("event") || "teka-teki-takdir"; // Default Fallback agar tidak blank saat test
+  if (!slug) {
+    renderNotFound();
+    return;
+  }
+
   const data = await fetchEventBySlug(slug);
   const event = normalizeEvent(data, slug);
-  if (!event) { renderNotFound(); return; }
+  if (!event) {
+    renderNotFound();
+    return;
+  }
+
   renderEvent(event);
 });
