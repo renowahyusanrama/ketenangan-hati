@@ -406,11 +406,24 @@ function formatStatusBadge(status) {
 
 function formatMethod(order) {
   if (!order) return "-";
-  if (order.paymentType === "bank_transfer") {
+  const paymentType = (order.paymentType || "").toString().toLowerCase();
+  const paymentName = (
+    order.paymentName ||
+    order.tripay?.data?.payment_name ||
+    order.tripay?.payment_name ||
+    order.tripay?.payment_method ||
+    order.method ||
+    ""
+  ).toString();
+  const paymentNameLower = paymentName.toLowerCase();
+  const isBsi = paymentNameLower.includes("bsi") || paymentNameLower.includes("syariah");
+  if (paymentType === "bank_transfer") {
+    if (isBsi) return "VA BSI";
     const bank = order.bank || order.method || "";
     return bank ? `VA ${String(bank).toUpperCase()}` : "Bank Transfer";
   }
-  if (order.paymentType === "qris") return "QRIS";
+  if (paymentType === "qris") return "QRIS";
+  if (isBsi) return "VA BSI";
   return order.method || order.paymentType || "-";
 }
 
