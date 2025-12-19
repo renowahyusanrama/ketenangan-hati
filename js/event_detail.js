@@ -1,8 +1,11 @@
-// js/event_detail.js (FULL VERSION - ORIGINAL CODE RESTORED)
+// js/event_detail.js (FULL ORIGINAL RESTORED)
 
-// 1. IMPORT DARI AUTH.JS (Supaya koneksi Database & Login NYAMBUNG)
-import { db, auth } from "./auth.js"; 
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
+  getAuth // Kita perlu getAuth disini untuk cek status login manual jika perlu
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
   doc,
   getDoc,
   collection,
@@ -14,15 +17,27 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { EVENT_SEED_DATA } from "./events_seed_data.js";
 
-// (Konfigurasi Firebase lokal dihapus karena sudah pakai dari auth.js agar tidak bentrok)
+const firebaseConfig = {
+  apiKey: "AIzaSyCoa_Ioa-Gp9TnL5eke6fwTkfQGkbWGJBw",
+  authDomain: "pengajian-online.firebaseapp.com",
+  projectId: "pengajian-online",
+  storageBucket: "pengajian-online.firebasestorage.app",
+  messagingSenderId: "965180253441",
+  appId: "1:965180253441:web:f03f6cb969e422fd7e2700",
+  measurementId: "G-YJ81SDXM5E",
+};
 
-// ==== 2. FIX API URL (AGAR TIDAK MACET DI VERCEL) ====
+// --- RESTORE: INISIALISASI DATABASE SEPERTI AWAL (AGAR KONTEN MUNCUL) ---
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app); // Inisialisasi Auth lokal
+
+// ==== FIX: API URL AGAR TIDAK MACET DI VERCEL ====
 const PROD_FUNCTION_BASE = "https://ketenangan-jiwa.vercel.app/api"; 
 const LOCAL_FUNCTION_BASE = "http://localhost:5001/pengajian-online/us-central1/api";
 const isBrowser = typeof window !== "undefined";
 
 let API_BASE;
-// Prioritaskan setting dari HTML jika ada, atau fallback ke Prod/Local
 if (isBrowser && window.__API_BASE_URL__) {
     API_BASE = window.__API_BASE_URL__;
 } else {
@@ -30,7 +45,7 @@ if (isBrowser && window.__API_BASE_URL__) {
       ? PROD_FUNCTION_BASE
       : window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
       ? LOCAL_FUNCTION_BASE
-      : "/api"; 
+      : "/api";
 }
 
 let activeOrderStatusPoll = null;
@@ -40,7 +55,7 @@ const FORM_KEY_PREFIX = "kj-payment-form-";
 const ORDER_KEY_PREFIX = "kj-payment-order-";
 
 // =========================================================
-// BAGIAN INI ADALAH KODE ASLI ANDA (TIDAK SAYA HAPUS)
+// BAGIAN INI ADALAH FUNGSI RENDER ASLI (TIDAK DIUBAH)
 // =========================================================
 
 function formatCurrency(amount) {
@@ -64,11 +79,11 @@ function renderList(listId, items, formatter) {
   container.innerHTML = "";
   if (!items || !items.length) {
     block?.classList.add("is-hidden");
-    if(block) block.style.display = 'none'; // Fallback visual
+    if(block) block.style.display = 'none'; // Tambahan safety
     return;
   }
   block?.classList.remove("is-hidden");
-  if(block) block.style.display = 'block'; // Fallback visual
+  if(block) block.style.display = 'block'; // Tambahan safety
 
   items.forEach((item) => {
     const li = document.createElement("li");
@@ -124,7 +139,6 @@ function renderNotFound() {
       </section>
     `;
   }
-  // Reset UI Hero
   const hero = document.querySelector(".event-hero");
   if(hero) hero.style.setProperty("--hero-image", "url('./assets/img/event-1.jpg')");
   setText("eventCategory", "Event");
@@ -332,15 +346,15 @@ function renderPaymentResult(container, data, options = {}) {
   if (!data) {
     stopExpiryTimer();
     container.classList.add("hidden");
-    container.style.display = 'none';
+    container.style.display = "none";
     return;
   }
 
-  // 3. FIX SCROLL OTOMATIS (Agar user lihat tagihan di bawah)
+  // --- FIX: AUTO SCROLL (AGAR USER MELIHAT TAGIHAN) ---
   container.classList.remove("hidden");
-  container.style.display = 'block';
+  container.style.display = "block";
   setTimeout(() => {
-      container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 300);
 
   const statusText = (data.status || data.rawStatus || "").toLowerCase();
@@ -522,26 +536,21 @@ function renderPaymentResult(container, data, options = {}) {
   }
 }
 
-
 function initPaymentForm(event) {
   const form = document.getElementById("paymentForm");
   const methodButtons = document.querySelectorAll(".method-btn");
   const resultBox = document.getElementById("paymentResult");
-  const hint = document.getElementById("paymentHint"); // Fallback jika tidak ada di HTML
+  const hint = document.getElementById("paymentHint");
   const payBtn = document.getElementById("payNowBtn");
   const methodGrid = document.querySelector(".method-grid");
-  
-  // Element Tambahan dari HTML Baru
   const ticketTypeInput = form?.querySelector('input[name="ticketType"]');
   const ticketRegularBtn = document.getElementById("ticketRegularBtn");
   const ticketVipBtn = document.getElementById("ticketVipBtn");
-  
   const priceRegularLabel = document.getElementById("priceRegularLabel");
   const priceVipLabel = document.getElementById("priceVipLabel");
   const nameInput = form?.querySelector('input[name="name"]');
   const emailInput = form?.querySelector('input[name="email"]');
   const phoneInput = form?.querySelector('input[name="phone"]');
-  
   const quotaRegular = Number(event.quotaRegular || 0);
   const quotaVip = Number(event.quotaVip || 0);
   const seatsUsedRegular = Number(event.seatsUsedRegular || 0);
@@ -612,7 +621,8 @@ function initPaymentForm(event) {
     selectedTicket = type === "vip" ? "vip" : "regular";
     selectedPrice = selectedTicket === "vip" ? priceVip || priceRegular || 0 : priceRegular || 0;
     
-    if (ticketTypeInput) ticketTypeInput.value = selectedTicket;
+    // UPDATE HIDDEN INPUT (Agar form HTML juga update)
+    if(ticketTypeInput) ticketTypeInput.value = selectedTicket;
     
     ticketRegularBtn?.classList.toggle("active", selectedTicket === "regular");
     ticketVipBtn?.classList.toggle("active", selectedTicket === "vip");
@@ -621,7 +631,7 @@ function initPaymentForm(event) {
     if (isFree) {
       method = "free";
       bank = null;
-      methodGrid?.classList.add("hidden");
+      if(methodGrid) methodGrid.classList.add("hidden");
       methodButtons.forEach((btn) => {
         btn.setAttribute("disabled", "true");
         btn.classList.remove("active");
@@ -629,7 +639,7 @@ function initPaymentForm(event) {
       setPayLabel("Kirim E-Ticket");
       setHint("Event gratis, e-ticket akan dikirim otomatis tanpa pembayaran.", "success");
     } else {
-      methodGrid?.classList.remove("hidden");
+      if(methodGrid) methodGrid.classList.remove("hidden");
       methodButtons.forEach((btn) => btn.removeAttribute("disabled"));
       if (!method || method === "free") method = "qris";
       setPayLabel(defaultPayLabel);
@@ -709,7 +719,7 @@ function initPaymentForm(event) {
       bank = chosen === "va" ? btn.dataset.bank || null : null;
       methodButtons.forEach((b) => b.classList.toggle("active", b === btn));
       
-      // Update hidden input jika ada
+      // Update hidden input agar form HTML tau (opsional tapi aman)
       const hiddenMethod = document.getElementById('paymentMethodInput');
       if(hiddenMethod) hiddenMethod.value = method + (bank ? '_' + bank : '');
 
@@ -746,21 +756,19 @@ function initPaymentForm(event) {
     }
 
     resultBox?.classList.add("hidden");
-    resultBox.style.display = 'none'; // Ensure hidden
-    
+    resultBox.style.display = 'none'; // Tambahan safety
     const isFree = selectedPrice <= 0;
     setHint(isFree ? "Memproses e-ticket gratis..." : "Membuat tagihan pembayaran...", "info");
     payBtn.disabled = true;
-    const originalText = payBtn.textContent;
     setPayLabel("Memproses...");
 
     const formData = new FormData(form);
     const email = formData.get("email")?.toString().trim() || "";
     if (!/@gmail\.com$/i.test(email)) {
       setHint("Email harus menggunakan Gmail (contoh: nama@gmail.com).", "error");
-      alert("Harap gunakan email Gmail!");
+      alert("Harap gunakan email Gmail (contoh@gmail.com)");
       payBtn.disabled = false;
-      setPayLabel(originalText);
+      setPayLabel(defaultPayLabel);
       return;
     }
 
@@ -777,7 +785,7 @@ function initPaymentForm(event) {
     };
 
     try {
-      console.log("Sending to:", `${API_BASE}/payments/create`); // Debug log
+      console.log("Sending payload to:", `${API_BASE}/payments/create`);
       const response = await fetch(`${API_BASE}/payments/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -786,7 +794,7 @@ function initPaymentForm(event) {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Error ${response.status}: Gagal membuat pembayaran.`);
+        throw new Error(err.error || "Gagal membuat pembayaran.");
       }
 
       const data = await response.json();
@@ -865,7 +873,7 @@ function initPaymentForm(event) {
     } catch (err) {
       console.error(err);
       setHint(err.message || "Gagal memproses pembayaran.", "error");
-      alert("Error: " + (err.message || "Gagal koneksi ke server."));
+      alert("Terjadi kesalahan: " + err.message);
       renderPaymentResult(resultBox, null);
     } finally {
       payBtn.disabled = false;
@@ -1043,7 +1051,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateFooterYear();
 
   const params = new URLSearchParams(window.location.search);
-  const slug = params.get("event") || "teka-teki-takdir"; // Default Fallback agar tidak blank saat test
+  const slug = params.get("event"); // HAPUS FALLBACK AGAR TIDAK LOAD DEFAULT JIKA URL KOSONG
   if (!slug) {
     renderNotFound();
     return;
