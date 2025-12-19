@@ -88,20 +88,25 @@
             <form id="paymentForm" class="payment-form">
               <h4>Pendaftaran Online</h4>
               <input type="hidden" name="ticketType" value="regular">
+              
               <label class="label">Nama Lengkap</label>
               <input type="text" class="input" name="name" placeholder="Nama lengkap" required>
+              
               <label class="label">Email (Gmail)</label>
               <input type="email" class="input" name="email" placeholder="nama@gmail.com" required>
+              
               <label class="label">No. WhatsApp</label>
               <input type="tel" class="input" name="phone" placeholder="08xxxxxxxxxx" required>
+              
               <p class="label">Metode Pembayaran</p>
-              <div class="method-grid">
-                  <button type="button" class="method-btn" data-method="qris">QRIS</button>
+              <div class="method-grid" id="methodGrid">
+                  <button type="button" class="method-btn active" data-method="qris">QRIS</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="bca">VA BCA</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="bni">VA BNI</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="bri">VA BRI</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="mandiri">VA Mandiri</button>
               </div>
+              
               <button class="btn btn-primary btn-full" type="submit" id="payNowBtn">Buat Tagihan</button>
             </form>
             <div id="paymentResult" class="payment-result hidden"></div>
@@ -111,9 +116,7 @@
     </section>
   </main>
 
-  <a class="floating-back" href="index.html#event" aria-label="Kembali ke daftar event">
-    Kembali
-  </a>
+  <a class="floating-back" href="index.html#event" aria-label="Kembali ke daftar event">Kembali</a>
 
   <div id="loginModal" class="modal" aria-hidden="true" role="dialog" style="display: none;">
     <div class="modal-overlay" data-close="true"></div>
@@ -136,6 +139,28 @@
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       const pForm = document.getElementById('paymentForm');
+      
+      // 1. Script Pilihan Pembayaran (Visual)
+      const methodBtns = document.querySelectorAll('.method-btn');
+      methodBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          methodBtns.forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+        });
+      });
+
+      // 2. Script Pilihan Tiket (Visual)
+      const ticketBtns = document.querySelectorAll('.ticket-btn');
+      const ticketInput = document.querySelector('input[name="ticketType"]');
+      ticketBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          ticketBtns.forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          if(ticketInput) ticketInput.value = this.dataset.ticket;
+        });
+      });
+
+      // 3. Pencegat Submit (Cek Login)
       if (pForm) {
         pForm.addEventListener('submit', function(e) {
           const isUser = Object.keys(localStorage).some(k => k.startsWith('firebase:authUser'));
