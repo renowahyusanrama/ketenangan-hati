@@ -21,9 +21,7 @@
 
   <header class="site-header pb-3">
     <div class="container nav nav-shell">
-      <div class="nav-left">
-        <button class="nav-burger" id="menuOpen"><span></span><span></span><span></span></button>
-      </div>
+      <div class="nav-left"><button class="nav-burger" id="menuOpen"><span></span><span></span><span></span></button></div>
       <a class="brand brand-center" href="index.html#beranda"><img src="images/logo.png" alt="logo" /></a>
       <div class="nav-right">
         <button class="icon-btn cart-btn" id="cartToggle"><img src="images/Cart.png" alt="Cart"></button>
@@ -74,7 +72,6 @@
         <aside class="event-sidebar">
           <div class="booking-card">
             <div class="price-tag"><span class="label">Harga Tiket</span><span id="eventPrice" class="price-value">Rp 0</span></div>
-            
             <div class="info-list" id="quotaInfo" style="margin-top:8px;"></div>
             
             <div class="ticket-choice" id="ticketChoice" style="margin-bottom: 15px;">
@@ -87,14 +84,13 @@
 
             <form id="paymentForm" class="payment-form">
               <h4>Pendaftaran Online</h4>
-              <input type="hidden" name="ticketType" value="regular">
+              <input type="hidden" name="ticketType" id="ticketTypeInput" value="regular">
+              <input type="hidden" name="paymentMethod" id="paymentMethodInput" value="qris">
               
               <label class="label">Nama Lengkap</label>
               <input type="text" class="input" name="name" placeholder="Nama lengkap" required>
-              
               <label class="label">Email (Gmail)</label>
               <input type="email" class="input" name="email" placeholder="nama@gmail.com" required>
-              
               <label class="label">No. WhatsApp</label>
               <input type="tel" class="input" name="phone" placeholder="08xxxxxxxxxx" required>
               
@@ -116,7 +112,7 @@
     </section>
   </main>
 
-  <a class="floating-back" href="index.html#event" aria-label="Kembali ke daftar event">Kembali</a>
+  <a class="floating-back" href="index.html#event">Kembali</a>
 
   <div id="loginModal" class="modal" aria-hidden="true" role="dialog" style="display: none;">
     <div class="modal-overlay" data-close="true"></div>
@@ -138,29 +134,29 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      const pForm = document.getElementById('paymentForm');
-      
-      // 1. Script Pilihan Pembayaran (Visual)
-      const methodBtns = document.querySelectorAll('.method-btn');
-      methodBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-          methodBtns.forEach(b => b.classList.remove('active'));
-          this.classList.add('active');
-        });
-      });
-
-      // 2. Script Pilihan Tiket (Visual)
+      // LOGIKA TIKET & METODE PEMBAYARAN
       const ticketBtns = document.querySelectorAll('.ticket-btn');
-      const ticketInput = document.querySelector('input[name="ticketType"]');
+      const ticketInput = document.getElementById('ticketTypeInput');
       ticketBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', () => {
           ticketBtns.forEach(b => b.classList.remove('active'));
-          this.classList.add('active');
-          if(ticketInput) ticketInput.value = this.dataset.ticket;
+          btn.classList.add('active');
+          ticketInput.value = btn.dataset.ticket;
         });
       });
 
-      // 3. Pencegat Submit (Cek Login)
+      const methodBtns = document.querySelectorAll('.method-btn');
+      const methodInput = document.getElementById('paymentMethodInput');
+      methodBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          methodBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          methodInput.value = btn.dataset.method + (btn.dataset.bank ? '_' + btn.dataset.bank : '');
+        });
+      });
+
+      // PENCEGAT LOGIN
+      const pForm = document.getElementById('paymentForm');
       if (pForm) {
         pForm.addEventListener('submit', function(e) {
           const isUser = Object.keys(localStorage).some(k => k.startsWith('firebase:authUser'));
