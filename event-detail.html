@@ -94,10 +94,13 @@
               <input type="tel" class="input" name="phone" placeholder="08xxxxxxxxxx" required>
               
               <p class="label">Metode Pembayaran</p>
-              <div class="method-grid">
-                  <button type="button" class="method-btn active" data-method="qris">QRIS</button>
-                  <button type="button" class="method-btn" data-method="va" data-bank="bca">BCA</button>
-                  <button type="button" class="method-btn" data-method="va" data-bank="mandiri">Mandiri</button>
+              
+              <div class="method-grid" role="group">
+                  <button type="button" class="method-btn" data-method="qris">QRIS</button>
+                  <button type="button" class="method-btn" data-method="va" data-bank="bca">VA BCA</button>
+                  <button type="button" class="method-btn" data-method="va" data-bank="bni">VA BNI</button>
+                  <button type="button" class="method-btn" data-method="va" data-bank="bri">VA BRI</button>
+                  <button type="button" class="method-btn" data-method="va" data-bank="mandiri">VA Mandiri</button>
               </div>
 
               <button class="btn btn-primary btn-full" type="submit" id="payNowBtn">Buat Tagihan</button>
@@ -135,7 +138,7 @@
           <input class="input" type="password" name="password" placeholder="Password" required />
           <button class="btn btn-primary btn-login-submit" type="submit">Login</button>
         </form>
-        </div>
+      </div>
     </div>
   </div>
 
@@ -150,11 +153,9 @@
       const pForm = document.getElementById('paymentForm');
       if (pForm) {
         pForm.addEventListener('submit', function(e) {
-          // Cek apakah user sudah login di Firebase (cek localStorage)
           const isUser = Object.keys(localStorage).some(k => k.startsWith('firebase:authUser'));
           
           if (!isUser) {
-            // JIKA BELUM LOGIN: Stop proses, munculkan modal
             e.preventDefault();
             e.stopImmediatePropagation();
             
@@ -163,12 +164,9 @@
               modal.classList.add('open');
               modal.style.display = 'block';
               alert("Silakan login terlebih dahulu untuk membuat tagihan.");
-              
-              // Simpan tanda agar setelah login bisa auto-klik (opsional)
               sessionStorage.setItem('pendingSubmit', 'true');
             }
           }
-          // JIKA SUDAH LOGIN: Biarkan script event_detail.js bekerja
         }, true); 
       }
     });
