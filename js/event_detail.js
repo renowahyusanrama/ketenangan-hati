@@ -700,10 +700,14 @@ function initPaymentForm(event) {
       const chosen = btn.dataset.method;
       method = chosen === "va" ? "bank_transfer" : "qris";
       bank = chosen === "va" ? btn.dataset.bank || null : null;
+      const bankLabel =
+        chosen === "va"
+          ? btn.dataset.bankLabel || (btn.textContent || "").replace(/^VA\s*/i, "").trim()
+          : null;
       methodButtons.forEach((b) => b.classList.toggle("active", b === btn));
       setHint(
         method === "bank_transfer"
-          ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
+          ? `Gunakan virtual account ${((bankLabel || bank || "bca") + "").toUpperCase()} untuk pembayaran.`
           : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
       );
       saveFormState();
