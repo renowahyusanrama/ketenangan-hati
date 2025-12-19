@@ -88,16 +88,12 @@
             <form id="paymentForm" class="payment-form">
               <h4>Pendaftaran Online</h4>
               <input type="hidden" name="ticketType" value="regular">
-              
               <label class="label">Nama Lengkap</label>
               <input type="text" class="input" name="name" placeholder="Nama lengkap" required>
-              
               <label class="label">Email (Gmail)</label>
               <input type="email" class="input" name="email" placeholder="nama@gmail.com" required>
-              
               <label class="label">No. WhatsApp</label>
               <input type="tel" class="input" name="phone" placeholder="08xxxxxxxxxx" required>
-              
               <p class="label">Metode Pembayaran</p>
               <div class="method-grid">
                   <button type="button" class="method-btn" data-method="qris">QRIS</button>
@@ -106,7 +102,6 @@
                   <button type="button" class="method-btn" data-method="va" data-bank="bri">VA BRI</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="mandiri">VA Mandiri</button>
               </div>
-              
               <button class="btn btn-primary btn-full" type="submit" id="payNowBtn">Buat Tagihan</button>
             </form>
             <div id="paymentResult" class="payment-result hidden"></div>
@@ -116,6 +111,10 @@
     </section>
   </main>
 
+  <a class="floating-back" href="index.html#event" aria-label="Kembali ke daftar event">
+    Kembali
+  </a>
+
   <div id="loginModal" class="modal" aria-hidden="true" role="dialog" style="display: none;">
     <div class="modal-overlay" data-close="true"></div>
     <div class="modal-dialog">
@@ -123,8 +122,7 @@
       <div class="modal-header"><h3>Selamat Datang</h3><p class="modal-sub">Login untuk melanjutkan</p></div>
       <div class="modal-body" style="text-align: center; padding-bottom: 20px;">
         <button class="btn btn-google" type="button" id="googleLoginBtn" style="width:100%; justify-content:center;">
-            <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" width="20"> 
-            Login dengan Google
+            <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" width="20"> Login dengan Google
         </button>
       </div>
     </div>
@@ -132,7 +130,6 @@
 
   <script src="js/home_page.js"></script>
   <script>window.__API_BASE_URL__ = "https://ketenangan-jiwa.vercel.app/api";</script>
-  
   <script type="module" src="js/event_detail.js"></script>
   <script type="module" src="js/auth.js"></script>
 
