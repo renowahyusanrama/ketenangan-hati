@@ -1,22 +1,16 @@
-// js/auth.js — Google Sign-In + Email/Password (login & daftar) dengan Firebase
+// js/auth.js — Login Google & Email (Fix Dashboard Terbuka)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
-  getRedirectResult, onAuthStateChanged, signOut, getIdTokenResult,
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword,
+  getRedirectResult, onAuthStateChanged, signOut,
   setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  getDocs,
+  getFirestore
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// === Config proyekmu ===
+// === Konfigurasi Firebase ===
 const firebaseConfig = {
   apiKey: "AIzaSyCoa_Ioa-Gp9TnL5eke6fwTkfQGkbWGJBw",
   authDomain: "pengajian-online.firebaseapp.com",
@@ -27,55 +21,40 @@ const firebaseConfig = {
   measurementId: "G-YJ81SDXM5E"
 };
 
-// === Init ===
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-auth.languageCode = 'id';
-const db = getFirestore(app);
+const db   = getFirestore(app);
 await setPersistence(auth, browserLocalPersistence).catch(console.error);
-const authGate = document.getElementById('auth-gate');
-const bodyEl = document.body;
 
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
-const modal     = document.getElementById('loginModal');
-const form      = document.getElementById('loginForm');
-const linkReg   = document.querySelector('.link-register');
-const linkLoginBack = document.querySelector('.link-login-back');
-const footRegister = document.querySelector('.auth-footnote-register');
-const footLogin = document.querySelector('.auth-footnote-login');
-const submitBtn = form?.querySelector('.btn-login-submit');
-let isAdmin = false;
-const userOrdersStatus = document.getElementById('userOrdersStatus') || document.getElementById('cartOrdersStatus');
-const userOrdersList = document.getElementById('userOrdersList') || document.getElementById('cartOrdersList');
-const USER_ORDER_LIMIT = 10;
-let userOrdersLoading = false;
-const ORDER_STATUS_CLASSES = {
-  paid: "green",
-  pending: "yellow",
-  expired: "gray",
-  failed: "red",
-  canceled: "red",
-  refunded: "blue",
-};
+const modal = document.getElementById('loginModal');
+const authGate = document.getElementById('auth-gate');
 
-// ——— Modal helpers
+// --- Fungsi Modal ---
 function closeModal(){
-  if(!modal) return;
-  if(!auth.currentUser){
-    modal.classList.add('open'); // tetap buka
-    document.body.style.overflow = 'hidden';
-    return;
+  if(modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
   }
-  modal.classList.remove('open');
-  document.body.style.overflow = '';
 }
 
-// ——— Pastikan ada #auth-slot untuk swap UI
-function ensureAuthSlot(){
+function openModal() {
+  if(modal) {
+    modal.classList.add('open');
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+// --- Render Profil & Tombol Login ---
+function getAuthSlot(){
   let slot = document.getElementById('profileDropdown');
   if (slot) return slot;
+  
+  // Jika belum ada, buat baru di navbar
   const navRight = document.querySelector('.nav-right');
   if (!navRight) return null;
   slot = document.createElement('div');
@@ -84,276 +63,108 @@ function ensureAuthSlot(){
   navRight.appendChild(slot);
   return slot;
 }
-function getAuthSlot(){ return ensureAuthSlot(); }
 
-// ——— Renderers
 function renderLoginButton(){
   const slot = getAuthSlot();
   if(!slot) return;
-  slot.dataset.state = 'logged-out';
-  slot.classList.remove('open');
-  slot.classList.remove('hidden');
-  slot.innerHTML = `
-    <div class="login-inline">
-      <button type="button" class="btn-inline-login">Login</button>
-    </div>
-  `;
-  slot.querySelector('.btn-inline-login')?.addEventListener('click', (e)=>{
-    e.preventDefault();
-    openModal();
-  });
+  // Tampilkan tombol login sederhana
+  slot.innerHTML = `<button type="button" class="btn-inline-login" style="width:100%; padding:10px; background:#3775B5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Login</button>`;
+  slot.querySelector('.btn-inline-login')?.addEventListener('click', openModal);
 }
 
 function renderUserChip(user){
   const slot = getAuthSlot();
   if(!slot) return;
-  slot.dataset.state = 'logged-in';
   slot.classList.remove('hidden');
-  const photo = user.photoURL
-    ? `<img class="avatar" src="${user.photoURL}" alt="">`
-    : `<span class="avatar avatar-fallback">${(user.displayName||user.email||'U').charAt(0)}</span>`;
+  
+  const photo = user.photoURL 
+    ? `<img src="${user.photoURL}" style="width:35px; height:35px; border-radius:50%; object-fit:cover; flex-shrink:0;">` 
+    : `<div style="width:35px; height:35px; border-radius:50%; background:#ddd; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:bold;">${(user.displayName||'U').charAt(0)}</div>`;
+  
   slot.innerHTML = `
-    <div class="profile-head">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 15px; border-bottom: 1px solid #eee;">
       ${photo}
-      <div>
-        <p class="profile-name">${user.displayName || user.email}</p>
-        <p class="profile-email">${user.email || ''}</p>
+      <div style="display: flex; flex-direction: column; text-align: left; line-height: 1.2;">
+        <span style="font-weight: bold; font-size: 14px; color: #333;">${user.displayName || 'User'}</span>
+        <span style="font-size: 11px; color: #777; overflow:hidden; text-overflow:ellipsis; max-width:140px;">${user.email}</span>
       </div>
     </div>
-    <ul class="menu">
-      ${isAdmin ? '<li><a href="admin.html">Admin</a></li>' : ''}
-    </ul>
-    <button class="logout-btn" type="button">Keluar</button>
+    <div style="padding: 10px;">
+       <button class="logout-btn" style="width: 100%; text-align: left; color: #e11d48; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600;">Keluar</button>
+    </div>
   `;
-  slot.querySelector('.logout-btn')?.addEventListener('click', async ()=>{
-    try{ await signOut(auth); }catch(e){ console.error(e); }
-    slot.classList.remove('open');
-  });
-  injectChipStyles();
+  slot.querySelector('.logout-btn')?.addEventListener('click', () => signOut(auth).then(() => location.reload()));
 }
 
-function injectChipStyles(){
-  if(document.getElementById('userChipStyle')) return;
-  const css = `
-    /* dropdown styles are defined in css/home_page.css */
-  `;
-  const style = Object.assign(document.createElement('style'), { id:'userChipStyle', textContent:css });
-  document.head.appendChild(style);
-}
-
-function formatCurrency(amount) {
-  const n = Number(amount) || 0;
-  if (!n) return "Gratis";
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
-}
-
-function formatDateTime(value) {
-  if (!value) return "-";
-  try {
-    const date = value?.toDate ? value.toDate() : new Date(value);
-    return new Intl.DateTimeFormat("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  } catch (err) {
-    return "-";
+// --- Handler Klik (Event Delegation) ---
+document.addEventListener('click', async (e) => {
+  // 1. Tutup Modal (Tombol X atau Overlay)
+  if (e.target.closest('#closeModalBtn') || e.target.classList.contains('modal-overlay')) {
+    closeModal();
   }
-}
 
-function getStatusClass(status) {
-  const key = (status || "").toLowerCase();
-  return ORDER_STATUS_CLASSES[key] || "gray";
-}
-
-function setOrdersPlaceholder(message) {
-  if (!userOrdersList) return;
-  userOrdersList.innerHTML = `<p class="muted text-center">${message}</p>`;
-}
-
-function setOrdersStatus(message) {
-  if (!userOrdersStatus) return;
-  userOrdersStatus.textContent = message || "";
-}
-
-function buildOrderCardHtml(order) {
-  const status = (order.status || "pending").toLowerCase();
-  const statusClass = getStatusClass(status);
-  const totalAmount = order.totalAmount ?? order.amount ?? 0;
-  const amountText = formatCurrency(totalAmount);
-  const method = order.paymentType === "bank_transfer"
-    ? `VA ${order.bank?.toUpperCase() || "BANK"}`
-    : (order.paymentType || order.method || "-").toString().toUpperCase();
-  const reference = order.reference || order.merchantRef || order.orderId || "-";
-  const ticketUrl = reference && reference !== "-" ? `${window.location.origin}/ticket.html?ref=${encodeURIComponent(reference)}` : "#";
-  const emailStatus = (order.ticketEmail?.status || "").toLowerCase();
-  const recipient = order.ticketEmail?.recipient || order.customer?.email || "";
-  let emailHint = "";
-  if (emailStatus === "sent") {
-    emailHint = `<p class="order-note success">E-ticket sudah dikirim ke ${recipient || "email Anda"}.</p>`;
-  } else if (emailStatus === "pending") {
-    emailHint = `<p class="order-note muted">E-ticket akan dikirim otomatis setelah pembayaran selesai.</p>`;
-  } else if (emailStatus === "error") {
-    emailHint = `<p class="order-note error">Gagal mengirim e-ticket. Silakan hubungi panitia.</p>`;
-  }
-  const paidStatuses = ["paid"];
-  const canDownload = paidStatuses.includes(status) && reference && reference !== "-";
-  const downloadAction = canDownload
-    ? `<a href="${ticketUrl}" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Unduh E-ticket</a>`
-    : `<span class="order-note muted">E-ticket hanya bisa diunduh setelah pembayaran berstatus PAID.</span>`;
-  return `
-    <article class="order-card">
-      <div class="order-card-header">
-        <h3 class="order-card-heading">${order.eventTitle || order.eventId || "Event"}</h3>
-        <span class="badge ${statusClass}">${status.toUpperCase()}</span>
-      </div>
-      <div class="order-row">
-        <div>
-          <span class="order-label">Total Bayar</span>
-          <span class="order-value">${amountText}</span>
-        </div>
-        <div>
-          <span class="order-label">Metode</span>
-          <span class="order-value">${method}</span>
-        </div>
-      </div>
-      <div class="order-card-meta">
-        <span><i class="fa-regular fa-clock"></i> ${formatDateTime(order.createdAt || order.created_at)}</span>
-        <span><i class="fa-solid fa-hashtag"></i> ${reference}</span>
-      </div>
-      <div class="order-row" style="margin-top:12px; gap:8px; align-items:center; flex-wrap:wrap;">
-        ${downloadAction}
-        ${
-          recipient
-            ? `<span style="font-size:12px; color:#475569;">Dikirim ke ${recipient}</span>`
-            : ""
+  // 2. Login Google
+  // Kita cari id="googleLoginBtn" atau class ".btn-google"
+  const btnGoogle = e.target.closest('#googleLoginBtn') || e.target.closest('.btn-google');
+  if (btnGoogle) {
+    e.preventDefault();
+    e.stopImmediatePropagation(); // PENTING: Mencegah bentrok dengan script lain
+    
+    try {
+      const res = await signInWithPopup(auth, provider);
+      if (res?.user) {
+        console.log("Login Google Berhasil:", res.user.email);
+        closeModal();
+        
+        // Cek jika ada auto-submit tertunda (dari halaman event)
+        if(sessionStorage.getItem('pendingSubmit')) {
+          sessionStorage.removeItem('pendingSubmit');
+          const payBtn = document.getElementById('payNowBtn');
+          if(payBtn) payBtn.click();
         }
-      </div>
-      ${emailHint}
-    </article>
-  `;
-}
-
-async function loadUserOrders(email) {
-  if (!userOrdersList) return;
-  if (!email) {
-    setOrdersPlaceholder("Silakan login terlebih dahulu untuk melihat pesanan Anda.");
-    setOrdersStatus("Login untuk melihat riwayat pesanan.");
-    return;
-  }
-  if (userOrdersLoading) return;
-  userOrdersLoading = true;
-  setOrdersStatus("Memuat pesanan...");
-  setOrdersPlaceholder("Memuat pesanan...");
-  try {
-    const ref = collection(db, "orders");
-    const q = query(ref, where("customer.email", "==", email), orderBy("createdAt", "desc"), limit(USER_ORDER_LIMIT));
-    const snap = await getDocs(q);
-    if (!snap || !snap.docs.length) {
-      setOrdersPlaceholder("Belum ada pesanan tersimpan.");
-      setOrdersStatus("Belum ada pesanan aktif.");
-      return;
+      }
+    } catch (err) { 
+      console.error("Error Google Login:", err);
+      if(err.code === 'auth/popup-blocked'){
+         signInWithRedirect(auth, provider);
+      }
     }
-    const orders = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    userOrdersList.innerHTML = orders.map(buildOrderCardHtml).join("");
-    setOrdersStatus(`Menampilkan ${orders.length} pesanan terbaru.`);
-  } catch (err) {
-    console.error("loadUserOrders error:", err?.message || err);
-    setOrdersPlaceholder("Gagal memuat pesanan.");
-    setOrdersStatus("Terjadi kesalahan saat memuat pesanan.");
-  } finally {
-    userOrdersLoading = false;
-  }
-}
-
-function showAuthGate(){
-  authGate?.classList.remove('hidden');
-  bodyEl.classList.add('auth-locked');
-  document.body.style.overflow = 'hidden';
-}
-function hideAuthGate(){
-  authGate?.classList.add('hidden');
-  bodyEl.classList.remove('auth-locked');
-  document.body.style.overflow = '';
-}
-
-async function refreshAdminFlag(user){
-  if(!user){ isAdmin = false; return; }
-  try{
-    const token = await getIdTokenResult(user);
-    isAdmin = !!token.claims?.admin;
-  }catch(err){
-    console.error('Gagal cek klaim admin:', err?.code || err);
-    isAdmin = false;
-  }
-}
-
-async function renderAfterAuth(user){
-  await refreshAdminFlag(user);
-  renderUserChip(user);
-  hideAuthGate();
-}
-
-// ——— GOOGLE LOGIN (popup + fallback redirect)
-let authBusy = false;
-
-document.addEventListener('click', async (e)=>{
-  const btn = e.target.closest('.btn-google');
-  if(!btn) return;
-  e.preventDefault();
-  if(authBusy) return;
-  authBusy = true; btn.disabled = true;
-
-  try{
-    const res = await signInWithPopup(auth, provider);
-    if(res?.user){ await renderAfterAuth(res.user); closeModal(); }
-  }catch(err){
-    if (err.code === 'auth/popup-blocked') {
-      await signInWithRedirect(auth, provider);
-    } else if (err.code !== 'auth/cancelled-popup-request') {
-      alert('Login gagal: ' + (err.code || 'unknown'));
-      console.error(err);
-    }
-  }finally{
-    authBusy = false; btn.disabled = false;
   }
 });
 
-getRedirectResult(auth)
-  .then(async (res) => { if(res?.user){ await renderAfterAuth(res.user); closeModal(); } })
-  .catch(err => console.error('Redirect error:', err.code));
+// --- Login Email Manual ---
+const loginForm = document.getElementById('loginForm');
+if(loginForm){
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = loginForm.email.value;
+    const pass = loginForm.password.value;
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      closeModal();
+      // Auto submit check
+      if(sessionStorage.getItem('pendingSubmit')) {
+          sessionStorage.removeItem('pendingSubmit');
+          document.getElementById('payNowBtn')?.click();
+      }
+    } catch(err) {
+      alert("Login gagal: Email atau password salah.");
+    }
+  });
+}
 
-// ——— Observer state
-onAuthStateChanged(auth, (user)=>{
-  loadUserOrders(user ? user.email : null);
-  if(user) {
-    renderAfterAuth(user);
-    // pastikan gate & modal tertutup jika sudah login (termasuk saat reload)
-    hideAuthGate();
-    modal?.classList.remove('open');
-    document.body.style.overflow = '';
+// --- State Observer (PENTING: Logika Gate) ---
+onAuthStateChanged(auth, (user) => {
+  // Pastikan gate SELALU hilang, apapun statusnya (agar dashboard terbuka)
+  if(authGate) authGate.style.display = 'none';
+  if(authGate) authGate.classList.add('hidden');
+
+  if (user) {
+    // User Login
+    renderUserChip(user);
+    closeModal();
   } else {
-    isAdmin = false;
+    // User Belum Login
     renderLoginButton();
-    showAuthGate();
-    modal?.classList.add('open'); // paksa modal tampil
-    document.body.style.overflow = 'hidden';
   }
 });
-
-// Tombol login pada gate -> buka modal & hilangkan gate
-document.querySelector('.gate-login-btn')?.addEventListener('click', (e)=>{
-  e.preventDefault();
-  hideAuthGate();
-  modal?.classList.add('open');
-  document.body.style.overflow = 'hidden';
-});
-
-// Render awal
-renderLoginButton();
-// Paksa tampilkan modal & kunci konten sampai login
-showAuthGate();
-modal?.classList.add('open');
-document.body.style.overflow = 'hidden';
