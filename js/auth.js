@@ -3,7 +3,9 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, 
   onAuthStateChanged, signOut, getIdTokenResult, setPersistence, browserLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+  getFirestore, collection, query, where, orderBy, limit, getDocs 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCoa_Ioa-Gp9TnL5eke6fwTkfQGkbWGJBw",
@@ -29,10 +31,16 @@ const authGate = document.getElementById('auth-gate');
 const profileBtn = document.getElementById('profileBtn');
 const profileDropdown = document.getElementById('profileDropdown');
 
-// ELEMENT MENU MOBILE (GARIS TIGA)
+// Menu Mobile
 const menuOpen = document.getElementById('menuOpen');
 const menuClose = document.getElementById('menuClose');
 const menuOverlay = document.getElementById('menuOverlay');
+
+// Keranjang
+const cartToggle = document.getElementById('cartToggle');
+const cartClose = document.getElementById('cartClose');
+const cartOverlay = document.getElementById('cartOverlay');
+const cartOrdersList = document.getElementById('cartOrdersList');
 
 // --- Helper Functions ---
 function closeModal(){
@@ -42,7 +50,6 @@ function openModal() {
   if(modal) { modal.classList.add('open'); modal.style.display = 'block'; document.body.style.overflow = 'hidden'; }
 }
 
-// Auto-fill form
 function autoFillForm(user) {
     const nameInput = document.querySelector('input[name="name"]');
     const emailInput = document.querySelector('input[name="email"]');
@@ -64,7 +71,6 @@ function handlePostLogin(user) {
             const payBtn = document.getElementById('payNowBtn');
             const phoneInput = document.querySelector('input[name="phone"]');
             
-            // Cek apakah WA kosong? Jika kosong, fokuskan kesana
             if(phoneInput && !phoneInput.value) {
                 phoneInput.focus();
                 alert("Login berhasil! Mohon lengkapi No. WhatsApp.");
@@ -87,6 +93,7 @@ function renderLoginButton(){
   slot.querySelector('.btn-inline-login')?.addEventListener('click', openModal);
 }
 
+// Render User Chip + Admin Check
 async function renderUserChip(user){
   const slot = getAuthSlot();
   if(!slot) return;
@@ -120,23 +127,47 @@ async function renderUserChip(user){
   slot.querySelector('.logout-btn')?.addEventListener('click', () => signOut(auth).then(() => location.reload()));
 }
 
-// --- LOGIKA MENU MOBILE (GARIS TIGA) ---
-if(menuOpen && menuOverlay) {
-    menuOpen.addEventListener('click', () => {
-        menuOverlay.classList.add('open'); // Tambah class 'open' (biasanya dari CSS home_page)
-        menuOverlay.style.display = 'block'; // Paksa tampil
-        document.body.style.overflow = 'hidden'; // Kunci scroll
-    });
-}
-if(menuClose && menuOverlay) {
-    menuClose.addEventListener('click', () => {
-        menuOverlay.classList.remove('open');
-        menuOverlay.style.display = 'none';
-        document.body.style.overflow = '';
-    });
+// --- LOGIKA KERANJANG (CART) ---
+async function loadUserOrders(email) {
+  if (!cartOrdersList) return;
+  if (!email) {
+    cartOrdersList.innerHTML = '<p style="padding:20px; text-align:center; color:#777;">Silakan login untuk melihat pesanan.</p>';
+    return;
+  }
+  cartOrdersList.innerHTML = '<p style="padding:20px; text-align:center; color:#777;">Memuat pesanan...</p>';
+  try {
+    const ref = collection(db, "orders");
+    const q = query(ref, where("customer.email", "==", email), orderBy("createdAt", "desc"), limit(10));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      cartOrdersList.innerHTML = '<p style="padding:20px; text-align:center; color:#777;">Belum ada pesanan.</p>';
+      return;
+    }
+    cartOrdersList.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const statusColor = d.status === 'paid' ? 'green' : (d.status === 'pending' ? 'orange' : 'red');
+      const amount = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(d.totalAmount || 0);
+      return `
+        <div style="padding:15px; border-bottom:1px solid #eee;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+             <strong style="font-size:14px;">${d.eventTitle || 'Event'}</strong>
+             <span style="font-size:12px; color:${statusColor}; font-weight:bold; text-transform:uppercase;">${d.status}</span>
+          </div>
+          <div style="font-size:13px; color:#555;">${amount} - ${d.paymentType || 'QRIS'}</div>
+          <div style="font-size:11px; color:#999; margin-top:5px;">${d.createdAt ? new Date(d.createdAt.toDate()).toLocaleDateString('id-ID') : '-'}</div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) { console.error("Gagal memuat order:", err); }
 }
 
-// --- Handler Klik Global ---
+// --- EVENT LISTENERS ---
+if(menuOpen && menuOverlay) menuOpen.addEventListener('click', () => { menuOverlay.classList.add('open'); menuOverlay.style.display = 'block'; });
+if(menuClose && menuOverlay) menuClose.addEventListener('click', () => { menuOverlay.classList.remove('open'); menuOverlay.style.display = 'none'; });
+
+if(cartToggle && cartOverlay) cartToggle.addEventListener('click', () => { cartOverlay.classList.add('open'); cartOverlay.style.display = 'block'; });
+if(cartClose && cartOverlay) cartClose.addEventListener('click', () => { cartOverlay.classList.remove('open'); cartOverlay.style.display = 'none'; });
+
 if(profileBtn && profileDropdown) {
   profileBtn.addEventListener('click', (e) => {
     e.preventDefault(); e.stopPropagation();
@@ -149,25 +180,19 @@ if(profileBtn && profileDropdown) {
 }
 
 document.addEventListener('click', (e) => {
-  // Tutup dropdown profil jika klik luar
   if (profileDropdown && !profileDropdown.classList.contains('hidden')) {
     if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
       profileDropdown.classList.add('hidden'); profileDropdown.classList.remove('open');
     }
   }
-  
-  // Tutup Modal
   if (e.target.closest('#closeModalBtn') || e.target.classList.contains('modal-overlay')) closeModal();
   
-  // Login Google
   const btnGoogle = e.target.closest('#googleLoginBtn') || e.target.closest('.btn-google');
   if (btnGoogle) {
     e.preventDefault(); e.stopImmediatePropagation();
     signInWithPopup(auth, provider).then((res) => {
       if(res.user) {
-        closeModal();
-        renderUserChip(res.user);
-        handlePostLogin(res.user);
+        closeModal(); renderUserChip(res.user); handlePostLogin(res.user);
       }
     }).catch(err => {
       if(err.code === 'auth/popup-blocked') signInWithRedirect(auth, provider);
@@ -175,13 +200,15 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Observer Auth State
+// Observer Auth
 onAuthStateChanged(auth, (user) => {
   if(authGate) { authGate.style.display = 'none'; authGate.classList.add('hidden'); }
   if (user) { 
-      renderUserChip(user); 
-      closeModal();
-      autoFillForm(user);
+      renderUserChip(user); closeModal(); autoFillForm(user); loadUserOrders(user.email);
+  } else { 
+      renderLoginButton(); loadUserOrders(null);
   }
-  else { renderLoginButton(); }
 });
+
+// EXPORT INI PENTING!
+export { auth, db };
