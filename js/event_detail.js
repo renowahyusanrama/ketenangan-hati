@@ -24,12 +24,13 @@ const firebaseConfig = {
   measurementId: "G-YJ81SDXM5E",
 };
 
+// Gunakan instance app yang sama agar Auth state terbaca
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ==== BASE URL UNTUK API (Vercel / Firebase Functions) ====
-
-const PROD_FUNCTION_BASE = "https://www.ketenanganjiwa.id/api";
+// ==== BASE URL UNTUK API ====
+// Pastikan ini mengarah ke Vercel Anda
+const PROD_FUNCTION_BASE = "https://ketenangan-jiwa.vercel.app/api"; 
 const LOCAL_FUNCTION_BASE = "http://localhost:5001/pengajian-online/us-central1/api";
 
 const isBrowser = typeof window !== "undefined";
@@ -38,7 +39,7 @@ const API_BASE = !isBrowser
   ? PROD_FUNCTION_BASE
   : window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
   ? LOCAL_FUNCTION_BASE
-  : "/api";
+  : PROD_FUNCTION_BASE; // Default ke Prod jika bukan localhost
 
 let activeOrderStatusPoll = null;
 let activeExpiryTimer = null;
@@ -69,9 +70,11 @@ function renderList(listId, items, formatter) {
   container.innerHTML = "";
   if (!items || !items.length) {
     block?.classList.add("is-hidden");
+    if(block) block.style.display = 'none';
     return;
   }
   block?.classList.remove("is-hidden");
+  if(block) block.style.display = 'block';
 
   items.forEach((item) => {
     const li = document.createElement("li");
@@ -119,7 +122,7 @@ function renderNotFound() {
   if (main) {
     main.innerHTML = `
       <section class="section">
-        <div class="container empty-state">
+        <div class="container empty-state" style="text-align:center; padding:50px;">
           <h2>Event tidak ditemukan</h2>
           <p>Maaf, tautan event yang Anda buka tidak tersedia atau sudah tidak aktif.</p>
           <a href="index.html#event" class="btn btn-primary">Kembali ke daftar event</a>
@@ -128,7 +131,7 @@ function renderNotFound() {
     `;
   }
   const hero = document.querySelector(".event-hero");
-  hero?.style.setProperty("--hero-image", "url('./assets/img/event-1.jpg')");
+  if(hero) hero.style.setProperty("--hero-image", "url('./assets/img/event-1.jpg')");
   setText("eventCategory", "Event");
   setText("eventTitle", "Event tidak ditemukan");
   setText("eventTagline", "Silakan kembali ke halaman utama untuk melihat jadwal terbaru.");
@@ -176,9 +179,9 @@ function buildInstructionsHtml(instructions) {
     .map((item) => {
       const steps = (item.steps || []).map((step) => `<li>${step}</li>`).join("");
       return `
-        <details class="payment-instruction" open>
-          <summary>${item.title || "Panduan pembayaran"}</summary>
-          ${steps ? `<ol>${steps}</ol>` : ""}
+        <details class="payment-instruction" open style="margin-bottom:10px; border:1px solid #eee; padding:10px; border-radius:8px;">
+          <summary style="font-weight:bold; cursor:pointer;">${item.title || "Panduan pembayaran"}</summary>
+          ${steps ? `<ol style="margin-left:20px; margin-top:5px;">${steps}</ol>` : ""}
         </details>
       `;
     })
@@ -215,18 +218,19 @@ function renderPaymentSuccess(container, data) {
     <div class="payment-info-row" style="align-items:center;">
       <div>
         <span>Status</span>
-        <strong>${statusText}</strong>
+        <strong style="color:green;">${statusText}</strong>
       </div>
       <div>
         <span>Total</span>
         <strong>${formatCurrency(amount)}</strong>
       </div>
     </div>
-    <p class="form-hint success">Pembayaran berhasil, e-ticket Anda sudah terkirim.</p>
+    <p class="form-hint success" style="margin-top:10px;">Pembayaran berhasil, e-ticket Anda sudah terkirim.</p>
     ${reference ? `<p class="form-hint">Ref: ${reference}</p>` : ""}
     ${emailHintHtml}
   `;
   container.classList.remove("hidden");
+  container.style.display = "block";
 }
 
 function startOrderStatusPolling(refValue, onStatus) {
@@ -319,15 +323,16 @@ function renderFeeBreakdown(data) {
   const hasAny = base !== null || platformTax !== null || tripayFee !== null || total !== null;
   if (!hasAny) return "";
   return `
-    <div class="payment-info-row fee-breakdown">
+    <div class="payment-info-row fee-breakdown" style="background:#f9fafb; padding:10px; border-radius:6px; margin:10px 0;">
       ${base !== null ? `<div><span>Harga tiket</span><strong>${formatCurrency(base)}</strong></div>` : ""}
       ${platformTax !== null ? `<div><span>Pajak website (1%)</span><strong>${formatCurrency(platformTax)}</strong></div>` : ""}
       ${tripayFee !== null ? `<div><span>Biaya Tripay</span><strong>${formatCurrency(tripayFee)}</strong></div>` : ""}
-      ${total !== null ? `<div><span>Total bayar</span><strong>${formatCurrency(total)}</strong></div>` : ""}
+      ${total !== null ? `<div style="margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;"><span>Total bayar</span><strong>${formatCurrency(total)}</strong></div>` : ""}
     </div>
   `;
 }
 
+// ==== FUNGSI RENDER UTAMA (SAYA TAMBAHKAN AUTO SCROLL DISINI) ====
 function renderPaymentResult(container, data, options = {}) {
   if (!container) return;
   if (!data) {
@@ -337,13 +342,13 @@ function renderPaymentResult(container, data, options = {}) {
     return;
   }
 
-  // --- TAMBAHAN PENTING: Scroll ke bawah agar user lihat barcode ---
+  // >> TAMBAHAN AGAR USER SADAR TAGIHAN MUNCUL <<
   container.classList.remove("hidden");
   container.style.display = "block";
   setTimeout(() => {
     container.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 300);
-  // ----------------------------------------------------------------
+  // ===============================================
 
   const statusText = (data.status || data.rawStatus || "").toLowerCase();
   if (statusText === "paid") {
@@ -366,12 +371,11 @@ function renderPaymentResult(container, data, options = {}) {
       <p class="form-hint success">Pendaftaran berhasil. E-ticket telah dikirim ke email.</p>
       ${data.reference ? `<p class="form-hint">Ref: ${data.reference}</p>` : ""}
     `;
-    container.classList.remove("hidden");
     return;
   }
 
   const checkoutLink = data.checkoutUrl
-    ? `<a class="btn btn-outline" href="${data.checkoutUrl}" target="_blank" rel="noopener">Buka halaman pembayaran</a>`
+    ? `<a class="btn btn-outline" href="${data.checkoutUrl}" target="_blank" rel="noopener" style="display:block; width:100%; text-align:center; margin-top:10px;">Buka halaman pembayaran</a>`
     : "";
   const referenceText = data.reference || data.orderId || "";
   const isPending = ["pending", "unpaid", ""].includes(statusText);
@@ -379,20 +383,20 @@ function renderPaymentResult(container, data, options = {}) {
     (data.provider || "").toLowerCase() === "tripay" && isPending && (data.reference || data.orderId);
   const cancelHtml = canCancel
     ? `
-      <div class="payment-info-row" style="align-items:center; gap:12px; flex-wrap:wrap;">
+      <div class="payment-info-row" style="align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;">
         <div>
           <span>Status</span>
-          <strong>${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
+          <strong style="color:orange;">${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
         </div>
-        <button data-cancel-order style="background:#ef4444;color:white;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;">Batalkan pesanan</button>
+        <button data-cancel-order style="background:#ef4444;color:white;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:12px;">Batalkan pesanan</button>
       </div>
-      <p class="form-hint" data-cancel-status>Tagihan menunggu pembayaran. Klik batalkan jika ingin mengganti metode.</p>
+      <p class="form-hint" data-cancel-status style="font-size:12px;">Tagihan menunggu pembayaran. Klik batalkan jika ingin mengganti metode.</p>
     `
     : `
       <div class="payment-info-row" style="align-items:center;">
         <div>
           <span>Status</span>
-          <strong>${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
+          <strong style="color:orange;">${statusText ? statusText.toUpperCase() : "PENDING"}</strong>
         </div>
       </div>
       ${
@@ -409,7 +413,7 @@ function renderPaymentResult(container, data, options = {}) {
     const va = data.vaNumber || data.payCode || data.pay_code || "-";
     const feeBreakdown = renderFeeBreakdown(data);
     container.innerHTML = `
-      <div class="payment-info-row">
+      <div class="payment-info-row" style="margin-bottom:10px;">
         <div>
           <span>Metode</span>
           <strong>VA ${bank}</strong>
@@ -419,22 +423,22 @@ function renderPaymentResult(container, data, options = {}) {
           <strong>${formatCurrency(data.amount)}</strong>
         </div>
       </div>
-      <div class="payment-info-row">
+      <div class="payment-info-row" style="background:#f1f5f9; padding:15px; border-radius:8px;">
         <div>
-          <span>Nomor VA</span>
-          <strong id="vaNumberText">${va}</strong>
+          <span style="display:block; font-size:12px; color:#64748b;">Nomor VA</span>
+          <strong id="vaNumberText" style="font-size:18px;">${va}</strong>
         </div>
-        <button class="copy-btn" data-copy="${va}">Salin</button>
+        <button class="copy-btn" data-copy="${va}" style="padding:5px 10px;">Salin</button>
       </div>
       <p class="form-hint">Transfer tepat sesuai nominal. Tagihan akan diverifikasi otomatis setelah pembayaran berhasil.</p>
       ${feeBreakdown}
       ${
         data.expiresAt
-          ? `<p class="form-hint warning" data-expiry-countdown>Waktu pembayaran: memuat...</p>`
+          ? `<p class="form-hint warning" data-expiry-countdown style="color:red; font-weight:bold;">Waktu pembayaran: memuat...</p>`
           : ""
       }
       ${checkoutLink}
-      ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
+      ${referenceText ? `<p class="form-hint" style="font-size:11px; color:#999;">Ref: ${referenceText}</p>` : ""}
       ${buildInstructionsHtml(data.instructions)}
       ${cancelHtml}
       ${emailHintHtml}
@@ -443,17 +447,17 @@ function renderPaymentResult(container, data, options = {}) {
     const qrUrl = data.qrUrl || createQrUrl(data.qrString) || "";
     const feeBreakdown = renderFeeBreakdown(data);
     container.innerHTML = `
-      <div class="qr-preview">
-        ${qrUrl ? `<img src="${qrUrl}" alt="QRIS">` : ""}
-        <strong>${formatCurrency(data.amount)}</strong>
+      <div class="qr-preview" style="text-align:center; margin-bottom:15px;">
+        ${qrUrl ? `<img src="${qrUrl}" alt="QRIS" style="max-width:200px; border:1px solid #ddd; padding:5px; border-radius:8px;">` : ""}
+        <div style="font-size:18px; font-weight:bold; margin-top:10px;">${formatCurrency(data.amount)}</div>
         <p>Pindai QRIS menggunakan mobile banking / e-wallet.</p>
       </div>
       ${feeBreakdown}
       ${checkoutLink}
-      ${referenceText ? `<p class="form-hint">Ref: ${referenceText}</p>` : ""}
+      ${referenceText ? `<p class="form-hint" style="font-size:11px; color:#999;">Ref: ${referenceText}</p>` : ""}
       ${
         data.expiresAt
-          ? `<p class="form-hint warning" data-expiry-countdown>Waktu pembayaran: memuat...</p>`
+          ? `<p class="form-hint warning" data-expiry-countdown style="color:red; font-weight:bold;">Waktu pembayaran: memuat...</p>`
           : ""
       }
       ${buildInstructionsHtml(data.instructions)}
@@ -525,12 +529,11 @@ function renderPaymentResult(container, data, options = {}) {
   }
 }
 
-
 function initPaymentForm(event) {
   const form = document.getElementById("paymentForm");
   const methodButtons = document.querySelectorAll(".method-btn");
   const resultBox = document.getElementById("paymentResult");
-  const hint = document.getElementById("paymentHint");
+  const hint = document.getElementById("paymentHint"); // Fallback jika tidak ada elemen ini
   const payBtn = document.getElementById("payNowBtn");
   const methodGrid = document.querySelector(".method-grid");
   const ticketTypeInput = form?.querySelector('input[name="ticketType"]');
@@ -611,6 +614,7 @@ function initPaymentForm(event) {
     selectedTicket = type === "vip" ? "vip" : "regular";
     selectedPrice = selectedTicket === "vip" ? priceVip || priceRegular || 0 : priceRegular || 0;
     if (ticketTypeInput) ticketTypeInput.value = selectedTicket;
+    
     ticketRegularBtn?.classList.toggle("active", selectedTicket === "regular");
     ticketVipBtn?.classList.toggle("active", selectedTicket === "vip");
 
@@ -618,7 +622,7 @@ function initPaymentForm(event) {
     if (isFree) {
       method = "free";
       bank = null;
-      methodGrid?.classList.add("hidden");
+      if(methodGrid) methodGrid.classList.add("hidden");
       methodButtons.forEach((btn) => {
         btn.setAttribute("disabled", "true");
         btn.classList.remove("active");
@@ -626,7 +630,7 @@ function initPaymentForm(event) {
       setPayLabel("Kirim E-Ticket");
       setHint("Event gratis, e-ticket akan dikirim otomatis tanpa pembayaran.", "success");
     } else {
-      methodGrid?.classList.remove("hidden");
+      if(methodGrid) methodGrid.classList.remove("hidden");
       methodButtons.forEach((btn) => btn.removeAttribute("disabled"));
       if (!method || method === "free") method = "qris";
       setPayLabel(defaultPayLabel);
@@ -796,7 +800,7 @@ function initPaymentForm(event) {
       setHint(
         isFree
           ? "E-ticket berhasil dikirim ke email. Cek inbox/spam."
-          : "Tagihan berhasil dibuat. Mengarahkan ke halaman pembayaran Tripay...",
+          : "Tagihan berhasil dibuat. Silakan lakukan pembayaran di bawah ini.",
         "success",
       );
       if (!isFree && data.checkoutUrl) {
@@ -924,7 +928,6 @@ function initPaymentForm(event) {
   }
 }
 
-
 async function fetchEventBySlug(slug) {
   if (!slug) return null;
   try {
@@ -980,7 +983,7 @@ function renderEvent(event) {
   document.title = `${event.title} | ketenangan jiwa`;
 
   const hero = document.querySelector(".event-hero");
-  hero?.style.setProperty("--hero-image", `url('${event.imageUrl}')`);
+  if(hero) hero.style.setProperty("--hero-image", `url('${event.imageUrl}')`);
 
   const category = document.getElementById("eventCategory");
   if (category) {
@@ -1029,7 +1032,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateFooterYear();
 
   const params = new URLSearchParams(window.location.search);
-  const slug = params.get("event") || "teka-teki-takdir"; // Default sementara untuk test
+  const slug = params.get("event") || "teka-teki-takdir"; // Default fallback
 
   if (!slug) {
     renderNotFound();
