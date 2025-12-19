@@ -31,14 +31,9 @@ const db = getFirestore(app);
 
 const PROD_FUNCTION_BASE = "https://www.ketenanganjiwa.id/api";
 const LOCAL_FUNCTION_BASE = "http://localhost:5001/pengajian-online/us-central1/api";
-// const DEFAULT_FUNCTION_BASE = "https://us-central1-pengajian-online.cloudfunctions.net/api"; // fallback lama jika masih diperlukan
 
 const isBrowser = typeof window !== "undefined";
 
-// Di browser:
-// - localhost / 127.0.0.1  -> pakai emulator Firebase Functions
-// - domain apa pun (vercel app / ketenanganjiwa.id / www.ketenanganjiwa.id) -> pakai path relatif "/api"
-// Di luar browser (SSR / script server) -> pakai PROD_FUNCTION_BASE
 const API_BASE = !isBrowser
   ? PROD_FUNCTION_BASE
   : window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
@@ -338,8 +333,17 @@ function renderPaymentResult(container, data, options = {}) {
   if (!data) {
     stopExpiryTimer();
     container.classList.add("hidden");
+    container.style.display = "none";
     return;
   }
+
+  // --- TAMBAHAN PENTING: Scroll ke bawah agar user lihat barcode ---
+  container.classList.remove("hidden");
+  container.style.display = "block";
+  setTimeout(() => {
+    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 300);
+  // ----------------------------------------------------------------
 
   const statusText = (data.status || data.rawStatus || "").toLowerCase();
   if (statusText === "paid") {
@@ -374,7 +378,7 @@ function renderPaymentResult(container, data, options = {}) {
   const canCancel =
     (data.provider || "").toLowerCase() === "tripay" && isPending && (data.reference || data.orderId);
   const cancelHtml = canCancel
-      ? `
+    ? `
       <div class="payment-info-row" style="align-items:center; gap:12px; flex-wrap:wrap;">
         <div>
           <span>Status</span>
@@ -825,8 +829,8 @@ function initPaymentForm(event) {
                 setHint("Waktu pembayaran sudah kadaluarsa. Buat tagihan baru untuk melanjutkan.", "warning");
                 clearPendingOrder();
               },
-              onTerminalStatus: (statusValue) => {
-                if (["paid", "failed", "expired", "canceled", "refunded"].includes(statusValue)) {
+              onTerminalStatus: (statusValue2) => {
+                if (["paid", "failed", "expired", "canceled", "refunded"].includes(statusValue2)) {
                   clearPendingOrder();
                 }
               },
@@ -1025,7 +1029,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateFooterYear();
 
   const params = new URLSearchParams(window.location.search);
-  const slug = params.get("event");
+  const slug = params.get("event") || "teka-teki-takdir"; // Default sementara untuk test
+
   if (!slug) {
     renderNotFound();
     return;

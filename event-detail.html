@@ -140,34 +140,21 @@
     document.addEventListener("DOMContentLoaded", function() {
       const pForm = document.getElementById('paymentForm');
       
-      // 1. Script Pilihan Pembayaran (Visual)
-      const methodBtns = document.querySelectorAll('.method-btn');
-      methodBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-          methodBtns.forEach(b => b.classList.remove('active'));
-          this.classList.add('active');
-        });
-      });
-
-      // 2. Script Pilihan Tiket (Visual)
-      const ticketBtns = document.querySelectorAll('.ticket-btn');
-      const ticketInput = document.querySelector('input[name="ticketType"]');
-      ticketBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-          ticketBtns.forEach(b => b.classList.remove('active'));
-          this.classList.add('active');
-          if(ticketInput) ticketInput.value = this.dataset.ticket;
-        });
-      });
-
-      // 3. Pencegat Submit (Cek Login)
+      // HAPUS SCRIPT TOMBOL VISUAL DISINI (Sudah dihandle oleh event_detail.js)
+      // Kita hanya sisakan script PENCEGAT LOGIN
+      
       if (pForm) {
         pForm.addEventListener('submit', function(e) {
           const isUser = Object.keys(localStorage).some(k => k.startsWith('firebase:authUser'));
           if (!isUser) {
-            e.preventDefault(); e.stopImmediatePropagation();
+            e.preventDefault(); 
+            e.stopImmediatePropagation();
             const modal = document.getElementById('loginModal');
-            if (modal) { modal.classList.add('open'); modal.style.display = 'block'; sessionStorage.setItem('pendingSubmit', 'true'); }
+            if (modal) { 
+              modal.classList.add('open'); 
+              modal.style.display = 'block'; 
+              sessionStorage.setItem('pendingSubmit', 'true'); 
+            }
           }
         }, true);
       }
