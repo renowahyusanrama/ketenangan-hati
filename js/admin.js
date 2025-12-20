@@ -100,6 +100,16 @@ const typeChartCanvas = document.getElementById("typeChart");
 let statusChart;
 let typeChart;
 const orderEventFilter = document.getElementById("orderEventFilter");
+const referralForm = document.getElementById("referralForm");
+const referralFormStatus = document.getElementById("referralFormStatus");
+const referralTableBody = document.querySelector("#referralTable tbody");
+const referralSaveBtn = document.getElementById("referralSaveBtn");
+const referralResetBtn = document.getElementById("referralResetBtn");
+const referralCodeInput = referralForm?.querySelector('[name="referralCode"]');
+const referralActiveInput = referralForm?.querySelector('[name="referralActive"]');
+const referralRegularInput = referralForm?.querySelector('[name="referralRegularPriceAfter"]');
+const referralVipInput = referralForm?.querySelector('[name="referralVipPriceAfter"]');
+const referralEventSelect = document.getElementById("referralEventId");
 
 const STATUS_DOT_COLORS = {
   paid: "#4ade80",
@@ -427,6 +437,147 @@ function formatMethod(order) {
   return order.method || order.paymentType || "-";
 }
 
+function normalizeReferralCode(value) {
+  return (value || "").toString().trim().toUpperCase();
+}
+
+function parseReferralPrice(value) {
+  const raw = (value || "").toString().replace(/[^\d]/g, "");
+  if (!raw) return null;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : null;
+}
+
+function setReferralFormMessage(message, isError = false) {
+  if (!referralFormStatus) return;
+  referralFormStatus.textContent = message || "";
+  referralFormStatus.style.color = isError ? "#f87171" : "#64748b";
+}
+
+function resetReferralForm() {
+  if (referralCodeInput) referralCodeInput.value = "";
+  if (referralActiveInput) referralActiveInput.value = "active";
+  if (referralEventSelect) referralEventSelect.value = "";
+  if (referralRegularInput) referralRegularInput.value = "";
+  if (referralVipInput) referralVipInput.value = "";
+  setReferralFormMessage("");
+}
+
+async function loadReferrals() {
+  if (!referralTableBody) return;
+  referralTableBody.innerHTML = `<tr><td colspan="6" class="muted">Memuat...</td></tr>`;
+  try {
+    const snap = await getDocs(query(collection(db, "referrals"), orderBy("createdAt", "desc")));
+    if (!snap.empty) {
+      const rows = snap.docs
+        .map((docSnap) => {
+      const data = docSnap.data() || {};
+      const code = data.code || docSnap.id;
+      const eventId = data.eventId || "";
+      const eventLabel = eventId ? getEventLabel(eventId) : "Semua event";
+      const statusLabel = data.active ? "Aktif" : "Nonaktif";
+      const regularText =
+        data.regularPriceAfter != null && data.regularPriceAfter !== ""
+          ? formatCurrency(data.regularPriceAfter)
+          : "-";
+      const vipText =
+        data.vipPriceAfter != null && data.vipPriceAfter !== ""
+          ? formatCurrency(data.vipPriceAfter)
+          : "-";
+      const usedCount = Number(data.usedCount || 0);
+      return `
+        <tr>
+          <td>${code}</td>
+          <td>${eventLabel}</td>
+          <td>${statusLabel}</td>
+          <td>${regularText}</td>
+          <td>${vipText}</td>
+          <td>${usedCount}</td>
+          <td>
+            <div class="table-actions">
+              <button type="button" class="outline" data-referral-delete="${code}">Hapus</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+  referralTableBody.innerHTML = rows;
+} else {
+  referralTableBody.innerHTML = `<tr><td colspan="7" class="muted">Belum ada data.</td></tr>`;
+}
+  } catch (err) {
+    console.error("Gagal memuat referral:", err);
+    referralTableBody.innerHTML = `<tr><td colspan="7" class="muted">Gagal memuat data.</td></tr>`;
+  }
+}
+
+async function saveReferral(e) {
+  if (e?.preventDefault) e.preventDefault();
+  if (!isAdmin) return;
+  const code = normalizeReferralCode(referralCodeInput?.value || "");
+  if (!code) {
+    setReferralFormMessage("Kode referral wajib diisi.", true);
+    return;
+  }
+  const regularPriceAfter = parseReferralPrice(referralRegularInput?.value || "");
+  const vipPriceAfter = parseReferralPrice(referralVipInput?.value || "");
+  if (regularPriceAfter == null && vipPriceAfter == null) {
+    setReferralFormMessage("Isi harga reguler atau VIP.", true);
+    return;
+  }
+  const active = (referralActiveInput?.value || "active") === "active";
+  const eventId = referralEventSelect?.value || "";
+  const ref = firestoreDoc(db, "referrals", code);
+  let existing = null;
+  try {
+    const snap = await getDoc(ref);
+    existing = snap.exists() ? snap.data() : null;
+  } catch (err) {
+    existing = null;
+  }
+  setReferralFormMessage("Menyimpan...");
+  if (referralSaveBtn) referralSaveBtn.disabled = true;
+  try {
+    const payload = {
+      code,
+      active,
+      eventId: eventId || null,
+      regularPriceAfter: regularPriceAfter != null ? regularPriceAfter : null,
+      vipPriceAfter: vipPriceAfter != null ? vipPriceAfter : null,
+      updatedAt: serverTimestamp(),
+    };
+    if (!existing?.createdAt) {
+      payload.createdAt = serverTimestamp();
+    }
+    if (!existing?.usedCount) {
+      payload.usedCount = existing?.usedCount || 0;
+    }
+    await setDoc(ref, payload, { merge: true });
+    setReferralFormMessage("Referral tersimpan.");
+    resetReferralForm();
+    await loadReferrals();
+  } catch (err) {
+    console.error("Gagal simpan referral:", err);
+    setReferralFormMessage(err?.message || "Gagal menyimpan referral.", true);
+  } finally {
+    if (referralSaveBtn) referralSaveBtn.disabled = false;
+  }
+}
+
+async function deleteReferral(code) {
+  if (!isAdmin || !code) return;
+  const ok = confirm(`Hapus referral ${code}?`);
+  if (!ok) return;
+  try {
+    await deleteDoc(firestoreDoc(db, "referrals", code));
+    await loadReferrals();
+  } catch (err) {
+    console.error("Gagal hapus referral:", err);
+    alert("Gagal menghapus referral: " + (err?.message || err));
+  }
+}
+
 function getAmountForTripay(order) {
   if (!order) return null;
   const direct = Number(order.amountForTripay);
@@ -638,6 +789,7 @@ function updateStatsCharts(breakdown = {}, typeBreakdown = {}) {
 function populateEventFilter(eventList = []) {
   const previousEventValue = selectedEventFilter || statEventFilter?.value || "";
   const previousOrderValue = selectedOrderEventFilter || orderEventFilter?.value || "";
+  const previousReferralValue = referralEventSelect?.value || "";
   const sorted = [...eventList].sort((a, b) => {
     const titleA = (a.title || a.slug || a.id || "").toLowerCase();
     const titleB = (b.title || b.slug || b.id || "").toLowerCase();
@@ -669,6 +821,12 @@ function populateEventFilter(eventList = []) {
     selectedOrderEventFilter = orderEventFilter.value || "";
   } else {
     selectedOrderEventFilter = previousOrderValue;
+  }
+
+  if (referralEventSelect) {
+    referralEventSelect.innerHTML = baseOptions;
+    const hasPreviousReferral = previousReferralValue && sorted.some((event) => event.id === previousReferralValue);
+    referralEventSelect.value = hasPreviousReferral ? previousReferralValue : "";
   }
 }
 
@@ -1889,6 +2047,8 @@ uploadPosterBtn?.addEventListener("click", openUpload);
 createEventBtn?.addEventListener("click", () => {
   saveEvent(null, { forceNew: true, redirectToPublic: true });
 });
+referralForm?.addEventListener("submit", (ev) => saveReferral(ev));
+referralResetBtn?.addEventListener("click", resetReferralForm);
 refreshOrdersBtn?.addEventListener("click", () => loadOrders(true));
 loadMoreOrdersBtn?.addEventListener("click", () => loadOrders(false));
 orderStatusFilter?.addEventListener("change", () => loadOrders(true));
@@ -1968,6 +2128,13 @@ ordersTableBody?.addEventListener("click", (e) => {
   }
 });
 
+referralTableBody?.addEventListener("click", (e) => {
+  const delBtn = e.target.closest("[data-referral-delete]");
+  if (delBtn) {
+    deleteReferral(delBtn.dataset.referralDelete);
+  }
+});
+
 // === Auth guard ===
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
@@ -2006,7 +2173,8 @@ onAuthStateChanged(auth, async (user) => {
   setGuard("Akses admin diberikan.", true);
   setDashboardVisible(true);
   resetForm();
-  loadEvents();
+  await loadEvents();
   loadOrders(true);
+  loadReferrals();
   initCloudinaryWidget();
 });

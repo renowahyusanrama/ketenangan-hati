@@ -71,6 +71,83 @@ function computeFees(paymentType, bank, baseAmount) {
   return { platformTax, tripayFee, amountForTripay, totalCustomer, baseAmount: base };
 }
 
+function normalizeReferralCode(value) {
+  return (value || "").toString().trim().toUpperCase();
+}
+
+function normalizeEmail(value) {
+  return (value || "").toString().trim().toLowerCase();
+}
+
+function getReferralUseId(email) {
+  return encodeURIComponent(email);
+}
+
+function resolveReferralPrice(data, type) {
+  if (!data) return null;
+  const appliesTo = (data.appliesTo || "").toString().toLowerCase();
+  if (appliesTo && appliesTo !== "both" && appliesTo !== type) return null;
+  const raw = type === "vip" ? data.vipPriceAfter : data.regularPriceAfter;
+  const candidate = Number(raw);
+  if (!Number.isFinite(candidate) || candidate < 0) return null;
+  return candidate;
+}
+
+async function applyReferralUsage(db, referralCode, email, orderRef, referralMeta) {
+  if (!referralCode || !email || !orderRef) return;
+  const referralRef = db.collection("referrals").doc(referralCode);
+  const useRef = referralRef.collection("uses").doc(getReferralUseId(email));
+  await db.runTransaction(async (tx) => {
+    const useSnap = await tx.get(useRef);
+    const count = Number(useSnap.data()?.count || 0);
+    if (count >= 5) {
+      tx.set(
+        orderRef,
+        {
+          referral: {
+            ...referralMeta,
+            usageApplied: false,
+            usageError: "limit",
+            usageCheckedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+        },
+        { merge: true },
+      );
+      return;
+    }
+    tx.set(
+      useRef,
+      {
+        code: referralCode,
+        email,
+        count: count + 1,
+        lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+    tx.set(
+      referralRef,
+      {
+        usedCount: admin.firestore.FieldValue.increment(1),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+    tx.set(
+      orderRef,
+      {
+        referral: {
+          ...referralMeta,
+          usageApplied: true,
+          usageAppliedAt: admin.firestore.FieldValue.serverTimestamp(),
+          usageCount: count + 1,
+        },
+      },
+      { merge: true },
+    );
+  });
+}
+
 async function reserveSeatAndSaveOrder(db, eventDocId, orderDocId, orderData) {
   const eventRef = db.collection("events").doc(eventDocId);
   const orderRef = db.collection("orders").doc(orderDocId);
@@ -170,6 +247,47 @@ module.exports = async (req, res) => {
   const priceVip = event.priceVip != null ? Number(event.priceVip) : null;
   let selectedAmount = type === "vip" ? priceVip || priceRegular : priceRegular;
   if (selectedAmount < 0) selectedAmount = 0;
+  const baseAmountOriginal = selectedAmount;
+  const referralCode = normalizeReferralCode(body?.referralCode);
+  const customerEmail = normalizeEmail(customer?.email);
+  let referralMeta = null;
+  if (referralCode) {
+    if (!customerEmail) {
+      return send(res, 400, { error: "Email wajib untuk kode referral." });
+    }
+    const referralRef = db.collection("referrals").doc(referralCode);
+    const referralSnap = await referralRef.get();
+    if (!referralSnap.exists) {
+      return send(res, 400, { error: "Kode referral tidak valid." });
+    }
+    const referralData = referralSnap.data() || {};
+    if (!referralData.active) {
+      return send(res, 400, { error: "Kode referral tidak aktif." });
+    }
+    const referralEventId = (referralData.eventId || "").toString();
+    if (referralEventId && referralEventId !== event.id) {
+      return send(res, 400, { error: "Kode referral tidak berlaku untuk event ini." });
+    }
+    const priceAfter = resolveReferralPrice(referralData, type);
+    if (priceAfter == null) {
+      return send(res, 400, { error: "Kode referral tidak berlaku untuk tiket ini." });
+    }
+    const useSnap = await referralRef.collection("uses").doc(getReferralUseId(customerEmail)).get();
+    const useCount = Number(useSnap.data()?.count || 0);
+    if (useCount >= 5) {
+      return send(res, 400, { error: "Kode referral sudah mencapai batas pemakaian untuk email ini." });
+    }
+    selectedAmount = priceAfter;
+    referralMeta = {
+      code: referralCode,
+      eventId: referralEventId || null,
+      priceBefore: baseAmountOriginal,
+      priceAfter,
+      discountAmount: Math.max(0, baseAmountOriginal - priceAfter),
+      email: customerEmail,
+      usageApplied: false,
+    };
+  }
   const isFree = selectedAmount <= 0;
   const merchantRef = makeMerchantRef(eventId, type);
 
@@ -205,6 +323,7 @@ module.exports = async (req, res) => {
         email: customer?.email || "peserta@example.com",
         phone: customer?.phone || "",
       },
+      referral: referralMeta || null,
       status: "paid",
       ticketEmail: { ...ticketEmailMeta },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -218,6 +337,14 @@ module.exports = async (req, res) => {
 
     const orderRef = db.collection("orders").doc(merchantRef);
     const responseData = { ...freeOrder, free: true, ticketEmailStatus: ticketEmailMeta.status, ticketEmailRecipient: ticketEmailMeta.recipient };
+
+    if (referralMeta) {
+      try {
+        await applyReferralUsage(db, referralCode, customerEmail, orderRef, referralMeta);
+      } catch (err) {
+        console.error("Referral usage error (free):", err?.message || err);
+      }
+    }
 
     try {
       await sendTicketEmail({
@@ -344,6 +471,7 @@ module.exports = async (req, res) => {
         email: customer?.email || "peserta@example.com",
         phone: customer?.phone || "",
       },
+      referral: referralMeta || null,
       ticketEmail: { ...ticketEmailMeta },
       tripay: tripayResponse,
       status: mapStatus(tripayData?.status || tripayResponse?.status),
@@ -370,6 +498,7 @@ module.exports = async (req, res) => {
       ...normalized,
       ticketEmailStatus: ticketEmailMeta.status,
       ticketEmailRecipient: ticketEmailMeta.recipient,
+      referral: referralMeta || null,
     };
     return send(res, 200, responsePayload);
   } catch (error) {
