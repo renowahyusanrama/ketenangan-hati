@@ -100,6 +100,16 @@ const typeChartCanvas = document.getElementById("typeChart");
 let statusChart;
 let typeChart;
 const orderEventFilter = document.getElementById("orderEventFilter");
+const referralForm = document.getElementById("referralForm");
+const referralFormStatus = document.getElementById("referralFormStatus");
+const referralTableBody = document.querySelector("#referralTable tbody");
+const referralSaveBtn = document.getElementById("referralSaveBtn");
+const referralResetBtn = document.getElementById("referralResetBtn");
+const referralCodeInput = referralForm?.querySelector('[name="referralCode"]');
+const referralActiveInput = referralForm?.querySelector('[name="referralActive"]');
+const referralRegularInput = referralForm?.querySelector('[name="referralRegularPriceAfter"]');
+const referralVipInput = referralForm?.querySelector('[name="referralVipPriceAfter"]');
+const referralEventSelect = document.getElementById("referralEventId");
 
 const STATUS_DOT_COLORS = {
   paid: "#4ade80",
@@ -406,12 +416,223 @@ function formatStatusBadge(status) {
 
 function formatMethod(order) {
   if (!order) return "-";
-  if (order.paymentType === "bank_transfer") {
+  const paymentType = (order.paymentType || "").toString().toLowerCase();
+  const paymentName = (
+    order.paymentName ||
+    order.tripay?.data?.payment_name ||
+    order.tripay?.payment_name ||
+    order.tripay?.payment_method ||
+    order.method ||
+    ""
+  ).toString();
+  const paymentNameLower = paymentName.toLowerCase();
+  const isBsi = paymentNameLower.includes("bsi") || paymentNameLower.includes("syariah");
+  if (paymentType === "bank_transfer") {
+    if (isBsi) return "VA BSI";
     const bank = order.bank || order.method || "";
     return bank ? `VA ${String(bank).toUpperCase()}` : "Bank Transfer";
   }
-  if (order.paymentType === "qris") return "QRIS";
+  if (paymentType === "qris") return "QRIS";
+  if (isBsi) return "VA BSI";
   return order.method || order.paymentType || "-";
+}
+
+function normalizeReferralCode(value) {
+  return (value || "").toString().trim().toUpperCase();
+}
+
+function parseReferralPrice(value) {
+  const raw = (value || "").toString().replace(/[^\d]/g, "");
+  if (!raw) return null;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : null;
+}
+
+function setReferralFormMessage(message, isError = false) {
+  if (!referralFormStatus) return;
+  referralFormStatus.textContent = message || "";
+  referralFormStatus.style.color = isError ? "#f87171" : "#64748b";
+}
+
+function resetReferralForm() {
+  if (referralCodeInput) referralCodeInput.value = "";
+  if (referralActiveInput) referralActiveInput.value = "active";
+  if (referralEventSelect) referralEventSelect.value = "";
+  if (referralRegularInput) referralRegularInput.value = "";
+  if (referralVipInput) referralVipInput.value = "";
+  setReferralFormMessage("");
+}
+
+async function loadReferrals() {
+  if (!referralTableBody) return;
+  referralTableBody.innerHTML = `<tr><td colspan="6" class="muted">Memuat...</td></tr>`;
+  try {
+    const snap = await getDocs(query(collection(db, "referrals"), orderBy("createdAt", "desc")));
+    if (!snap.empty) {
+      const rows = snap.docs
+        .map((docSnap) => {
+      const data = docSnap.data() || {};
+      const code = data.code || docSnap.id;
+      const eventId = data.eventId || "";
+      const eventLabel = eventId ? getEventLabel(eventId) : "Semua event";
+      const statusLabel = data.active ? "Aktif" : "Nonaktif";
+      const regularText =
+        data.regularPriceAfter != null && data.regularPriceAfter !== ""
+          ? formatCurrency(data.regularPriceAfter)
+          : "-";
+      const vipText =
+        data.vipPriceAfter != null && data.vipPriceAfter !== ""
+          ? formatCurrency(data.vipPriceAfter)
+          : "-";
+      const usedCount = Number(data.usedCount || 0);
+      return `
+        <tr>
+          <td>${code}</td>
+          <td>${eventLabel}</td>
+          <td>${statusLabel}</td>
+          <td>${regularText}</td>
+          <td>${vipText}</td>
+          <td>${usedCount}</td>
+          <td>
+            <div class="table-actions">
+              <button type="button" class="outline" data-referral-delete="${code}">Hapus</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+  referralTableBody.innerHTML = rows;
+} else {
+  referralTableBody.innerHTML = `<tr><td colspan="7" class="muted">Belum ada data.</td></tr>`;
+}
+  } catch (err) {
+    console.error("Gagal memuat referral:", err);
+    referralTableBody.innerHTML = `<tr><td colspan="7" class="muted">Gagal memuat data.</td></tr>`;
+  }
+}
+
+async function saveReferral(e) {
+  if (e?.preventDefault) e.preventDefault();
+  if (!isAdmin) return;
+  const code = normalizeReferralCode(referralCodeInput?.value || "");
+  if (!code) {
+    setReferralFormMessage("Kode referral wajib diisi.", true);
+    return;
+  }
+  const regularPriceAfter = parseReferralPrice(referralRegularInput?.value || "");
+  const vipPriceAfter = parseReferralPrice(referralVipInput?.value || "");
+  if (regularPriceAfter == null && vipPriceAfter == null) {
+    setReferralFormMessage("Isi harga reguler atau VIP.", true);
+    return;
+  }
+  const active = (referralActiveInput?.value || "active") === "active";
+  const eventId = referralEventSelect?.value || "";
+  const ref = firestoreDoc(db, "referrals", code);
+  let existing = null;
+  try {
+    const snap = await getDoc(ref);
+    existing = snap.exists() ? snap.data() : null;
+  } catch (err) {
+    existing = null;
+  }
+  setReferralFormMessage("Menyimpan...");
+  if (referralSaveBtn) referralSaveBtn.disabled = true;
+  try {
+    const payload = {
+      code,
+      active,
+      eventId: eventId || null,
+      regularPriceAfter: regularPriceAfter != null ? regularPriceAfter : null,
+      vipPriceAfter: vipPriceAfter != null ? vipPriceAfter : null,
+      updatedAt: serverTimestamp(),
+    };
+    if (!existing?.createdAt) {
+      payload.createdAt = serverTimestamp();
+    }
+    if (!existing?.usedCount) {
+      payload.usedCount = existing?.usedCount || 0;
+    }
+    await setDoc(ref, payload, { merge: true });
+    setReferralFormMessage("Referral tersimpan.");
+    resetReferralForm();
+    await loadReferrals();
+  } catch (err) {
+    console.error("Gagal simpan referral:", err);
+    setReferralFormMessage(err?.message || "Gagal menyimpan referral.", true);
+  } finally {
+    if (referralSaveBtn) referralSaveBtn.disabled = false;
+  }
+}
+
+async function deleteReferral(code) {
+  if (!isAdmin || !code) return;
+  const ok = confirm(`Hapus referral ${code}?`);
+  if (!ok) return;
+  try {
+    await deleteDoc(firestoreDoc(db, "referrals", code));
+    await loadReferrals();
+  } catch (err) {
+    console.error("Gagal hapus referral:", err);
+    alert("Gagal menghapus referral: " + (err?.message || err));
+  }
+}
+
+function getAmountForTripay(order) {
+  if (!order) return null;
+  const direct = Number(order.amountForTripay);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const base = Number(order.baseAmount);
+  const tax = Number(order.platformTax);
+  if (Number.isFinite(base) && Number.isFinite(tax)) {
+    const sum = base + tax;
+    if (Number.isFinite(sum) && sum > 0) return sum;
+  }
+  return null;
+}
+
+function getTripayFee(order) {
+  if (!order) return 0;
+  if (order.tripayFee !== undefined && order.tripayFee !== null && order.tripayFee !== "") {
+    const explicit = Number(order.tripayFee);
+    if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  }
+  const paymentType = (order.paymentType || "").toString().toLowerCase();
+  const bankValue = (order.bank || "").toString().toLowerCase();
+  const methodValue = (order.method || order.paymentName || "").toString().toLowerCase();
+  const isQris = paymentType === "qris" || methodValue === "qris";
+  const isBankTransfer = paymentType === "bank_transfer" || (!!bankValue && !isQris);
+  if (isBankTransfer) {
+    const bank = bankValue || methodValue;
+    return bank === "bca" ? 5500 : 4250;
+  }
+  if (isQris) {
+    const amountForTripay = getAmountForTripay(order);
+    if (Number.isFinite(amountForTripay) && amountForTripay > 0) {
+      return Math.ceil(750 + amountForTripay * 0.007);
+    }
+    const total = Number(order.totalAmount ?? order.amount ?? 0);
+    if (Number.isFinite(total) && total > 0) {
+      let amount = total;
+      for (let i = 0; i < 5; i += 1) {
+        const fee = Math.ceil(750 + amount * 0.007);
+        const next = total - fee;
+        if (next <= 0 || next === amount) break;
+        amount = next;
+      }
+      const fallbackFee = Math.ceil(750 + amount * 0.007);
+      if (Number.isFinite(fallbackFee) && fallbackFee > 0) return fallbackFee;
+    }
+  }
+  return 0;
+}
+
+function getNetRevenue(order) {
+  const gross = Number(order?.totalAmount ?? order?.amount ?? 0) || 0;
+  if (!gross) return 0;
+  const fee = getTripayFee(order);
+  const net = gross - fee;
+  return net > 0 ? net : 0;
 }
 
 function getOrderEventIdentifier(order) {
@@ -450,7 +671,7 @@ function renderOrderStats(rows = [], eventFilter = "") {
     breakdown[status] = (breakdown[status] || 0) + 1;
     if (status === "paid") {
       paidCount += 1;
-      totalRevenue += Number(order.totalAmount ?? order.amount ?? 0) || 0;
+      totalRevenue += getNetRevenue(order);
       const qty = Number(order.quantity ?? order.qty ?? 1);
       participants += qty;
       const type = (order.ticketType || "regular").toLowerCase();
@@ -568,6 +789,7 @@ function updateStatsCharts(breakdown = {}, typeBreakdown = {}) {
 function populateEventFilter(eventList = []) {
   const previousEventValue = selectedEventFilter || statEventFilter?.value || "";
   const previousOrderValue = selectedOrderEventFilter || orderEventFilter?.value || "";
+  const previousReferralValue = referralEventSelect?.value || "";
   const sorted = [...eventList].sort((a, b) => {
     const titleA = (a.title || a.slug || a.id || "").toLowerCase();
     const titleB = (b.title || b.slug || b.id || "").toLowerCase();
@@ -599,6 +821,12 @@ function populateEventFilter(eventList = []) {
     selectedOrderEventFilter = orderEventFilter.value || "";
   } else {
     selectedOrderEventFilter = previousOrderValue;
+  }
+
+  if (referralEventSelect) {
+    referralEventSelect.innerHTML = baseOptions;
+    const hasPreviousReferral = previousReferralValue && sorted.some((event) => event.id === previousReferralValue);
+    referralEventSelect.value = hasPreviousReferral ? previousReferralValue : "";
   }
 }
 
@@ -906,7 +1134,7 @@ function summarizeOrdersByEvent(orders = []) {
       "";
     if (!key) return;
     const type = (order.ticketType || "regular").toLowerCase() === "vip" ? "vip" : "regular";
-    const revenue = Number(order.totalAmount ?? order.amount ?? 0) || 0;
+    const revenue = getNetRevenue(order);
     const entry =
       map.get(key) || {
         regular: 0,
@@ -961,9 +1189,9 @@ function buildEventsCsv(eventList = [], revenueMap = new Map(), exportedAt, deli
     "Dibuat",
     "Diperbarui",
     "Exported At",
-    "Pendapatan Reguler",
-    "Pendapatan VIP",
-    "Pendapatan Total",
+    "Pendapatan Reguler (bersih)",
+    "Pendapatan VIP (bersih)",
+    "Pendapatan Total (bersih)",
     "Peserta (paid)",
   ];
 
@@ -1087,7 +1315,7 @@ function slugify(text, fallback = "events") {
 function computeOrderTotals(orders = []) {
   return orders.reduce(
     (acc, order) => {
-      const amount = Number(order.totalAmount ?? order.amount ?? 0) || 0;
+      const amount = getNetRevenue(order);
       const type = (order.ticketType || "regular").toLowerCase() === "vip" ? "vip" : "regular";
       if (type === "vip") acc.totalVip += amount;
       else acc.totalRegular += amount;
@@ -1121,9 +1349,9 @@ function buildOrdersTableData(orders = [], exportedAt, eventLabel = "") {
     "Bank",
     "Quantity",
     "Exported At",
-    "Total Reguler (summary)",
-    "Total VIP (summary)",
-    "Total Semua (summary)",
+    "Total Reguler (bersih)",
+    "Total VIP (bersih)",
+    "Total Semua (bersih)",
   ];
 
   const dataRows = orders.map((order) => [
@@ -1819,6 +2047,8 @@ uploadPosterBtn?.addEventListener("click", openUpload);
 createEventBtn?.addEventListener("click", () => {
   saveEvent(null, { forceNew: true, redirectToPublic: true });
 });
+referralForm?.addEventListener("submit", (ev) => saveReferral(ev));
+referralResetBtn?.addEventListener("click", resetReferralForm);
 refreshOrdersBtn?.addEventListener("click", () => loadOrders(true));
 loadMoreOrdersBtn?.addEventListener("click", () => loadOrders(false));
 orderStatusFilter?.addEventListener("change", () => loadOrders(true));
@@ -1898,6 +2128,13 @@ ordersTableBody?.addEventListener("click", (e) => {
   }
 });
 
+referralTableBody?.addEventListener("click", (e) => {
+  const delBtn = e.target.closest("[data-referral-delete]");
+  if (delBtn) {
+    deleteReferral(delBtn.dataset.referralDelete);
+  }
+});
+
 // === Auth guard ===
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
@@ -1936,7 +2173,8 @@ onAuthStateChanged(auth, async (user) => {
   setGuard("Akses admin diberikan.", true);
   setDashboardVisible(true);
   resetForm();
-  loadEvents();
+  await loadEvents();
   loadOrders(true);
+  loadReferrals();
   initCloudinaryWidget();
 });

@@ -1028,6 +1028,7 @@
         <button class="nav-link" data-target="page-kelola"><i class="fa-regular fa-pen-to-square"></i> Kelola Event</button>
         <button class="nav-link" data-target="page-daftar"><i class="fa-regular fa-calendar"></i> Daftar Event</button>
         <button class="nav-link" data-target="page-transaksi"><i class="fa-solid fa-receipt"></i> Transaksi</button>
+        <button class="nav-link" data-target="page-referral"><i class="fa-solid fa-tag"></i> Referral</button>
       </nav>
     </aside>
 
@@ -1051,6 +1052,7 @@
             <button class="nav-link" data-target="page-kelola"><i class="fa-regular fa-pen-to-square"></i> Kelola Event</button>
             <button class="nav-link" data-target="page-daftar"><i class="fa-regular fa-calendar"></i> Daftar Event</button>
             <button class="nav-link" data-target="page-transaksi"><i class="fa-solid fa-receipt"></i> Transaksi</button>
+            <button class="nav-link" data-target="page-referral"><i class="fa-solid fa-tag"></i> Referral</button>
           </div>
         </div>
       </div>
@@ -1079,9 +1081,9 @@
                 </div>
                 <div class="stats-grid">
                   <div class="stat-card">
-                    <p class="stat-label">Pendapatan (paid)</p>
+                    <p class="stat-label">Pendapatan (bersih)</p>
                     <p class="stat-value" id="statRevenue">Rp 0</p>
-                    <p class="muted">Total tagihan yang sudah lunas.</p>
+                    <p class="muted">Total tagihan lunas setelah potongan admin Tripay.</p>
                   </div>
                   <div class="stat-card">
                     <p class="stat-label">Pesanan berstatus paid</p>
@@ -1410,6 +1412,75 @@
                 </div>
               </div>
             </section>
+
+            <section class="page" id="page-referral">
+              <div class="panel">
+                <div class="flex-between" style="gap: 12px; flex-wrap: wrap; align-items: center;">
+                  <div>
+                    <h2>Referral</h2>
+                    <p class="muted">Atur kode referral dan pantau penggunaannya.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel">
+                <form id="referralForm">
+                  <div class="grid">
+                    <div>
+                      <label>Kode Referral</label>
+                      <input name="referralCode" type="text" placeholder="KODE123" required />
+                    </div>
+                    <div>
+                      <label>Status</label>
+                      <select name="referralActive">
+                        <option value="active">Aktif</option>
+                        <option value="inactive">Nonaktif</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>Event</label>
+                      <select name="referralEventId" id="referralEventId">
+                        <option value="">Semua event</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>Harga Reguler Setelah Referral</label>
+                      <input name="referralRegularPriceAfter" type="number" min="0" placeholder="0" />
+                    </div>
+                    <div>
+                      <label>Harga VIP Setelah Referral</label>
+                      <input name="referralVipPriceAfter" type="number" min="0" placeholder="0" />
+                    </div>
+                  </div>
+                  <div class="flex" style="gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                    <button id="referralSaveBtn" type="submit" class="success-btn">Simpan</button>
+                    <button id="referralResetBtn" type="button" class="outline">Reset</button>
+                  </div>
+                  <p id="referralFormStatus" class="muted" style="margin-top: 8px;"></p>
+                </form>
+              </div>
+
+              <div class="panel">
+                <div style="overflow-x:auto;">
+                  <table class="table" id="referralTable">
+                    <thead>
+                      <tr>
+                        <th>Kode</th>
+                        <th>Event</th>
+                        <th>Status</th>
+                        <th>Harga Reguler</th>
+                        <th>Harga VIP</th>
+                        <th>Dipakai</th>
+                        <th>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td colspan="7" class="muted">Belum ada data.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -1426,6 +1497,7 @@
       'page-kelola': 'Kelola Event',
       'page-daftar': 'Daftar Event',
       'page-transaksi': 'Transaksi',
+      'page-referral': 'Referral',
     };
     function closeMobileNav() {
       if (mobileNavPanel) {

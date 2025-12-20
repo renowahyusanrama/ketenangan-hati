@@ -237,6 +237,7 @@ body.no-scroll{
     padding:14px;
     display:none;
     z-index:80;
+    box-sizing:border-box;
 }
 .profile-dropdown.open{ display:block; }
 .profile-dropdown .profile-head{
@@ -1152,10 +1153,19 @@ body.no-scroll{
     .dzikir-card{ min-height:200px; max-width:100%; }
     .dzikir-text{ font-size:16px; }
     .profile-dropdown{
-        left:10px;
-        right:10px;
-        width:auto;
-        max-width:none;
+        position:fixed;
+        right:12px;
+        left:auto;
+        top:72px;
+        width:min(280px, calc(100vw - 24px));
+        max-width:calc(100vw - 24px);
+    }
+    .profile-dropdown .profile-head{
+        min-width:0;
+    }
+    .profile-dropdown .profile-name,
+    .profile-dropdown .profile-email{
+        max-width:100%;
     }
     .cart-drawer{
         width:320px;
@@ -1212,6 +1222,12 @@ body.no-scroll{
   color:#fff; border-radius:20px;
   background:linear-gradient(135deg, var(--primary), var(--primary-700));
   font-size:28px;
+}
+.modal-logo img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
 }
 .modal-header h3{ margin:8px 0 8px; font-size:22px; color:var(--text) }
 .modal-sub{ margin:0; color:#6b7280; font-size:0.95rem }

@@ -8,6 +8,14 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+function normalizeEmail(value) {
+  return (value || "").toString().trim().toLowerCase();
+}
+
+function getReferralUseId(email) {
+  return encodeURIComponent(email);
+}
+
 function send(res, status, body) {
   Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
   res.status(status).json(body);
@@ -240,6 +248,69 @@ module.exports = async (req, res) => {
           },
           { merge: true },
         );
+      }
+    }
+
+    const referralInfo = previous?.referral || null;
+    const referralCode = referralInfo?.code || null;
+    if (nowPaid && referralCode && !referralInfo?.usageApplied && previous) {
+      const email = normalizeEmail(previous.customer?.email || referralInfo?.email);
+      if (email) {
+        try {
+          const referralRef = db.collection("referrals").doc(referralCode);
+          const useRef = referralRef.collection("uses").doc(getReferralUseId(email));
+          await db.runTransaction(async (tx) => {
+            const useSnap = await tx.get(useRef);
+            const count = Number(useSnap.data()?.count || 0);
+            if (count >= 5) {
+              tx.set(
+                docRef,
+                {
+                  referral: {
+                    ...referralInfo,
+                    usageApplied: false,
+                    usageError: "limit",
+                    usageCheckedAt: admin.firestore.FieldValue.serverTimestamp(),
+                  },
+                },
+                { merge: true },
+              );
+              return;
+            }
+            tx.set(
+              useRef,
+              {
+                code: referralCode,
+                email,
+                count: count + 1,
+                lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+            tx.set(
+              referralRef,
+              {
+                usedCount: admin.firestore.FieldValue.increment(1),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+            tx.set(
+              docRef,
+              {
+                referral: {
+                  ...referralInfo,
+                  usageApplied: true,
+                  usageAppliedAt: admin.firestore.FieldValue.serverTimestamp(),
+                  usageCount: count + 1,
+                },
+              },
+              { merge: true },
+            );
+          });
+        } catch (err) {
+          console.error("Referral usage error (webhook):", err?.message || err);
+        }
       }
     }
 

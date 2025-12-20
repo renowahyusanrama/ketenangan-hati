@@ -43,6 +43,7 @@ function resolveTripayMethod(paymentType, bank) {
     bni: "BNIVA",
     bri: "BRIVA",
     mandiri: "MANDIRIVA",
+    bsi: "BSIVA",
     permata: "PERMATAVA",
   };
   return map[normalized] || "BCAVA";

@@ -537,6 +537,8 @@ function initPaymentForm(event) {
   const nameInput = form?.querySelector('input[name="name"]');
   const emailInput = form?.querySelector('input[name="email"]');
   const phoneInput = form?.querySelector('input[name="phone"]');
+  const referralInput = form?.querySelector('input[name="referralCode"]');
+  const referralHint = document.getElementById("referralHint");
   const quotaRegular = Number(event.quotaRegular || 0);
   const quotaVip = Number(event.quotaVip || 0);
   const seatsUsedRegular = Number(event.seatsUsedRegular || 0);
@@ -558,7 +560,18 @@ function initPaymentForm(event) {
   let selectedPrice = selectedTicket === "vip" ? priceVip || priceRegular || 0 : priceRegular || 0;
   let method = savedForm.method || "qris";
   let bank = savedForm.bank || null;
-  const defaultPayLabel = selectedPrice > 0 ? "Buat Tagihan" : "Kirim E-Ticket";
+  const getDefaultPayLabel = () => (selectedPrice > 0 ? "Buat Tagihan" : "Kirim E-Ticket");
+  const referralLimit = 5;
+  let referralState = {
+    code: "",
+    valid: false,
+    data: null,
+    uses: 0,
+    email: "",
+  };
+  let referralCheckKey = "";
+  let referralTimer = null;
+  let isSubmitting = false;
 
   function setHint(message, variant = "info") {
     if (!hint) return;
@@ -571,6 +584,66 @@ function initPaymentForm(event) {
     if (payBtn) payBtn.textContent = label;
   }
 
+  function normalizeReferralCode(value) {
+    return (value || "").toString().trim().toUpperCase();
+  }
+
+  function normalizeEmail(value) {
+    return (value || "").toString().trim().toLowerCase();
+  }
+
+  function buildReferralUseId(email) {
+    return encodeURIComponent(email);
+  }
+
+  function setReferralHint(message, variant = "info") {
+    if (!referralHint) return;
+    referralHint.textContent = message || "";
+    referralHint.classList.remove("error", "success", "warning");
+    if (variant !== "info") referralHint.classList.add(variant);
+  }
+
+  function getBasePrice(type) {
+    if (type === "vip") return priceVip != null ? priceVip : priceRegular || 0;
+    return priceRegular || 0;
+  }
+
+  function getReferralPrice(type) {
+    if (!referralState.valid || !referralState.data) return null;
+    if (type === "vip" && priceVip == null) return null;
+    const appliesTo = (referralState.data.appliesTo || "").toString().toLowerCase();
+    if (appliesTo && appliesTo !== "both" && appliesTo !== type) return null;
+    const raw = type === "vip" ? referralState.data.vipPriceAfter : referralState.data.regularPriceAfter;
+    const candidate = Number(raw);
+    if (!Number.isFinite(candidate) || candidate < 0) return null;
+    return candidate;
+  }
+
+  function getTicketPrice(type) {
+    const referralPrice = getReferralPrice(type);
+    if (referralPrice != null) return referralPrice;
+    return getBasePrice(type);
+  }
+
+  function updatePriceLabels() {
+    if (priceRegularLabel) {
+      const regularPrice = getTicketPrice("regular");
+      priceRegularLabel.textContent = regularPrice ? formatCurrency(regularPrice) : "Gratis";
+    }
+    if (priceVipLabel) {
+      if (priceVip) {
+        const vipPrice = getTicketPrice("vip");
+        priceVipLabel.textContent = vipPrice ? formatCurrency(vipPrice) : "Gratis";
+        ticketVipBtn?.classList.remove("hidden");
+        ticketVipBtn?.removeAttribute("disabled");
+      } else {
+        priceVipLabel.textContent = "N/A";
+        ticketVipBtn?.setAttribute("disabled", "true");
+        ticketVipBtn?.classList.add("hidden");
+      }
+    }
+  }
+
   function saveFormState() {
     saveToStorage(formStorageKey, {
       name: nameInput?.value || "",
@@ -579,6 +652,7 @@ function initPaymentForm(event) {
       ticketType: selectedTicket,
       method,
       bank,
+      referralCode: normalizeReferralCode(referralInput?.value || ""),
     });
   }
 
@@ -598,6 +672,7 @@ function initPaymentForm(event) {
   if (nameInput && savedForm.name) nameInput.value = savedForm.name;
   if (emailInput && savedForm.email) emailInput.value = savedForm.email;
   if (phoneInput && savedForm.phone) phoneInput.value = savedForm.phone;
+  if (referralInput && savedForm.referralCode) referralInput.value = savedForm.referralCode;
 
   function updateTicketSelection(type) {
     if ((type === "vip" && soldOutVip) || (type !== "vip" && soldOutRegular)) {
@@ -605,7 +680,7 @@ function initPaymentForm(event) {
       return;
     }
     selectedTicket = type === "vip" ? "vip" : "regular";
-    selectedPrice = selectedTicket === "vip" ? priceVip || priceRegular || 0 : priceRegular || 0;
+    selectedPrice = getTicketPrice(selectedTicket);
     if (ticketTypeInput) ticketTypeInput.value = selectedTicket;
     ticketRegularBtn?.classList.toggle("active", selectedTicket === "regular");
     ticketVipBtn?.classList.toggle("active", selectedTicket === "vip");
@@ -619,39 +694,137 @@ function initPaymentForm(event) {
         btn.setAttribute("disabled", "true");
         btn.classList.remove("active");
       });
-      setPayLabel("Kirim E-Ticket");
+      if (!isSubmitting) {
+        setPayLabel("Kirim E-Ticket");
+      }
       setHint("Event gratis, e-ticket akan dikirim otomatis tanpa pembayaran.", "success");
     } else {
       methodGrid?.classList.remove("hidden");
       methodButtons.forEach((btn) => btn.removeAttribute("disabled"));
       if (!method || method === "free") method = "qris";
-      setPayLabel(defaultPayLabel);
+      if (!isSubmitting) {
+        setPayLabel(getDefaultPayLabel());
+      }
       setHint("Silakan isi data peserta dengan email Gmail lalu pilih metode pembayaran.");
     }
 
     const priceDisplay = document.getElementById("eventPrice");
     if (priceDisplay) {
-      if (priceVip) {
-        priceDisplay.textContent = selectedTicket === "vip" ? formatCurrency(priceVip) : formatCurrency(priceRegular);
-      } else {
-        priceDisplay.textContent = selectedPrice ? formatCurrency(selectedPrice) : "Gratis";
-      }
+      priceDisplay.textContent = selectedPrice ? formatCurrency(selectedPrice) : "Gratis";
     }
+    updatePriceLabels();
     saveFormState();
+    refreshReferralHint();
   }
 
-  if (priceRegularLabel) priceRegularLabel.textContent = priceRegular ? formatCurrency(priceRegular) : "Gratis";
-  if (priceVipLabel) {
-    if (priceVip) {
-      priceVipLabel.textContent = formatCurrency(priceVip);
-      ticketVipBtn?.classList.remove("hidden");
-      ticketVipBtn?.removeAttribute("disabled");
-    } else {
-      priceVipLabel.textContent = "N/A";
-      ticketVipBtn?.setAttribute("disabled", "true");
-      ticketVipBtn?.classList.add("hidden");
+  function resetReferralState() {
+    referralState = {
+      code: "",
+      valid: false,
+      data: null,
+      uses: 0,
+      email: "",
+    };
+  }
+
+  function refreshReferralHint() {
+    if (!referralInput) return;
+    const code = normalizeReferralCode(referralInput.value);
+    if (!code) {
+      setReferralHint("");
+      return;
+    }
+    if (!referralState.valid || !referralState.data) return;
+    const applicablePrice = getReferralPrice(selectedTicket);
+    if (applicablePrice == null) {
+      setReferralHint("Kode referral tidak berlaku untuk tiket ini.", "warning");
+      return;
+    }
+    setReferralHint("Kode referral aktif. Harga tiket diperbarui.", "success");
+  }
+
+  async function validateReferral() {
+    if (!referralInput) return;
+    const code = normalizeReferralCode(referralInput.value);
+    if (!code) {
+      resetReferralState();
+      updateTicketSelection(selectedTicket);
+      setReferralHint("");
+      return;
+    }
+    const email = normalizeEmail(emailInput?.value || "");
+    referralCheckKey = `${code}|${email}`;
+    if (!email) {
+      referralState = { code, valid: false, data: null, uses: 0, email: "" };
+      setReferralHint("Masukkan email untuk cek referral.", "warning");
+      updateTicketSelection(selectedTicket);
+      return;
+    }
+    setReferralHint("Memeriksa kode referral...");
+    try {
+      const refSnap = await getDoc(doc(db, "referrals", code));
+      if (referralCheckKey !== `${code}|${email}`) return;
+      if (!refSnap.exists()) {
+        referralState = { code, valid: false, data: null, uses: 0, email };
+        setReferralHint("Kode referral tidak ditemukan.", "error");
+        updateTicketSelection(selectedTicket);
+        return;
+      }
+      const data = refSnap.data() || {};
+      if (!data.active) {
+        referralState = { code, valid: false, data: null, uses: 0, email };
+        setReferralHint("Kode referral tidak aktif.", "error");
+        updateTicketSelection(selectedTicket);
+        return;
+      }
+      const referralEventId = (data.eventId || "").toString();
+      if (referralEventId && referralEventId !== event.id) {
+        referralState = { code, valid: false, data: null, uses: 0, email };
+        setReferralHint("Kode referral tidak berlaku untuk event ini.", "error");
+        updateTicketSelection(selectedTicket);
+        return;
+      }
+      const regularCandidate = Number(data.regularPriceAfter);
+      const vipCandidate = Number(data.vipPriceAfter);
+      const hasRegular = Number.isFinite(regularCandidate) && regularCandidate >= 0;
+      const hasVip = Number.isFinite(vipCandidate) && vipCandidate >= 0;
+      if (!hasRegular && !hasVip) {
+        referralState = { code, valid: false, data: null, uses: 0, email };
+        setReferralHint("Kode referral tidak memiliki harga.", "error");
+        updateTicketSelection(selectedTicket);
+        return;
+      }
+      let useCount = 0;
+      try {
+        const useSnap = await getDoc(doc(db, "referrals", code, "uses", buildReferralUseId(email)));
+        useCount = Number(useSnap.data()?.count || 0);
+      } catch (err) {
+        useCount = 0;
+      }
+      if (useCount >= referralLimit) {
+        referralState = { code, valid: false, data: null, uses: useCount, email };
+        setReferralHint("Kode referral sudah mencapai batas pemakaian untuk email ini.", "error");
+        updateTicketSelection(selectedTicket);
+        return;
+      }
+      referralState = { code, valid: true, data, uses: useCount, email };
+      updateTicketSelection(selectedTicket);
+      refreshReferralHint();
+    } catch (err) {
+      referralState = { code, valid: false, data: null, uses: 0, email };
+      setReferralHint("Tidak bisa memeriksa kode referral. Coba lagi.", "error");
+      updateTicketSelection(selectedTicket);
     }
   }
+
+  function scheduleReferralValidation() {
+    if (referralTimer) clearTimeout(referralTimer);
+    referralTimer = setTimeout(() => {
+      validateReferral();
+    }, 400);
+  }
+
+  updatePriceLabels();
   if (soldOutRegular) {
     ticketRegularBtn?.setAttribute("disabled", "true");
     ticketRegularBtn?.classList.add("sold-out");
@@ -667,6 +840,9 @@ function initPaymentForm(event) {
   ticketRegularBtn?.addEventListener("click", () => updateTicketSelection("regular"));
   ticketVipBtn?.addEventListener("click", () => updateTicketSelection("vip"));
   updateTicketSelection(selectedTicket);
+  if (referralInput && referralInput.value) {
+    scheduleReferralValidation();
+  }
   if (soldOutRegular && soldOutVip) {
     setHint("Semua tiket sudah habis.", "warning");
     payBtn.disabled = true;
@@ -700,10 +876,14 @@ function initPaymentForm(event) {
       const chosen = btn.dataset.method;
       method = chosen === "va" ? "bank_transfer" : "qris";
       bank = chosen === "va" ? btn.dataset.bank || null : null;
+      const bankLabel =
+        chosen === "va"
+          ? btn.dataset.bankLabel || (btn.textContent || "").replace(/^VA\s*/i, "").trim()
+          : null;
       methodButtons.forEach((b) => b.classList.toggle("active", b === btn));
       setHint(
         method === "bank_transfer"
-          ? `Gunakan virtual account ${(bank || "bca").toUpperCase()} untuk pembayaran.`
+          ? `Gunakan virtual account ${((bankLabel || bank || "bca") + "").toUpperCase()} untuk pembayaran.`
           : "QRIS bisa dibayar lewat mobile banking atau e-wallet yang mendukung.",
       );
       saveFormState();
@@ -713,8 +893,16 @@ function initPaymentForm(event) {
     selectMethodButton(method, bank);
   }
 
-  [nameInput, emailInput, phoneInput].forEach((el) => {
+  [nameInput, phoneInput].forEach((el) => {
     el?.addEventListener("input", () => saveFormState());
+  });
+  emailInput?.addEventListener("input", () => {
+    saveFormState();
+    scheduleReferralValidation();
+  });
+  referralInput?.addEventListener("input", () => {
+    saveFormState();
+    scheduleReferralValidation();
   });
 
   form.addEventListener("submit", async (e) => {
@@ -736,6 +924,7 @@ function initPaymentForm(event) {
     resultBox?.classList.add("hidden");
     const isFree = selectedPrice <= 0;
     setHint(isFree ? "Memproses e-ticket gratis..." : "Membuat tagihan pembayaran...", "info");
+    isSubmitting = true;
     payBtn.disabled = true;
     setPayLabel("Memproses...");
 
@@ -743,9 +932,24 @@ function initPaymentForm(event) {
     const email = formData.get("email")?.toString().trim() || "";
     if (!/@gmail\.com$/i.test(email)) {
       setHint("Email harus menggunakan Gmail (contoh: nama@gmail.com).", "error");
+      isSubmitting = false;
       payBtn.disabled = false;
-      setPayLabel(defaultPayLabel);
+      setPayLabel(getDefaultPayLabel());
       return;
+    }
+
+    const referralCode = normalizeReferralCode(referralInput?.value || "");
+    if (referralCode) {
+      await validateReferral();
+      const referralPrice = getReferralPrice(selectedTicket);
+      if (!referralState.valid || referralState.code !== referralCode || referralPrice == null) {
+        setReferralHint("Kode referral belum valid untuk tiket ini.", "error");
+        setHint("Periksa kode referral sebelum membuat tagihan.", "error");
+        isSubmitting = false;
+        payBtn.disabled = false;
+        setPayLabel(getDefaultPayLabel());
+        return;
+      }
     }
 
     const payload = {
@@ -759,6 +963,9 @@ function initPaymentForm(event) {
         phone: formData.get("phone")?.toString() || "",
       },
     };
+    if (referralCode) {
+      payload.referralCode = referralCode;
+    }
 
     try {
       const response = await fetch(`${API_BASE}/payments/create`, {
@@ -850,8 +1057,9 @@ function initPaymentForm(event) {
       setHint(err.message || "Gagal memproses pembayaran.", "error");
       renderPaymentResult(resultBox, null);
     } finally {
+      isSubmitting = false;
       payBtn.disabled = false;
-      setPayLabel(defaultPayLabel);
+      setPayLabel(getDefaultPayLabel());
     }
   });
 

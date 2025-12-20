@@ -185,13 +185,18 @@
                 <label class="label">No. WhatsApp</label>
                 <input type="tel" class="input" name="phone" placeholder="08xxxxxxxxxx" required>
 
+                <label class="label">Kode Referral</label>
+                <input type="text" class="input" name="referralCode" id="referralCode" placeholder="Masukkan kode referral">
+                <p class="form-hint" id="referralHint"></p>
+
                 <p class="label">Metode Pembayaran</p>
                 <div class="method-grid" role="group" aria-label="Metode Pembayaran">
                   <button type="button" class="method-btn" data-method="qris">QRIS</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="bca">VA BCA</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="bni">VA BNI</button>
                   <button type="button" class="method-btn" data-method="va" data-bank="bri">VA BRI</button>
-                  <button type="button" class="method-btn" data-method="va" data-bank="mandiri">VA Mandiri</button>
+                  <button type="button" class="method-btn" data-method="va" data-bank="mandiri">VA MANDIRI</button>
+                  <button type="button" class="method-btn" data-method="va" data-bank="bsi" data-bank-label="bsi">VA BSI</button>
                 </div>
 
                 <button class="btn btn-primary btn-full" type="submit" id="payNowBtn">Buat Tagihan</button>
@@ -231,7 +236,9 @@
     <div class="modal-dialog" role="document" aria-labelledby="loginTitle">
       <button class="modal-close" aria-label="Tutup" data-close="true"><i class="fa-solid fa-xmark"></i></button>
       <div class="modal-header">
-        <div class="modal-logo"><i class="fa-solid fa-moon"></i></div>
+        <div class="modal-logo">
+          <img src="images/logokj.png" alt="ketenangan jiwa" />
+        </div>
         <h3 id="loginTitle">Selamat Datang</h3>
         <p class="modal-sub">Login untuk mengikuti kajian dan event Islamic</p>
       </div>
@@ -245,15 +252,6 @@
           </svg>
           Login dengan Google
         </button>
-        <div class="divider"><span>atau</span></div>
-        <form id="loginForm" autocomplete="on" novalidate>
-          <label class="label">Email</label>
-          <input class="input" type="email" name="email" placeholder="nama@email.com" required />
-          <label class="label">Password</label>
-          <input class="input" type="password" name="password" placeholder="Ketik password" required />
-          <button class="btn btn-primary btn-login-submit" type="submit">Login</button>
-        </form>
-        <p class="modal-footnote">Belum punya akun? <a href="#" class="link-register">Daftar sekarang</a></p>
       </div>
     </div>
   </div>
