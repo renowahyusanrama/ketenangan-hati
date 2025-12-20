@@ -487,13 +487,13 @@ async function loadReferrals() {
       const usedCount = Number(data.usedCount || 0);
       return `
         <tr>
-          <td>${code}</td>
-          <td>${eventLabel}</td>
-          <td>${statusLabel}</td>
-          <td>${regularText}</td>
-          <td>${vipText}</td>
-          <td>${usedCount}</td>
-          <td>
+          <td data-label="Kode">${code}</td>
+          <td data-label="Event">${eventLabel}</td>
+          <td data-label="Status">${statusLabel}</td>
+          <td data-label="Harga Reguler">${regularText}</td>
+          <td data-label="Harga VIP">${vipText}</td>
+          <td data-label="Dipakai">${usedCount}</td>
+          <td data-label="Aksi">
             <div class="table-actions">
               <button type="button" class="outline" data-referral-delete="${code}">Hapus</button>
             </div>
