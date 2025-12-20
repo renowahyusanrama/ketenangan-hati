@@ -571,6 +571,7 @@ function initPaymentForm(event) {
   };
   let referralCheckKey = "";
   let referralTimer = null;
+  let isSubmitting = false;
 
   function setHint(message, variant = "info") {
     if (!hint) return;
@@ -693,13 +694,17 @@ function initPaymentForm(event) {
         btn.setAttribute("disabled", "true");
         btn.classList.remove("active");
       });
-      setPayLabel("Kirim E-Ticket");
+      if (!isSubmitting) {
+        setPayLabel("Kirim E-Ticket");
+      }
       setHint("Event gratis, e-ticket akan dikirim otomatis tanpa pembayaran.", "success");
     } else {
       methodGrid?.classList.remove("hidden");
       methodButtons.forEach((btn) => btn.removeAttribute("disabled"));
       if (!method || method === "free") method = "qris";
-      setPayLabel(getDefaultPayLabel());
+      if (!isSubmitting) {
+        setPayLabel(getDefaultPayLabel());
+      }
       setHint("Silakan isi data peserta dengan email Gmail lalu pilih metode pembayaran.");
     }
 
@@ -919,6 +924,7 @@ function initPaymentForm(event) {
     resultBox?.classList.add("hidden");
     const isFree = selectedPrice <= 0;
     setHint(isFree ? "Memproses e-ticket gratis..." : "Membuat tagihan pembayaran...", "info");
+    isSubmitting = true;
     payBtn.disabled = true;
     setPayLabel("Memproses...");
 
@@ -926,6 +932,7 @@ function initPaymentForm(event) {
     const email = formData.get("email")?.toString().trim() || "";
     if (!/@gmail\.com$/i.test(email)) {
       setHint("Email harus menggunakan Gmail (contoh: nama@gmail.com).", "error");
+      isSubmitting = false;
       payBtn.disabled = false;
       setPayLabel(getDefaultPayLabel());
       return;
@@ -938,6 +945,7 @@ function initPaymentForm(event) {
       if (!referralState.valid || referralState.code !== referralCode || referralPrice == null) {
         setReferralHint("Kode referral belum valid untuk tiket ini.", "error");
         setHint("Periksa kode referral sebelum membuat tagihan.", "error");
+        isSubmitting = false;
         payBtn.disabled = false;
         setPayLabel(getDefaultPayLabel());
         return;
@@ -1049,6 +1057,7 @@ function initPaymentForm(event) {
       setHint(err.message || "Gagal memproses pembayaran.", "error");
       renderPaymentResult(resultBox, null);
     } finally {
+      isSubmitting = false;
       payBtn.disabled = false;
       setPayLabel(getDefaultPayLabel());
     }
