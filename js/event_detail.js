@@ -731,11 +731,7 @@ function initPaymentForm(event) {
     }
     updatePriceLabels();
     saveFormState();
-    if (referralInput && referralInput.value) {
-      scheduleReferralValidation();
-    } else {
-      refreshReferralHint();
-    }
+    refreshReferralHint();
   }
 
   function resetReferralState() {
