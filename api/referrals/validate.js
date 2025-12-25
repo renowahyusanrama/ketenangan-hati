@@ -1,8 +1,8 @@
 const { getDb } = require("../_lib/admin");
-const { getUserFromAuthHeader } = require("../_lib/auth");
 const {
   REFERRAL_LIMIT,
   normalizeReferralCode,
+  normalizeEmail,
   resolveReferralPrice,
   getReferralUsageCount,
 } = require("../_lib/referral");
@@ -43,15 +43,14 @@ module.exports = async (req, res) => {
   const referralCode = normalizeReferralCode(body?.referralCode);
   const eventId = (body?.eventId || "").toString();
   const ticketType = (body?.ticketType || "regular").toString().toLowerCase() === "vip" ? "vip" : "regular";
+  const email = normalizeEmail(body?.email);
 
   if (!referralCode) {
     return send(res, 400, { error: "Kode referral wajib diisi." });
   }
 
-  const authUser = await getUserFromAuthHeader(req);
-  const userId = authUser?.uid || null;
-  if (!userId) {
-    return send(res, 401, { error: "Login diperlukan untuk menggunakan kode referral." });
+  if (!email) {
+    return send(res, 400, { error: "Email wajib untuk kode referral." });
   }
 
   const db = getDb();
@@ -74,10 +73,10 @@ module.exports = async (req, res) => {
     return send(res, 400, { error: "Kode referral tidak berlaku untuk tiket ini." });
   }
 
-  const usageCount = await getReferralUsageCount(db, userId, referralCode);
+  const usageCount = await getReferralUsageCount(db, referralCode, email);
   if (usageCount >= REFERRAL_LIMIT) {
     return send(res, 400, {
-      error: `Kode referral sudah mencapai batas pemakaian untuk akun ini (maks ${REFERRAL_LIMIT}x).`,
+      error: `Kode referral sudah mencapai batas pemakaian untuk email ini (maks ${REFERRAL_LIMIT}x).`,
     });
   }
 

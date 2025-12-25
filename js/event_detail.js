@@ -572,7 +572,7 @@ function initPaymentForm(event) {
     valid: false,
     data: null,
     uses: 0,
-    userId: "",
+    email: "",
   };
   let referralCheckKey = "";
   let referralTimer = null;
@@ -598,6 +598,10 @@ function initPaymentForm(event) {
 
   function normalizeReferralCode(value) {
     return (value || "").toString().trim().toUpperCase();
+  }
+
+  function normalizeEmail(value) {
+    return (value || "").toString().trim().toLowerCase();
   }
 
   async function getAuthToken() {
@@ -740,7 +744,7 @@ function initPaymentForm(event) {
       valid: false,
       data: null,
       uses: 0,
-      userId: "",
+      email: "",
     };
   }
 
@@ -769,14 +773,14 @@ function initPaymentForm(event) {
       setReferralHint("");
       return;
     }
-    if (!currentUser) {
-      referralState = { code, valid: false, data: null, uses: 0, userId: "" };
-      setReferralHint("Login untuk memakai kode referral.", "warning");
+    const email = normalizeEmail(emailInput?.value || "");
+    referralCheckKey = `${code}|${email}`;
+    if (!email) {
+      referralState = { code, valid: false, data: null, uses: 0, email: "" };
+      setReferralHint("Masukkan email untuk cek referral.", "warning");
       updateTicketSelection(selectedTicket);
       return;
     }
-    const userId = currentUser.uid || "";
-    referralCheckKey = `${code}|${userId}`;
     setReferralHint("Memeriksa kode referral...");
     try {
       const token = await getAuthToken();
@@ -787,27 +791,28 @@ function initPaymentForm(event) {
         headers,
         body: JSON.stringify({
           referralCode: code,
+          email,
           eventId: event.id,
           ticketType: selectedTicket,
         }),
       });
-      if (referralCheckKey !== `${code}|${userId}`) return;
+      if (referralCheckKey !== `${code}|${email}`) return;
       if (!response.ok) {
         const errPayload = await response.json().catch(() => ({}));
-        referralState = { code, valid: false, data: null, uses: 0, userId };
+        referralState = { code, valid: false, data: null, uses: 0, email };
         setReferralHint(errPayload.error || "Kode referral tidak valid.", "error");
         updateTicketSelection(selectedTicket);
         return;
       }
       const payload = await response.json().catch(() => ({}));
-      if (referralCheckKey !== `${code}|${userId}`) return;
+      if (referralCheckKey !== `${code}|${email}`) return;
       const data = payload.referral || null;
       const useCount = Number(payload.uses || 0);
-      referralState = { code, valid: true, data, uses: useCount, userId };
+      referralState = { code, valid: true, data, uses: useCount, email };
       updateTicketSelection(selectedTicket);
       refreshReferralHint();
     } catch (err) {
-      referralState = { code, valid: false, data: null, uses: 0, userId };
+      referralState = { code, valid: false, data: null, uses: 0, email };
       setReferralHint("Tidak bisa memeriksa kode referral. Coba lagi.", "error");
       updateTicketSelection(selectedTicket);
     }

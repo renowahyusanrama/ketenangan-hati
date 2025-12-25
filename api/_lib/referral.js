@@ -6,6 +6,10 @@ function normalizeReferralCode(value) {
   return (value || "").toString().trim().toUpperCase();
 }
 
+function normalizeEmail(value) {
+  return (value || "").toString().trim().toLowerCase();
+}
+
 function resolveReferralPrice(data, type) {
   if (!data) return null;
   const appliesTo = (data.appliesTo || "").toString().toLowerCase();
@@ -16,84 +20,66 @@ function resolveReferralPrice(data, type) {
   return candidate;
 }
 
-function getReferralUsageDocId(userId, referralCode) {
-  const safeUser = encodeURIComponent(userId || "");
-  const safeCode = encodeURIComponent(referralCode || "");
-  return `${safeUser}__${safeCode}`;
+function getReferralUseId(email) {
+  return encodeURIComponent(email || "");
 }
 
-async function getReferralUsageCount(db, userId, referralCode) {
-  if (!userId || !referralCode) return 0;
-  const docId = getReferralUsageDocId(userId, referralCode);
-  const snap = await db.collection("referral_usages").doc(docId).get();
+async function getReferralUsageCount(db, referralCode, email) {
+  if (!referralCode || !email) return 0;
+  const useRef = db.collection("referrals").doc(referralCode).collection("uses").doc(getReferralUseId(email));
+  const snap = await useRef.get();
   return Number(snap.data()?.count || 0);
 }
 
-async function reserveReferralUsage(db, { userId, referralCode, orderId, eventId }) {
-  if (!userId || !referralCode) return 0;
-  const usageRef = db.collection("referral_usages").doc(getReferralUsageDocId(userId, referralCode));
+async function applyReferralUsage(db, referralCode, email, orderRef, referralMeta) {
+  if (!referralCode || !email || !orderRef) return;
   const referralRef = db.collection("referrals").doc(referralCode);
-  let nextCount = 0;
-
+  const useRef = referralRef.collection("uses").doc(getReferralUseId(email));
   await db.runTransaction(async (tx) => {
-    const usageSnap = await tx.get(usageRef);
-    const current = Number(usageSnap.data()?.count || 0);
-    if (current >= REFERRAL_LIMIT) {
-      const err = new Error("Referral usage limit reached.");
-      err.code = "REFERRAL_LIMIT";
-      throw err;
+    const useSnap = await tx.get(useRef);
+    const count = Number(useSnap.data()?.count || 0);
+    if (count >= REFERRAL_LIMIT) {
+      tx.set(
+        orderRef,
+        {
+          referral: {
+            ...referralMeta,
+            usageApplied: false,
+            usageError: "limit",
+            usageCheckedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+        },
+        { merge: true },
+      );
+      return;
     }
-    nextCount = current + 1;
-    const now = admin.firestore.FieldValue.serverTimestamp();
-    const payload = {
-      userId,
-      referralCode,
-      count: nextCount,
-      lastUsedAt: now,
-      updatedAt: now,
-      lastOrderId: orderId || null,
-      lastEventId: eventId || null,
-    };
-    if (!usageSnap.exists) payload.createdAt = now;
-    tx.set(usageRef, payload, { merge: true });
+    tx.set(
+      useRef,
+      {
+        code: referralCode,
+        email,
+        count: count + 1,
+        lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
     tx.set(
       referralRef,
       {
         usedCount: admin.firestore.FieldValue.increment(1),
-        updatedAt: now,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true },
     );
-  });
-
-  return nextCount;
-}
-
-async function rollbackReferralUsage(db, { userId, referralCode }) {
-  if (!userId || !referralCode) return;
-  const usageRef = db.collection("referral_usages").doc(getReferralUsageDocId(userId, referralCode));
-  const referralRef = db.collection("referrals").doc(referralCode);
-
-  await db.runTransaction(async (tx) => {
-    const usageSnap = await tx.get(usageRef);
-    const current = Number(usageSnap.data()?.count || 0);
-    if (!current) return;
-    const nextCount = current - 1;
-    const now = admin.firestore.FieldValue.serverTimestamp();
-    if (nextCount <= 0) {
-      tx.delete(usageRef);
-    } else {
-      tx.set(
-        usageRef,
-        { count: nextCount, updatedAt: now, lastRolledBackAt: now },
-        { merge: true },
-      );
-    }
     tx.set(
-      referralRef,
+      orderRef,
       {
-        usedCount: admin.firestore.FieldValue.increment(-1),
-        updatedAt: now,
+        referral: {
+          ...referralMeta,
+          usageApplied: true,
+          usageAppliedAt: admin.firestore.FieldValue.serverTimestamp(),
+          usageCount: count + 1,
+        },
       },
       { merge: true },
     );
@@ -103,9 +89,8 @@ async function rollbackReferralUsage(db, { userId, referralCode }) {
 module.exports = {
   REFERRAL_LIMIT,
   normalizeReferralCode,
+  normalizeEmail,
   resolveReferralPrice,
-  getReferralUsageDocId,
   getReferralUsageCount,
-  reserveReferralUsage,
-  rollbackReferralUsage,
+  applyReferralUsage,
 };
