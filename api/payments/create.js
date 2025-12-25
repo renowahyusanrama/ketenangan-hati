@@ -12,6 +12,14 @@ const {
   normalizeTripayResponse,
   mapStatus,
 } = require("../_lib/tripay");
+const { getUserFromAuthHeader } = require("../_lib/auth");
+const {
+  REFERRAL_LIMIT,
+  normalizeReferralCode,
+  resolveReferralPrice,
+  reserveReferralUsage,
+  rollbackReferralUsage,
+} = require("../_lib/referral");
 const { sendTicketEmail } = require("../_lib/email");
 
 const CORS_HEADERS = {
@@ -69,83 +77,6 @@ function computeFees(paymentType, bank, baseAmount) {
   const totalCustomer = Math.max(0, amountForTripay + tripayFee);
 
   return { platformTax, tripayFee, amountForTripay, totalCustomer, baseAmount: base };
-}
-
-function normalizeReferralCode(value) {
-  return (value || "").toString().trim().toUpperCase();
-}
-
-function normalizeEmail(value) {
-  return (value || "").toString().trim().toLowerCase();
-}
-
-function getReferralUseId(email) {
-  return encodeURIComponent(email);
-}
-
-function resolveReferralPrice(data, type) {
-  if (!data) return null;
-  const appliesTo = (data.appliesTo || "").toString().toLowerCase();
-  if (appliesTo && appliesTo !== "both" && appliesTo !== type) return null;
-  const raw = type === "vip" ? data.vipPriceAfter : data.regularPriceAfter;
-  const candidate = Number(raw);
-  if (!Number.isFinite(candidate) || candidate < 0) return null;
-  return candidate;
-}
-
-async function applyReferralUsage(db, referralCode, email, orderRef, referralMeta) {
-  if (!referralCode || !email || !orderRef) return;
-  const referralRef = db.collection("referrals").doc(referralCode);
-  const useRef = referralRef.collection("uses").doc(getReferralUseId(email));
-  await db.runTransaction(async (tx) => {
-    const useSnap = await tx.get(useRef);
-    const count = Number(useSnap.data()?.count || 0);
-    if (count >= 5) {
-      tx.set(
-        orderRef,
-        {
-          referral: {
-            ...referralMeta,
-            usageApplied: false,
-            usageError: "limit",
-            usageCheckedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-        },
-        { merge: true },
-      );
-      return;
-    }
-    tx.set(
-      useRef,
-      {
-        code: referralCode,
-        email,
-        count: count + 1,
-        lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
-    tx.set(
-      referralRef,
-      {
-        usedCount: admin.firestore.FieldValue.increment(1),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
-    tx.set(
-      orderRef,
-      {
-        referral: {
-          ...referralMeta,
-          usageApplied: true,
-          usageAppliedAt: admin.firestore.FieldValue.serverTimestamp(),
-          usageCount: count + 1,
-        },
-      },
-      { merge: true },
-    );
-  });
 }
 
 async function reserveSeatAndSaveOrder(db, eventDocId, orderDocId, orderData) {
@@ -249,11 +180,15 @@ module.exports = async (req, res) => {
   if (selectedAmount < 0) selectedAmount = 0;
   const baseAmountOriginal = selectedAmount;
   const referralCode = normalizeReferralCode(body?.referralCode);
-  const customerEmail = normalizeEmail(customer?.email);
+  let referralUserId = null;
+  let referralUsageCount = 0;
+  let referralReserved = false;
   let referralMeta = null;
   if (referralCode) {
-    if (!customerEmail) {
-      return send(res, 400, { error: "Email wajib untuk kode referral." });
+    const authUser = await getUserFromAuthHeader(req);
+    referralUserId = authUser?.uid || null;
+    if (!referralUserId) {
+      return send(res, 401, { error: "Login diperlukan untuk menggunakan kode referral." });
     }
     const referralRef = db.collection("referrals").doc(referralCode);
     const referralSnap = await referralRef.get();
@@ -272,11 +207,6 @@ module.exports = async (req, res) => {
     if (priceAfter == null) {
       return send(res, 400, { error: "Kode referral tidak berlaku untuk tiket ini." });
     }
-    const useSnap = await referralRef.collection("uses").doc(getReferralUseId(customerEmail)).get();
-    const useCount = Number(useSnap.data()?.count || 0);
-    if (useCount >= 5) {
-      return send(res, 400, { error: "Kode referral sudah mencapai batas pemakaian untuk email ini." });
-    }
     selectedAmount = priceAfter;
     referralMeta = {
       code: referralCode,
@@ -284,12 +214,45 @@ module.exports = async (req, res) => {
       priceBefore: baseAmountOriginal,
       priceAfter,
       discountAmount: Math.max(0, baseAmountOriginal - priceAfter),
-      email: customerEmail,
-      usageApplied: false,
+      userId: referralUserId,
+      usageApplied: true,
+      usageCount: 0,
     };
   }
   const isFree = selectedAmount <= 0;
+
+  // Validasi metode pembayaran sebelum reservasi referral.
+  if (!isFree) {
+    if (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) {
+      return send(res, 500, { error: "Tripay belum dikonfigurasi." });
+    }
+    if (!["bank_transfer", "qris"].includes(paymentType)) {
+      return send(res, 400, { error: "paymentType harus bank_transfer atau qris." });
+    }
+  }
+
   const merchantRef = makeMerchantRef(eventId, type);
+
+  if (referralMeta) {
+    try {
+      referralUsageCount = await reserveReferralUsage(db, {
+        userId: referralUserId,
+        referralCode,
+        orderId: merchantRef,
+        eventId: event.id,
+      });
+      referralReserved = true;
+      referralMeta.usageCount = referralUsageCount;
+    } catch (err) {
+      if (err?.code === "REFERRAL_LIMIT") {
+        return send(res, 400, {
+          error: `Kode referral sudah mencapai batas pemakaian untuk akun ini (maks ${REFERRAL_LIMIT}x).`,
+        });
+      }
+      console.error("Referral usage reserve error:", err?.message || err);
+      return send(res, 500, { error: "Gagal memproses kode referral." });
+    }
+  }
 
   // 1) EVENT GRATIS
   if (isFree) {
@@ -318,6 +281,7 @@ module.exports = async (req, res) => {
       merchantRef,
       reference: merchantRef,
       reserved: true,
+      customerUid: referralUserId || null,
       customer: {
         name: customer?.name || "Peserta",
         email: customer?.email || "peserta@example.com",
@@ -332,19 +296,14 @@ module.exports = async (req, res) => {
     try {
       await reserveSeatAndSaveOrder(db, event.id, merchantRef, freeOrder);
     } catch (err) {
+      if (referralReserved) {
+        await rollbackReferralUsage(db, { userId: referralUserId, referralCode });
+      }
       return send(res, 400, { error: err?.message || "Kuota event sudah penuh." });
     }
 
     const orderRef = db.collection("orders").doc(merchantRef);
     const responseData = { ...freeOrder, free: true, ticketEmailStatus: ticketEmailMeta.status, ticketEmailRecipient: ticketEmailMeta.recipient };
-
-    if (referralMeta) {
-      try {
-        await applyReferralUsage(db, referralCode, customerEmail, orderRef, referralMeta);
-      } catch (err) {
-        console.error("Referral usage error (free):", err?.message || err);
-      }
-    }
 
     try {
       await sendTicketEmail({
@@ -376,14 +335,6 @@ module.exports = async (req, res) => {
   }
 
   // 2) EVENT BERBAYAR (Tripay)
-  if (!TRIPAY_API_KEY || !TRIPAY_PRIVATE_KEY || !TRIPAY_MERCHANT_CODE) {
-    return send(res, 500, { error: "Tripay belum dikonfigurasi." });
-  }
-
-  if (!["bank_transfer", "qris"].includes(paymentType)) {
-    return send(res, 400, { error: "paymentType harus bank_transfer atau qris." });
-  }
-
   const method = resolveTripayMethod(paymentType, bank);
   const { platformTax, tripayFee, amountForTripay, totalCustomer, baseAmount } = computeFees(
     paymentType,
@@ -421,6 +372,9 @@ module.exports = async (req, res) => {
   try {
     const tripayResponse = await createTripayTransaction(payload);
     if (tripayResponse?.success === false) {
+      if (referralReserved) {
+        await rollbackReferralUsage(db, { userId: referralUserId, referralCode });
+      }
       return send(res, 400, { error: tripayResponse.message || "Gagal membuat pembayaran." });
     }
 
@@ -466,6 +420,7 @@ module.exports = async (req, res) => {
       method,
       merchantRef,
       reference: normalized.reference,
+      customerUid: referralUserId || null,
       customer: {
         name: customer?.name || "Peserta",
         email: customer?.email || "peserta@example.com",
@@ -491,6 +446,9 @@ module.exports = async (req, res) => {
     try {
       await reserveSeatAndSaveOrder(db, event.id, merchantRef, orderDoc);
     } catch (err) {
+      if (referralReserved) {
+        await rollbackReferralUsage(db, { userId: referralUserId, referralCode });
+      }
       return send(res, 400, { error: err?.message || "Kuota event sudah penuh." });
     }
 
@@ -502,6 +460,9 @@ module.exports = async (req, res) => {
     };
     return send(res, 200, responsePayload);
   } catch (error) {
+    if (referralReserved) {
+      await rollbackReferralUsage(db, { userId: referralUserId, referralCode });
+    }
     console.error("Tripay charge error:", error.response?.data || error.message || error);
     return send(res, 500, {
       error: "Gagal membuat pembayaran.",

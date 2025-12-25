@@ -1,5 +1,6 @@
 const { admin, getDb } = require("../_lib/admin");
 const { verifyTripayCallback, mapStatus } = require("../_lib/tripay");
+const { reserveReferralUsage } = require("../_lib/referral");
 const { sendTicketEmail } = require("../_lib/email");
 
 const CORS_HEADERS = {
@@ -254,62 +255,103 @@ module.exports = async (req, res) => {
     const referralInfo = previous?.referral || null;
     const referralCode = referralInfo?.code || null;
     if (nowPaid && referralCode && !referralInfo?.usageApplied && previous) {
-      const email = normalizeEmail(previous.customer?.email || referralInfo?.email);
-      if (email) {
+      const userId = referralInfo?.userId || previous.customerUid || null;
+      if (userId) {
         try {
-          const referralRef = db.collection("referrals").doc(referralCode);
-          const useRef = referralRef.collection("uses").doc(getReferralUseId(email));
-          await db.runTransaction(async (tx) => {
-            const useSnap = await tx.get(useRef);
-            const count = Number(useSnap.data()?.count || 0);
-            if (count >= 5) {
+          const usageCount = await reserveReferralUsage(db, {
+            userId,
+            referralCode,
+            orderId: docRef.id,
+            eventId: previous.eventId,
+          });
+          await docRef.set(
+            {
+              referral: {
+                ...referralInfo,
+                userId,
+                usageApplied: true,
+                usageAppliedAt: admin.firestore.FieldValue.serverTimestamp(),
+                usageCount,
+              },
+            },
+            { merge: true },
+          );
+        } catch (err) {
+          if (err?.code === "REFERRAL_LIMIT") {
+            await docRef.set(
+              {
+                referral: {
+                  ...referralInfo,
+                  userId,
+                  usageApplied: false,
+                  usageError: "limit",
+                  usageCheckedAt: admin.firestore.FieldValue.serverTimestamp(),
+                },
+              },
+              { merge: true },
+            );
+          } else {
+            console.error("Referral usage error (webhook):", err?.message || err);
+          }
+        }
+      } else {
+        const email = normalizeEmail(previous.customer?.email || referralInfo?.email);
+        if (email) {
+          try {
+            const referralRef = db.collection("referrals").doc(referralCode);
+            const useRef = referralRef.collection("uses").doc(getReferralUseId(email));
+            await db.runTransaction(async (tx) => {
+              const useSnap = await tx.get(useRef);
+              const count = Number(useSnap.data()?.count || 0);
+              if (count >= 5) {
+                tx.set(
+                  docRef,
+                  {
+                    referral: {
+                      ...referralInfo,
+                      usageApplied: false,
+                      usageError: "limit",
+                      usageCheckedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    },
+                  },
+                  { merge: true },
+                );
+                return;
+              }
+              tx.set(
+                useRef,
+                {
+                  code: referralCode,
+                  email,
+                  count: count + 1,
+                  lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
+                },
+                { merge: true },
+              );
+              tx.set(
+                referralRef,
+                {
+                  usedCount: admin.firestore.FieldValue.increment(1),
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                },
+                { merge: true },
+              );
               tx.set(
                 docRef,
                 {
                   referral: {
                     ...referralInfo,
-                    usageApplied: false,
-                    usageError: "limit",
-                    usageCheckedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    usageApplied: true,
+                    usageAppliedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    usageCount: count + 1,
                   },
                 },
                 { merge: true },
               );
-              return;
-            }
-            tx.set(
-              useRef,
-              {
-                code: referralCode,
-                email,
-                count: count + 1,
-                lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
-              },
-              { merge: true },
-            );
-            tx.set(
-              referralRef,
-              {
-                usedCount: admin.firestore.FieldValue.increment(1),
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-              },
-              { merge: true },
-            );
-            tx.set(
-              docRef,
-              {
-                referral: {
-                  ...referralInfo,
-                  usageApplied: true,
-                  usageAppliedAt: admin.firestore.FieldValue.serverTimestamp(),
-                  usageCount: count + 1,
-                },
-              },
-              { merge: true },
-            );
-          });
-        } catch (err) {
-          console.error("Referral usage error (webhook):", err?.message || err);
+            });
+          } catch (err) {
+            console.error("Referral usage error (webhook):", err?.message || err);
+          }
         }
       }
     }
